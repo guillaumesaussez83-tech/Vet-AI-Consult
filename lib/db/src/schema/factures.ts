@@ -1,0 +1,22 @@
+import { pgTable, text, serial, timestamp, integer, real } from "drizzle-orm/pg-core";
+import { createInsertSchema } from "drizzle-zod";
+import { z } from "zod/v4";
+import { consultationsTable } from "./consultations";
+
+export const facturesTable = pgTable("factures", {
+  id: serial("id").primaryKey(),
+  consultationId: integer("consultation_id").notNull().references(() => consultationsTable.id).unique(),
+  numero: text("numero").notNull().unique(),
+  montantHT: real("montant_ht").notNull(),
+  tva: real("tva").notNull().default(20),
+  montantTTC: real("montant_ttc").notNull(),
+  statut: text("statut").notNull().default("en_attente"),
+  dateEmission: text("date_emission").notNull(),
+  datePaiement: text("date_paiement"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
+});
+
+export const insertFactureSchema = createInsertSchema(facturesTable).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertFacture = z.infer<typeof insertFactureSchema>;
+export type Facture = typeof facturesTable.$inferSelect;

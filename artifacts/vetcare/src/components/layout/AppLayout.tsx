@@ -1,0 +1,134 @@
+import { type ReactNode } from "react";
+import { Link, useLocation } from "wouter";
+import { useUser, useClerk } from "@clerk/react";
+import { 
+  Activity, 
+  Users, 
+  Calendar, 
+  FileText, 
+  Settings, 
+  LogOut,
+  Stethoscope,
+  StethoscopeIcon,
+  Syringe,
+  Pill,
+  Menu
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+
+export function AppLayout({ children }: { children: ReactNode }) {
+  const [location] = useLocation();
+  const { user } = useUser();
+  const { signOut } = useClerk();
+
+  const navigation = [
+    { name: "Tableau de bord", href: "/dashboard", icon: Activity },
+    { name: "Patients", href: "/patients", icon: Users },
+    { name: "Consultations", href: "/consultations", icon: Stethoscope },
+    { name: "Factures", href: "/factures", icon: FileText },
+    { name: "Actes & Produits", href: "/actes", icon: Syringe },
+    { name: "Paramètres", href: "/parametres", icon: Settings },
+  ];
+
+  const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
+  const currentPath = location === "" ? "/" : location;
+
+  const NavLinks = () => (
+    <div className="flex flex-col gap-2 mt-4 px-2">
+      {navigation.map((item) => {
+        const isActive = currentPath === item.href || (item.href !== "/dashboard" && currentPath.startsWith(item.href));
+        return (
+          <Link key={item.name} href={item.href}>
+            <div
+              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors cursor-pointer text-sm font-medium ${
+                isActive
+                  ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                  : "text-sidebar-foreground/80 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
+              }`}
+            >
+              <item.icon className="h-5 w-5" />
+              {item.name}
+            </div>
+          </Link>
+        );
+      })}
+    </div>
+  );
+
+  return (
+    <div className="min-h-screen bg-background flex w-full">
+      {/* Desktop Sidebar */}
+      <aside className="hidden md:flex flex-col w-64 border-r bg-sidebar border-sidebar-border h-screen sticky top-0 shrink-0">
+        <div className="p-6 flex items-center gap-3">
+          <div className="bg-primary/20 p-2 rounded-xl text-primary-foreground">
+            <StethoscopeIcon className="h-6 w-6 text-primary-foreground" />
+          </div>
+          <span className="font-bold text-xl tracking-tight text-sidebar-foreground">VetCare Pro</span>
+        </div>
+        
+        <div className="flex-1 overflow-y-auto px-3">
+          <NavLinks />
+        </div>
+
+        <div className="p-4 border-t border-sidebar-border/50">
+          <div className="flex items-center gap-3 px-3 py-2">
+            <div className="h-9 w-9 rounded-full bg-sidebar-accent flex items-center justify-center text-sidebar-accent-foreground font-semibold">
+              {user?.firstName?.charAt(0) || "D"}
+            </div>
+            <div className="flex-1 overflow-hidden">
+              <p className="text-sm font-medium text-sidebar-foreground truncate">Dr. {user?.firstName || "Vétérinaire"}</p>
+              <p className="text-xs text-sidebar-foreground/60 truncate">{user?.emailAddresses[0]?.emailAddress}</p>
+            </div>
+          </div>
+          <Button 
+            variant="ghost" 
+            className="w-full justify-start text-sidebar-foreground/80 hover:text-sidebar-foreground hover:bg-sidebar-accent/50 mt-2"
+            onClick={() => signOut()}
+          >
+            <LogOut className="h-4 w-4 mr-2" />
+            Déconnexion
+          </Button>
+        </div>
+      </aside>
+
+      {/* Main Content */}
+      <main className="flex-1 flex flex-col min-w-0 max-w-full">
+        {/* Mobile Header */}
+        <header className="md:hidden flex items-center justify-between p-4 border-b bg-card">
+          <div className="flex items-center gap-2">
+            <div className="bg-primary/20 p-1.5 rounded-lg text-primary-foreground">
+              <StethoscopeIcon className="h-5 w-5 text-primary" />
+            </div>
+            <span className="font-bold text-lg text-card-foreground">VetCare Pro</span>
+          </div>
+          
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button variant="ghost" size="icon">
+                <Menu className="h-6 w-6" />
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="left" className="w-72 bg-sidebar p-0 border-sidebar-border">
+              <div className="p-6 flex items-center gap-3">
+                <div className="bg-primary/20 p-2 rounded-xl text-primary-foreground">
+                  <StethoscopeIcon className="h-6 w-6 text-primary-foreground" />
+                </div>
+                <span className="font-bold text-xl text-sidebar-foreground">VetCare Pro</span>
+              </div>
+              <div className="px-3">
+                <NavLinks />
+              </div>
+            </SheetContent>
+          </Sheet>
+        </header>
+
+        <div className="flex-1 p-4 md:p-8 overflow-y-auto">
+          <div className="max-w-6xl mx-auto w-full">
+            {children}
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+}

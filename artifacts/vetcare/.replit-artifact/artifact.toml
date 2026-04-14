@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "VetCare Pro - Logiciel Vétérinaire"
+version = "1.0.0"
+id = "artifacts/vetcare"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 21313
+
+[services.development]
+run = "pnpm --filter @workspace/vetcare run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/vetcare", "run", "build" ]
+publicDir = "artifacts/vetcare/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "21313"
+BASE_PATH = "/"

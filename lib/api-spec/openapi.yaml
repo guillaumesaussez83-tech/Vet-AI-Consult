@@ -1,22 +1,35 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: VetCare Pro API - Logiciel vétérinaire
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: owners
+    description: Propriétaires d'animaux
+  - name: patients
+    description: Patients (animaux)
+  - name: consultations
+    description: Consultations vétérinaires
+  - name: factures
+    description: Facturation
+  - name: actes
+    description: Actes médicaux
+  - name: ai
+    description: Diagnostic IA Claude
+  - name: dashboard
+    description: Tableau de bord
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +37,538 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /owners:
+    get:
+      operationId: listOwners
+      tags: [owners]
+      summary: Liste des propriétaires
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Liste des propriétaires
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Owner"
+    post:
+      operationId: createOwner
+      tags: [owners]
+      summary: Créer un propriétaire
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateOwnerBody"
+      responses:
+        "201":
+          description: Propriétaire créé
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Owner"
+
+  /owners/{id}:
+    get:
+      operationId: getOwner
+      tags: [owners]
+      summary: Détails d'un propriétaire
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Propriétaire trouvé
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Owner"
+        "404":
+          description: Non trouvé
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    patch:
+      operationId: updateOwner
+      tags: [owners]
+      summary: Mettre à jour un propriétaire
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateOwnerBody"
+      responses:
+        "200":
+          description: Propriétaire mis à jour
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Owner"
+    delete:
+      operationId: deleteOwner
+      tags: [owners]
+      summary: Supprimer un propriétaire
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Supprimé
+
+  /patients:
+    get:
+      operationId: listPatients
+      tags: [patients]
+      summary: Liste des patients
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: ownerId
+          in: query
+          schema:
+            type: integer
+        - name: espece
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Liste des patients
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PatientWithOwner"
+    post:
+      operationId: createPatient
+      tags: [patients]
+      summary: Créer un patient
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePatientBody"
+      responses:
+        "201":
+          description: Patient créé
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Patient"
+
+  /patients/{id}:
+    get:
+      operationId: getPatient
+      tags: [patients]
+      summary: Détails d'un patient
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Patient trouvé
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PatientWithOwner"
+        "404":
+          description: Non trouvé
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    patch:
+      operationId: updatePatient
+      tags: [patients]
+      summary: Mettre à jour un patient
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePatientBody"
+      responses:
+        "200":
+          description: Patient mis à jour
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Patient"
+    delete:
+      operationId: deletePatient
+      tags: [patients]
+      summary: Supprimer un patient
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Supprimé
+
+  /patients/{id}/consultations:
+    get:
+      operationId: listPatientConsultations
+      tags: [patients]
+      summary: Historique des consultations d'un patient
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Consultations du patient
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Consultation"
+
+  /consultations:
+    get:
+      operationId: listConsultations
+      tags: [consultations]
+      summary: Liste des consultations
+      parameters:
+        - name: statut
+          in: query
+          schema:
+            type: string
+        - name: date
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Liste des consultations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ConsultationWithPatient"
+    post:
+      operationId: createConsultation
+      tags: [consultations]
+      summary: Créer une consultation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateConsultationBody"
+      responses:
+        "201":
+          description: Consultation créée
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Consultation"
+
+  /consultations/{id}:
+    get:
+      operationId: getConsultation
+      tags: [consultations]
+      summary: Détails d'une consultation
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Consultation trouvée
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConsultationFull"
+        "404":
+          description: Non trouvé
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    patch:
+      operationId: updateConsultation
+      tags: [consultations]
+      summary: Mettre à jour une consultation
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateConsultationBody"
+      responses:
+        "200":
+          description: Consultation mise à jour
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Consultation"
+
+  /consultations/{id}/ordonnance:
+    post:
+      operationId: generateOrdonnance
+      tags: [consultations]
+      summary: Générer une ordonnance automatique avec IA
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Ordonnance générée
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrdonnanceResponse"
+
+  /consultations/{id}/facture:
+    post:
+      operationId: generateFacture
+      tags: [consultations]
+      summary: Générer la facture d'une consultation
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Facture générée
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Facture"
+
+  /actes:
+    get:
+      operationId: listActes
+      tags: [actes]
+      summary: Liste des actes médicaux
+      responses:
+        "200":
+          description: Liste des actes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Acte"
+    post:
+      operationId: createActe
+      tags: [actes]
+      summary: Créer un acte médical
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateActeBody"
+      responses:
+        "201":
+          description: Acte créé
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Acte"
+
+  /actes/{id}:
+    patch:
+      operationId: updateActe
+      tags: [actes]
+      summary: Mettre à jour un acte
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateActeBody"
+      responses:
+        "200":
+          description: Acte mis à jour
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Acte"
+    delete:
+      operationId: deleteActe
+      tags: [actes]
+      summary: Supprimer un acte
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Supprimé
+
+  /factures:
+    get:
+      operationId: listFactures
+      tags: [factures]
+      summary: Liste des factures
+      parameters:
+        - name: statut
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Liste des factures
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/FactureWithDetails"
+
+  /factures/{id}:
+    get:
+      operationId: getFacture
+      tags: [factures]
+      summary: Détails d'une facture
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Facture trouvée
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FactureWithDetails"
+    patch:
+      operationId: updateFactureStatut
+      tags: [factures]
+      summary: Mettre à jour le statut d'une facture
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateFactureStatutBody"
+      responses:
+        "200":
+          description: Facture mise à jour
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Facture"
+
+  /ai/diagnostic:
+    post:
+      operationId: getDiagnosticIA
+      tags: [ai]
+      summary: Obtenir un diagnostic différentiel IA (Claude)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DiagnosticIARequest"
+      responses:
+        "200":
+          description: Diagnostic IA généré
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DiagnosticIAResponse"
+
+  /dashboard/stats:
+    get:
+      operationId: getDashboardStats
+      tags: [dashboard]
+      summary: Statistiques du tableau de bord
+      responses:
+        "200":
+          description: Statistiques
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardStats"
+
+  /dashboard/consultations-recentes:
+    get:
+      operationId: getConsultationsRecentes
+      tags: [dashboard]
+      summary: Consultations récentes
+      responses:
+        "200":
+          description: Consultations récentes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ConsultationWithPatient"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +579,480 @@ components:
       required:
         - status
 
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+
+    Owner:
+      type: object
+      properties:
+        id:
+          type: integer
+        nom:
+          type: string
+        prenom:
+          type: string
+        email:
+          type: ["string", "null"]
+        telephone:
+          type: string
+        adresse:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+      required:
+        - id
+        - nom
+        - prenom
+        - telephone
+        - createdAt
+
+    CreateOwnerBody:
+      type: object
+      properties:
+        nom:
+          type: string
+        prenom:
+          type: string
+        email:
+          type: ["string", "null"]
+        telephone:
+          type: string
+        adresse:
+          type: ["string", "null"]
+      required:
+        - nom
+        - prenom
+        - telephone
+
+    Patient:
+      type: object
+      properties:
+        id:
+          type: integer
+        nom:
+          type: string
+        espece:
+          type: string
+        race:
+          type: ["string", "null"]
+        sexe:
+          type: string
+        dateNaissance:
+          type: ["string", "null"]
+        poids:
+          type: ["number", "null"]
+        couleur:
+          type: ["string", "null"]
+        sterilise:
+          type: boolean
+        ownerId:
+          type: integer
+        antecedents:
+          type: ["string", "null"]
+        allergies:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+      required:
+        - id
+        - nom
+        - espece
+        - sexe
+        - sterilise
+        - ownerId
+        - createdAt
+
+    PatientWithOwner:
+      allOf:
+        - $ref: "#/components/schemas/Patient"
+        - type: object
+          properties:
+            owner:
+              $ref: "#/components/schemas/Owner"
+
+    CreatePatientBody:
+      type: object
+      properties:
+        nom:
+          type: string
+        espece:
+          type: string
+        race:
+          type: ["string", "null"]
+        sexe:
+          type: string
+        dateNaissance:
+          type: ["string", "null"]
+        poids:
+          type: ["number", "null"]
+        couleur:
+          type: ["string", "null"]
+        sterilise:
+          type: boolean
+        ownerId:
+          type: integer
+        antecedents:
+          type: ["string", "null"]
+        allergies:
+          type: ["string", "null"]
+      required:
+        - nom
+        - espece
+        - sexe
+        - sterilise
+        - ownerId
+
+    Consultation:
+      type: object
+      properties:
+        id:
+          type: integer
+        patientId:
+          type: integer
+        veterinaire:
+          type: string
+        date:
+          type: string
+        statut:
+          type: string
+        motif:
+          type: ["string", "null"]
+        anamnese:
+          type: ["string", "null"]
+        examenClinique:
+          type: ["string", "null"]
+        examensComplementaires:
+          type: ["string", "null"]
+        diagnostic:
+          type: ["string", "null"]
+        diagnosticIA:
+          type: ["string", "null"]
+        ordonnance:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+        poids:
+          type: ["number", "null"]
+        temperature:
+          type: ["number", "null"]
+        createdAt:
+          type: string
+      required:
+        - id
+        - patientId
+        - veterinaire
+        - date
+        - statut
+        - createdAt
+
+    ConsultationWithPatient:
+      allOf:
+        - $ref: "#/components/schemas/Consultation"
+        - type: object
+          properties:
+            patient:
+              $ref: "#/components/schemas/PatientWithOwner"
+
+    ConsultationFull:
+      allOf:
+        - $ref: "#/components/schemas/ConsultationWithPatient"
+        - type: object
+          properties:
+            actes:
+              type: array
+              items:
+                $ref: "#/components/schemas/ActeConsultation"
+            facture:
+              $ref: "#/components/schemas/Facture"
+
+    CreateConsultationBody:
+      type: object
+      properties:
+        patientId:
+          type: integer
+        veterinaire:
+          type: string
+        date:
+          type: string
+        motif:
+          type: ["string", "null"]
+        statut:
+          type: string
+      required:
+        - patientId
+        - veterinaire
+        - date
+        - statut
+
+    UpdateConsultationBody:
+      type: object
+      properties:
+        statut:
+          type: string
+        motif:
+          type: ["string", "null"]
+        anamnese:
+          type: ["string", "null"]
+        examenClinique:
+          type: ["string", "null"]
+        examensComplementaires:
+          type: ["string", "null"]
+        diagnostic:
+          type: ["string", "null"]
+        diagnosticIA:
+          type: ["string", "null"]
+        ordonnance:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+        poids:
+          type: ["number", "null"]
+        temperature:
+          type: ["number", "null"]
+        actes:
+          type: array
+          items:
+            $ref: "#/components/schemas/ActeConsultationInput"
+
+    ActeConsultation:
+      type: object
+      properties:
+        id:
+          type: integer
+        acteId:
+          type: integer
+        consultationId:
+          type: integer
+        quantite:
+          type: integer
+        prixUnitaire:
+          type: number
+        description:
+          type: ["string", "null"]
+        acte:
+          $ref: "#/components/schemas/Acte"
+      required:
+        - id
+        - acteId
+        - consultationId
+        - quantite
+        - prixUnitaire
+
+    ActeConsultationInput:
+      type: object
+      properties:
+        acteId:
+          type: integer
+        quantite:
+          type: integer
+        prixUnitaire:
+          type: number
+        description:
+          type: ["string", "null"]
+      required:
+        - acteId
+        - quantite
+        - prixUnitaire
+
+    Acte:
+      type: object
+      properties:
+        id:
+          type: integer
+        code:
+          type: string
+        nom:
+          type: string
+        categorie:
+          type: string
+        prixDefaut:
+          type: number
+        description:
+          type: ["string", "null"]
+        unite:
+          type: string
+      required:
+        - id
+        - code
+        - nom
+        - categorie
+        - prixDefaut
+        - unite
+
+    CreateActeBody:
+      type: object
+      properties:
+        code:
+          type: string
+        nom:
+          type: string
+        categorie:
+          type: string
+        prixDefaut:
+          type: number
+        description:
+          type: ["string", "null"]
+        unite:
+          type: string
+      required:
+        - code
+        - nom
+        - categorie
+        - prixDefaut
+        - unite
+
+    Facture:
+      type: object
+      properties:
+        id:
+          type: integer
+        consultationId:
+          type: integer
+        numero:
+          type: string
+        montantHT:
+          type: number
+        tva:
+          type: number
+        montantTTC:
+          type: number
+        statut:
+          type: string
+        dateEmission:
+          type: string
+        datePaiement:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+      required:
+        - id
+        - consultationId
+        - numero
+        - montantHT
+        - tva
+        - montantTTC
+        - statut
+        - dateEmission
+        - createdAt
+
+    FactureWithDetails:
+      allOf:
+        - $ref: "#/components/schemas/Facture"
+        - type: object
+          properties:
+            consultation:
+              $ref: "#/components/schemas/ConsultationWithPatient"
+
+    UpdateFactureStatutBody:
+      type: object
+      properties:
+        statut:
+          type: string
+        datePaiement:
+          type: ["string", "null"]
+      required:
+        - statut
+
+    OrdonnanceResponse:
+      type: object
+      properties:
+        ordonnance:
+          type: string
+      required:
+        - ordonnance
+
+    DiagnosticIARequest:
+      type: object
+      properties:
+        espece:
+          type: string
+        race:
+          type: ["string", "null"]
+        age:
+          type: ["string", "null"]
+        poids:
+          type: ["number", "null"]
+        sexe:
+          type: string
+        sterilise:
+          type: boolean
+        anamnese:
+          type: string
+        examenClinique:
+          type: string
+        examensComplementaires:
+          type: ["string", "null"]
+        antecedents:
+          type: ["string", "null"]
+        allergies:
+          type: ["string", "null"]
+      required:
+        - espece
+        - sexe
+        - sterilise
+        - anamnese
+        - examenClinique
+
+    DiagnosticIAResponse:
+      type: object
+      properties:
+        diagnostics:
+          type: array
+          items:
+            $ref: "#/components/schemas/DiagnosticItem"
+        recommandations:
+          type: string
+        urgence:
+          type: string
+        texteComplet:
+          type: string
+      required:
+        - diagnostics
+        - recommandations
+        - urgence
+        - texteComplet
+
+    DiagnosticItem:
+      type: object
+      properties:
+        nom:
+          type: string
+        probabilite:
+          type: string
+        description:
+          type: string
+      required:
+        - nom
+        - probabilite
+        - description
+
+    DashboardStats:
+      type: object
+      properties:
+        totalPatients:
+          type: integer
+        totalConsultations:
+          type: integer
+        consultationsAujourdhui:
+          type: integer
+        consultationsEnCours:
+          type: integer
+        chiffreAffaireMois:
+          type: number
+        facturesImpayees:
+          type: integer
+        totalProprietaires:
+          type: integer
+      required:
+        - totalPatients
+        - totalConsultations
+        - consultationsAujourdhui
+        - consultationsEnCours
+        - chiffreAffaireMois
+        - facturesImpayees
+        - totalProprietaires
