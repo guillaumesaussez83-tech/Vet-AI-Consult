@@ -1,4 +1,4 @@
-import { pgTable, text, serial, timestamp, integer, real } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp, integer, real, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { patientsTable } from "./patients";
@@ -21,7 +21,11 @@ export const consultationsTable = pgTable("consultations", {
   temperature: real("temperature"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
-});
+}, (table) => ({
+  patientIdIdx: index("idx_consultations_patient_id").on(table.patientId),
+  dateIdx: index("idx_consultations_date").on(table.date),
+  statutIdx: index("idx_consultations_statut").on(table.statut),
+}));
 
 export const insertConsultationSchema = createInsertSchema(consultationsTable).omit({ id: true, createdAt: true, updatedAt: true });
 export type InsertConsultation = z.infer<typeof insertConsultationSchema>;

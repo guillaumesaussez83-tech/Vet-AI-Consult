@@ -8,7 +8,7 @@ const router = Router();
 
 router.get("/", async (req, res) => {
   try {
-    const actes = await db.select().from(actesTable);
+    const actes = await db.select().from(actesTable).orderBy(actesTable.nom);
     return res.json(actes);
   } catch (err) {
     req.log.error(err);

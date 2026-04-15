@@ -14,10 +14,10 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Brain, FileText, Sparkles, Check, ChevronRight, Plus, Trash2, Receipt, Mic, MicOff, Loader2, Printer } from "lucide-react";
+import { ArrowLeft, Brain, FileText, Sparkles, Check, ChevronRight, Plus, Trash2, Receipt, Loader2, Printer } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
 import { PatientBarre } from "@/components/PatientBarre";
+import { VoiceRecorder } from "@/components/VoiceRecorder";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
@@ -462,17 +462,6 @@ function EtapeOrdonnanceActes({
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isDeletingFacture, setIsDeletingFacture] = useState(false);
-  const {
-    isListening,
-    isSupported,
-    fullText,
-    transcript,
-    startListening,
-    stopListening,
-    resetTranscript,
-  } = useSpeechRecognition("fr-FR");
-
-  const [isGeneratingVoix, setIsGeneratingVoix] = useState(false);
   const [voixPreview, setVoixPreview] = useState<{
     lignes: { acteId: number | null; description: string; quantite: number; prixUnitaire: number; tvaRate: number; montantHT: number }[];
     totalHT: number;
@@ -481,36 +470,16 @@ function EtapeOrdonnanceActes({
     resume: string;
   } | null>(null);
 
-  const handleToggleMic = () => {
-    if (isListening) {
-      stopListening();
-    } else {
-      resetTranscript();
-      setVoixPreview(null);
-      startListening();
-    }
-  };
-
-  const handleGenererFactureVoix = async () => {
-    if (!transcript.trim()) {
-      toast({ title: "Aucune dictée enregistrée", variant: "destructive" });
-      return;
-    }
-    setIsGeneratingVoix(true);
-    try {
-      const res = await fetch("/api/ai/generer-facture-voix", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ transcript }),
-      });
-      if (!res.ok) throw new Error();
-      const data = await res.json();
-      setVoixPreview(data);
-    } catch {
-      toast({ title: "Erreur lors de la génération vocale de facture", variant: "destructive" });
-    } finally {
-      setIsGeneratingVoix(false);
-    }
+  const handleGenererFactureVoix = async (transcript: string) => {
+    setVoixPreview(null);
+    const res = await fetch("/api/ai/generer-facture-voix", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ transcript }),
+    });
+    if (!res.ok) throw new Error("Erreur lors de la génération vocale de facture");
+    const data = await res.json();
+    setVoixPreview(data);
   };
 
   const handleValiderVoix = async () => {
@@ -525,7 +494,6 @@ function EtapeOrdonnanceActes({
       }));
     onActesChange(newActes);
     setVoixPreview(null);
-    resetTranscript();
     await onGenerateFactureFromActes(newActes);
   };
 
@@ -710,58 +678,11 @@ function EtapeOrdonnanceActes({
             </div>
           ) : (
             <>
-              {isSupported && (
-                <div className="space-y-3 border rounded-xl p-4 bg-muted/20">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className={`w-2 h-2 rounded-full ${isListening ? "bg-red-500 animate-pulse" : "bg-muted-foreground/40"}`} />
-                      <span className="text-sm font-medium text-muted-foreground">
-                        {isListening ? "Enregistrement en cours..." : "Dictée vocale de facturation"}
-                      </span>
-                    </div>
-                    <Button
-                      type="button"
-                      variant={isListening ? "destructive" : "outline"}
-                      size="sm"
-                      onClick={handleToggleMic}
-                    >
-                      {isListening ? (
-                        <><MicOff className="mr-2 h-4 w-4" />Arrêter</>
-                      ) : (
-                        <><Mic className="mr-2 h-4 w-4" />Dicter ma facture</>
-                      )}
-                    </Button>
-                  </div>
-
-                  {(fullText || isListening) && (
-                    <div className={`min-h-[70px] rounded-lg border p-3 text-sm bg-background ${isListening ? "border-red-300 ring-1 ring-red-200" : "border-border"}`}>
-                      {fullText ? (
-                        <span>{fullText}</span>
-                      ) : (
-                        <span className="text-muted-foreground italic">
-                          Dictez les actes : "consultation, vaccin rage, amoxicilline 500mg pendant 7 jours"...
-                        </span>
-                      )}
-                    </div>
-                  )}
-
-                  {transcript && !isListening && (
-                    <Button
-                      type="button"
-                      size="sm"
-                      onClick={handleGenererFactureVoix}
-                      disabled={isGeneratingVoix}
-                      className="w-full bg-violet-600 hover:bg-violet-700 text-white"
-                    >
-                      {isGeneratingVoix ? (
-                        <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Analyse par Claude...</>
-                      ) : (
-                        <><Sparkles className="mr-2 h-4 w-4" />Générer la facture</>
-                      )}
-                    </Button>
-                  )}
-                </div>
-              )}
+              <VoiceRecorder
+                onAction={handleGenererFactureVoix}
+                actionLabel="Générer la facture"
+                placeholder='Dictez les actes : "consultation, vaccin rage, amoxicilline 500mg pendant 7 jours"...'
+              />
 
               {voixPreview && (
                 <div className="border rounded-xl overflow-hidden">

@@ -15,9 +15,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useUser } from "@clerk/react";
-import { ArrowLeft, ArrowRight, Sparkles, CheckCircle, Loader2, Mic, MicOff, FileText, X, Upload } from "lucide-react";
-import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
+import { ArrowLeft, ArrowRight, Sparkles, CheckCircle, Loader2, FileText, X, Upload } from "lucide-react";
 import { PatientBarre } from "@/components/PatientBarre";
+import { VoiceRecorder } from "@/components/VoiceRecorder";
 
 const ETAPES = [
   { id: 1, label: "Patient & Contexte" },
@@ -513,49 +513,17 @@ function Step2Anamnese({
   setAnamnese: (v: string) => void;
 }) {
   const { toast } = useToast();
-  const {
-    isListening,
-    isSupported,
-    fullText,
-    transcript,
-    startListening,
-    stopListening,
-    resetTranscript,
-  } = useSpeechRecognition("fr-FR");
 
-  const [isReformulating, setIsReformulating] = useState(false);
-
-  const handleToggleMic = () => {
-    if (isListening) {
-      stopListening();
-    } else {
-      resetTranscript();
-      startListening();
-    }
-  };
-
-  const handleReformuler = async () => {
-    if (!transcript.trim()) {
-      toast({ title: "Aucun texte à reformuler", variant: "destructive" });
-      return;
-    }
-    setIsReformulating(true);
-    try {
-      const res = await fetch("/api/ai/reformuler-anamnese", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ transcript }),
-      });
-      if (!res.ok) throw new Error();
-      const data = await res.json();
-      setAnamnese(data.anamnese);
-      resetTranscript();
-      toast({ title: "Anamnèse reformulée par Claude" });
-    } catch {
-      toast({ title: "Erreur lors de la reformulation", variant: "destructive" });
-    } finally {
-      setIsReformulating(false);
-    }
+  const handleReformuler = async (transcript: string) => {
+    const res = await fetch("/api/ai/reformuler-anamnese", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ transcript }),
+    });
+    if (!res.ok) throw new Error("Erreur lors de la reformulation");
+    const data = await res.json();
+    setAnamnese(data.anamnese);
+    toast({ title: "Anamnèse reformulée par Claude" });
   };
 
   return (
@@ -567,68 +535,9 @@ function Step2Anamnese({
         </p>
       </CardHeader>
       <CardContent className="space-y-4">
-        {isSupported && (
-          <div className="space-y-3 border rounded-xl p-4 bg-muted/20">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className={`w-2 h-2 rounded-full ${isListening ? "bg-red-500 animate-pulse" : "bg-muted-foreground/40"}`} />
-                <span className="text-sm font-medium text-muted-foreground">
-                  {isListening ? "Enregistrement en cours..." : "Dictée vocale"}
-                </span>
-              </div>
-              <Button
-                type="button"
-                variant={isListening ? "destructive" : "outline"}
-                size="sm"
-                onClick={handleToggleMic}
-              >
-                {isListening ? (
-                  <><MicOff className="mr-2 h-4 w-4" />Arrêter</>
-                ) : (
-                  <><Mic className="mr-2 h-4 w-4" />Enregistrer la consultation</>
-                )}
-              </Button>
-            </div>
-
-            {(fullText || isListening) && (
-              <div
-                className={`min-h-[80px] rounded-lg border p-3 text-sm bg-background ${
-                  isListening ? "border-red-300 ring-1 ring-red-200" : "border-border"
-                }`}
-              >
-                {fullText ? (
-                  <span>{fullText}</span>
-                ) : (
-                  <span className="text-muted-foreground italic">
-                    Parlez maintenant...
-                  </span>
-                )}
-              </div>
-            )}
-
-            {transcript && !isListening && (
-              <Button
-                type="button"
-                variant="default"
-                size="sm"
-                onClick={handleReformuler}
-                disabled={isReformulating}
-                className="w-full bg-violet-600 hover:bg-violet-700 text-white"
-              >
-                {isReformulating ? (
-                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Reformulation en cours...</>
-                ) : (
-                  <><Sparkles className="mr-2 h-4 w-4" />Reformuler avec l'IA</>
-                )}
-              </Button>
-            )}
-          </div>
-        )}
-
+        <VoiceRecorder onAction={handleReformuler} actionLabel="Reformuler avec l'IA" />
         <div>
-          <Label className="text-sm text-muted-foreground">
-            Anamnèse {isSupported ? "(ou saisie manuelle)" : ""}
-          </Label>
+          <Label>Anamnèse (ou saisie manuelle)</Label>
           <Textarea
             className="mt-1"
             rows={10}
@@ -656,46 +565,18 @@ function Step3ExamenClinique({
   setUploadedFiles: (fn: (prev: UploadedFile[]) => UploadedFile[]) => void;
 }) {
   const { toast } = useToast();
-  const {
-    isListening,
-    isSupported,
-    fullText,
-    transcript,
-    startListening,
-    stopListening,
-    resetTranscript,
-  } = useSpeechRecognition("fr-FR");
-
-  const [isStructuring, setIsStructuring] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
 
-  const handleToggleMic = () => {
-    if (isListening) stopListening();
-    else { resetTranscript(); startListening(); }
-  };
-
-  const handleStructurer = async () => {
-    if (!transcript.trim()) {
-      toast({ title: "Aucun texte à structurer", variant: "destructive" });
-      return;
-    }
-    setIsStructuring(true);
-    try {
-      const res = await fetch("/api/ai/structurer-examen-clinique", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ transcript }),
-      });
-      if (!res.ok) throw new Error();
-      const data = await res.json();
-      setStep3(f => ({ ...f, examenClinique: data.examenClinique }));
-      resetTranscript();
-      toast({ title: "Examen clinique structuré par Claude" });
-    } catch {
-      toast({ title: "Erreur lors de la structuration", variant: "destructive" });
-    } finally {
-      setIsStructuring(false);
-    }
+  const handleStructurer = async (transcript: string) => {
+    const res = await fetch("/api/ai/structurer-examen-clinique", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ transcript }),
+    });
+    if (!res.ok) throw new Error("Erreur lors de la structuration");
+    const data = await res.json();
+    setStep3(f => ({ ...f, examenClinique: data.examenClinique }));
+    toast({ title: "Examen clinique structuré par Claude" });
   };
 
   const handleFilesChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -761,54 +642,7 @@ function Step3ExamenClinique({
             </div>
           </div>
 
-          {isSupported && (
-            <div className="space-y-3 border rounded-xl p-4 bg-muted/20">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className={`w-2 h-2 rounded-full ${isListening ? "bg-red-500 animate-pulse" : "bg-muted-foreground/40"}`} />
-                  <span className="text-sm font-medium text-muted-foreground">
-                    {isListening ? "Enregistrement en cours..." : "Dicter mes observations"}
-                  </span>
-                </div>
-                <Button
-                  type="button"
-                  variant={isListening ? "destructive" : "outline"}
-                  size="sm"
-                  onClick={handleToggleMic}
-                >
-                  {isListening ? (
-                    <><MicOff className="mr-2 h-4 w-4" />Arrêter</>
-                  ) : (
-                    <><Mic className="mr-2 h-4 w-4" />Dicter mes observations</>
-                  )}
-                </Button>
-              </div>
-
-              {(fullText || isListening) && (
-                <div className={`min-h-[70px] rounded-lg border p-3 text-sm bg-background ${isListening ? "border-red-300 ring-1 ring-red-200" : "border-border"}`}>
-                  {fullText ? <span>{fullText}</span> : (
-                    <span className="text-muted-foreground italic">Parlez maintenant...</span>
-                  )}
-                </div>
-              )}
-
-              {transcript && !isListening && (
-                <Button
-                  type="button"
-                  size="sm"
-                  onClick={handleStructurer}
-                  disabled={isStructuring}
-                  className="w-full bg-violet-600 hover:bg-violet-700 text-white"
-                >
-                  {isStructuring ? (
-                    <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Structuration en cours...</>
-                  ) : (
-                    <><Sparkles className="mr-2 h-4 w-4" />Structurer avec l'IA</>
-                  )}
-                </Button>
-              )}
-            </div>
-          )}
+          <VoiceRecorder onAction={handleStructurer} actionLabel="Structurer avec l'IA" />
 
           <div>
             <Label>Examen clinique *</Label>

@@ -2,7 +2,8 @@ import { Router } from "express";
 import { db } from "@workspace/db";
 import { patientsTable, ownersTable, consultationsTable } from "@workspace/db";
 import { CreatePatientBody, GetPatientParams, UpdatePatientBody, UpdatePatientParams, DeletePatientParams, ListPatientsQueryParams, ListPatientConsultationsParams } from "@workspace/api-zod";
-import { eq, ilike, or, and } from "drizzle-orm";
+import { eq, ilike, or, and, asc } from "drizzle-orm";
+import { PAGINATION_DEFAULT_LIMIT, PAGINATION_MAX_LIMIT } from "../../lib/constants";
 
 const router = Router();
 
@@ -10,6 +11,11 @@ router.get("/", async (req, res) => {
   try {
     const query = ListPatientsQueryParams.safeParse(req.query);
     const { search, ownerId, espece } = query.success ? query.data : {};
+
+    const rawLimit = parseInt(req.query.limit as string || "");
+    const rawOffset = parseInt(req.query.offset as string || "0");
+    const limit = isNaN(rawLimit) ? PAGINATION_DEFAULT_LIMIT : Math.min(rawLimit, PAGINATION_MAX_LIMIT);
+    const offset = isNaN(rawOffset) ? 0 : rawOffset;
 
     const conditions = [];
     if (ownerId) conditions.push(eq(patientsTable.ownerId, ownerId));
@@ -50,19 +56,28 @@ router.get("/", async (req, res) => {
 
     let patients;
     if (search) {
-      patients = await baseQuery.where(
-        or(
+      patients = await baseQuery
+        .where(or(
           ilike(patientsTable.nom, `%${search}%`),
           ilike(patientsTable.espece, `%${search}%`),
           ilike(patientsTable.race, `%${search}%`),
           ilike(ownersTable.nom, `%${search}%`),
           ilike(ownersTable.prenom, `%${search}%`)
-        )
-      );
+        ))
+        .orderBy(asc(patientsTable.nom))
+        .limit(limit)
+        .offset(offset);
     } else if (conditions.length > 0) {
-      patients = await baseQuery.where(and(...conditions));
+      patients = await baseQuery
+        .where(and(...conditions))
+        .orderBy(asc(patientsTable.nom))
+        .limit(limit)
+        .offset(offset);
     } else {
-      patients = await baseQuery;
+      patients = await baseQuery
+        .orderBy(asc(patientsTable.nom))
+        .limit(limit)
+        .offset(offset);
     }
 
     return res.json(patients.map(p => ({
