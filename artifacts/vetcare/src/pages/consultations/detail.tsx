@@ -14,8 +14,9 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Brain, FileText, Sparkles, Check, ChevronRight, Plus, Trash2, Receipt } from "lucide-react";
+import { ArrowLeft, Brain, FileText, Sparkles, Check, ChevronRight, Plus, Trash2, Receipt, Mic, MicOff, Loader2 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
 
 const ETAPES = [
   { id: 1, label: "Anamnèse", icon: "📋" },
@@ -425,6 +426,75 @@ function EtapeOrdonnanceActes({
   onSaveActes, onGenerateOrdonnance, onGenerateFacture, totalHT, totalTTC,
   isGeneratingOrdonnance, isGeneratingFacture
 }: any) {
+  const { toast } = useToast();
+  const {
+    isListening,
+    isSupported,
+    fullText,
+    transcript,
+    startListening,
+    stopListening,
+    resetTranscript,
+  } = useSpeechRecognition("fr-FR");
+
+  const [isGeneratingVoix, setIsGeneratingVoix] = useState(false);
+  const [voixPreview, setVoixPreview] = useState<{
+    lignes: { acteId: number | null; description: string; quantite: number; prixUnitaire: number; tvaRate: number; montantHT: number }[];
+    totalHT: number;
+    totalTVA: number;
+    totalTTC: number;
+    resume: string;
+  } | null>(null);
+
+  const handleToggleMic = () => {
+    if (isListening) {
+      stopListening();
+    } else {
+      resetTranscript();
+      setVoixPreview(null);
+      startListening();
+    }
+  };
+
+  const handleGenererFactureVoix = async () => {
+    if (!transcript.trim()) {
+      toast({ title: "Aucune dictée enregistrée", variant: "destructive" });
+      return;
+    }
+    setIsGeneratingVoix(true);
+    try {
+      const res = await fetch("/api/ai/generer-facture-voix", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ transcript }),
+      });
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      setVoixPreview(data);
+    } catch {
+      toast({ title: "Erreur lors de la génération vocale de facture", variant: "destructive" });
+    } finally {
+      setIsGeneratingVoix(false);
+    }
+  };
+
+  const handleValiderVoix = async () => {
+    if (!voixPreview) return;
+    const newActes = voixPreview.lignes
+      .filter(l => l.acteId != null)
+      .map(l => ({
+        acteId: l.acteId as number,
+        quantite: l.quantite,
+        prixUnitaire: l.prixUnitaire,
+        description: l.description,
+      }));
+    onActesChange(newActes);
+    setVoixPreview(null);
+    resetTranscript();
+    toast({ title: "Actes importés depuis la dictée vocale" });
+    await onGenerateFacture();
+  };
+
   const updateActe = (idx: number, field: string, value: unknown) => {
     const updated = [...actes];
     updated[idx] = { ...updated[idx], [field]: value };
@@ -559,13 +629,120 @@ function EtapeOrdonnanceActes({
               </div>
             </div>
           ) : (
-            <p className="text-muted-foreground text-sm">Aucune facture générée</p>
-          )}
-          {!consultation.facture && (
-            <Button onClick={onGenerateFacture} disabled={isGeneratingFacture} variant="outline" className="w-full">
-              <Receipt className="mr-2 h-4 w-4" />
-              {isGeneratingFacture ? "Génération en cours..." : "Générer la facture automatiquement"}
-            </Button>
+            <>
+              {isSupported && (
+                <div className="space-y-3 border rounded-xl p-4 bg-muted/20">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className={`w-2 h-2 rounded-full ${isListening ? "bg-red-500 animate-pulse" : "bg-muted-foreground/40"}`} />
+                      <span className="text-sm font-medium text-muted-foreground">
+                        {isListening ? "Enregistrement en cours..." : "Dictée vocale de facturation"}
+                      </span>
+                    </div>
+                    <Button
+                      type="button"
+                      variant={isListening ? "destructive" : "outline"}
+                      size="sm"
+                      onClick={handleToggleMic}
+                    >
+                      {isListening ? (
+                        <><MicOff className="mr-2 h-4 w-4" />Arrêter</>
+                      ) : (
+                        <><Mic className="mr-2 h-4 w-4" />Dicter ma facture</>
+                      )}
+                    </Button>
+                  </div>
+
+                  {(fullText || isListening) && (
+                    <div className={`min-h-[70px] rounded-lg border p-3 text-sm bg-background ${isListening ? "border-red-300 ring-1 ring-red-200" : "border-border"}`}>
+                      {fullText ? (
+                        <span>{fullText}</span>
+                      ) : (
+                        <span className="text-muted-foreground italic">
+                          Dictez les actes : "consultation, vaccin rage, amoxicilline 500mg pendant 7 jours"...
+                        </span>
+                      )}
+                    </div>
+                  )}
+
+                  {transcript && !isListening && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={handleGenererFactureVoix}
+                      disabled={isGeneratingVoix}
+                      className="w-full bg-violet-600 hover:bg-violet-700 text-white"
+                    >
+                      {isGeneratingVoix ? (
+                        <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Analyse par Claude...</>
+                      ) : (
+                        <><Sparkles className="mr-2 h-4 w-4" />Générer la facture</>
+                      )}
+                    </Button>
+                  )}
+                </div>
+              )}
+
+              {voixPreview && (
+                <div className="border rounded-xl overflow-hidden">
+                  <div className="bg-violet-50 border-b border-violet-200 px-4 py-3">
+                    <div className="flex items-center gap-2 text-violet-800 font-medium text-sm">
+                      <Sparkles className="h-4 w-4" />
+                      Prévisualisation de la facture dictée
+                    </div>
+                    {voixPreview.resume && (
+                      <p className="text-xs text-violet-600 mt-1">{voixPreview.resume}</p>
+                    )}
+                  </div>
+                  <div className="p-4 space-y-2">
+                    {voixPreview.lignes.map((l, i) => (
+                      <div key={i} className="flex items-center justify-between text-sm py-1.5 border-b last:border-0">
+                        <div>
+                          <span className="font-medium">{l.description}</span>
+                          <span className="text-muted-foreground ml-2">× {l.quantite}</span>
+                          {l.acteId == null && (
+                            <span className="text-xs text-amber-600 ml-2">(acte libre)</span>
+                          )}
+                        </div>
+                        <span className="font-medium">{l.montantHT.toFixed(2)} € HT</span>
+                      </div>
+                    ))}
+                    <div className="pt-2 space-y-1 text-sm">
+                      <div className="flex justify-between text-muted-foreground">
+                        <span>Total HT</span><span>{voixPreview.totalHT.toFixed(2)} €</span>
+                      </div>
+                      <div className="flex justify-between text-muted-foreground">
+                        <span>TVA (20%)</span><span>{voixPreview.totalTVA.toFixed(2)} €</span>
+                      </div>
+                      <div className="flex justify-between font-bold border-t pt-1">
+                        <span>Total TTC</span><span>{voixPreview.totalTTC.toFixed(2)} €</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="px-4 pb-4 flex gap-2">
+                    <Button
+                      type="button"
+                      onClick={handleValiderVoix}
+                      disabled={isGeneratingFacture}
+                      className="flex-1"
+                    >
+                      <Check className="mr-2 h-4 w-4" />
+                      {isGeneratingFacture ? "Création..." : "Valider et créer la facture"}
+                    </Button>
+                    <Button type="button" variant="ghost" size="sm" onClick={() => setVoixPreview(null)}>
+                      Annuler
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {!voixPreview && (
+                <Button onClick={onGenerateFacture} disabled={isGeneratingFacture} variant="outline" className="w-full">
+                  <Receipt className="mr-2 h-4 w-4" />
+                  {isGeneratingFacture ? "Génération en cours..." : "Générer la facture depuis les actes"}
+                </Button>
+              )}
+            </>
           )}
         </CardContent>
       </Card>

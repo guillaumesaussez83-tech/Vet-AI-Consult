@@ -16,7 +16,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useUser } from "@clerk/react";
-import { ArrowLeft, ArrowRight, Sparkles, CheckCircle, Loader2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, Sparkles, CheckCircle, Loader2, Mic, MicOff } from "lucide-react";
+import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
 
 const ETAPES = [
   { id: 1, label: "Patient & Contexte" },
@@ -253,22 +254,10 @@ export default function NouvelleConsultationPage() {
 
       {/* Étape 2 — Anamnèse */}
       {etape === 2 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Anamnèse</CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Histoire clinique rapportée par le propriétaire
-            </p>
-          </CardHeader>
-          <CardContent>
-            <Textarea
-              rows={12}
-              value={step2.anamnese}
-              onChange={e => setStep2({ anamnese: e.target.value })}
-              placeholder="Décrivez l'histoire clinique : début des symptômes, évolution, contexte, traitements en cours, comportement alimentaire, hydratation, vaccination, environnement..."
-            />
-          </CardContent>
-        </Card>
+        <Step2Anamnese
+          anamnese={step2.anamnese}
+          setAnamnese={(v) => setStep2({ anamnese: v })}
+        />
       )}
 
       {/* Étape 3 — Examen clinique */}
@@ -511,5 +500,142 @@ export default function NouvelleConsultationPage() {
         )}
       </div>
     </div>
+  );
+}
+
+function Step2Anamnese({
+  anamnese,
+  setAnamnese,
+}: {
+  anamnese: string;
+  setAnamnese: (v: string) => void;
+}) {
+  const { toast } = useToast();
+  const {
+    isListening,
+    isSupported,
+    fullText,
+    transcript,
+    startListening,
+    stopListening,
+    resetTranscript,
+  } = useSpeechRecognition("fr-FR");
+
+  const [isReformulating, setIsReformulating] = useState(false);
+
+  const handleToggleMic = () => {
+    if (isListening) {
+      stopListening();
+    } else {
+      resetTranscript();
+      startListening();
+    }
+  };
+
+  const handleReformuler = async () => {
+    if (!transcript.trim()) {
+      toast({ title: "Aucun texte à reformuler", variant: "destructive" });
+      return;
+    }
+    setIsReformulating(true);
+    try {
+      const res = await fetch("/api/ai/reformuler-anamnese", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ transcript }),
+      });
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      setAnamnese(data.anamnese);
+      resetTranscript();
+      toast({ title: "Anamnèse reformulée par Claude" });
+    } catch {
+      toast({ title: "Erreur lors de la reformulation", variant: "destructive" });
+    } finally {
+      setIsReformulating(false);
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Anamnèse</CardTitle>
+        <p className="text-sm text-muted-foreground">
+          Histoire clinique rapportée par le propriétaire
+        </p>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {isSupported && (
+          <div className="space-y-3 border rounded-xl p-4 bg-muted/20">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className={`w-2 h-2 rounded-full ${isListening ? "bg-red-500 animate-pulse" : "bg-muted-foreground/40"}`} />
+                <span className="text-sm font-medium text-muted-foreground">
+                  {isListening ? "Enregistrement en cours..." : "Dictée vocale"}
+                </span>
+              </div>
+              <Button
+                type="button"
+                variant={isListening ? "destructive" : "outline"}
+                size="sm"
+                onClick={handleToggleMic}
+              >
+                {isListening ? (
+                  <><MicOff className="mr-2 h-4 w-4" />Arrêter</>
+                ) : (
+                  <><Mic className="mr-2 h-4 w-4" />Enregistrer la consultation</>
+                )}
+              </Button>
+            </div>
+
+            {(fullText || isListening) && (
+              <div
+                className={`min-h-[80px] rounded-lg border p-3 text-sm bg-background ${
+                  isListening ? "border-red-300 ring-1 ring-red-200" : "border-border"
+                }`}
+              >
+                {fullText ? (
+                  <span>{fullText}</span>
+                ) : (
+                  <span className="text-muted-foreground italic">
+                    Parlez maintenant...
+                  </span>
+                )}
+              </div>
+            )}
+
+            {transcript && !isListening && (
+              <Button
+                type="button"
+                variant="default"
+                size="sm"
+                onClick={handleReformuler}
+                disabled={isReformulating}
+                className="w-full bg-violet-600 hover:bg-violet-700 text-white"
+              >
+                {isReformulating ? (
+                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Reformulation en cours...</>
+                ) : (
+                  <><Sparkles className="mr-2 h-4 w-4" />Reformuler avec l'IA</>
+                )}
+              </Button>
+            )}
+          </div>
+        )}
+
+        <div>
+          <Label className="text-sm text-muted-foreground">
+            Anamnèse {isSupported ? "(ou saisie manuelle)" : ""}
+          </Label>
+          <Textarea
+            className="mt-1"
+            rows={10}
+            value={anamnese}
+            onChange={e => setAnamnese(e.target.value)}
+            placeholder="Décrivez l'histoire clinique : début des symptômes, évolution, contexte, traitements en cours, comportement alimentaire, hydratation, vaccination, environnement..."
+          />
+        </div>
+      </CardContent>
+    </Card>
   );
 }
