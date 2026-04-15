@@ -17,6 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Brain, FileText, Sparkles, Check, ChevronRight, Plus, Trash2, Receipt, Mic, MicOff, Loader2 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
+import { PatientBarre } from "@/components/PatientBarre";
 
 const ETAPES = [
   { id: 1, label: "Anamnèse", icon: "📋" },
@@ -193,6 +194,10 @@ export default function ConsultationDetailPage() {
           {consultation.statut === "en_attente" ? "En attente" : consultation.statut === "en_cours" ? "En cours" : "Terminée"}
         </Badge>
       </div>
+
+      {patient && (
+        <PatientBarre patient={patient as any} />
+      )}
 
       {/* Navigation étapes */}
       <div className="flex items-center gap-2 overflow-x-auto pb-2">

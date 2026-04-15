@@ -2,8 +2,10 @@ import { Router } from "express";
 import { anthropic } from "@workspace/integrations-anthropic-ai";
 import { db, actesTable } from "@workspace/db";
 import { GetDiagnosticIABody } from "@workspace/api-zod";
+import { ObjectStorageService } from "../../lib/objectStorage";
 
 const router = Router();
+const storage = new ObjectStorageService();
 
 router.post("/diagnostic", async (req, res) => {
   try {
@@ -76,6 +78,110 @@ Réponds UNIQUEMENT avec un objet JSON valide (sans bloc de code markdown) ayant
   }
 });
 
+router.post("/diagnostic-enrichi", async (req, res) => {
+  try {
+    const { espece, race, age, poids, sexe, sterilise, anamnese, examenClinique, examensComplementaires, antecedents, allergies, objectPaths } = req.body;
+    if (!anamnese || !examenClinique) {
+      return res.status(400).json({ error: "Anamnèse et examen clinique requis" });
+    }
+
+    const textBlock = {
+      type: "text" as const,
+      text: `Tu es un vétérinaire expert en médecine des animaux de compagnie. Analyse le cas clinique complet suivant (incluant les résultats d'examens complémentaires fournis en pièces jointes) et propose un diagnostic différentiel structuré et enrichi.
+
+INFORMATIONS SUR LE PATIENT :
+- Espèce : ${espece || "Non précisée"}${race ? ` (Race : ${race})` : ""}
+${age ? `- Âge : ${age}` : ""}
+${poids ? `- Poids : ${poids} kg` : ""}
+- Sexe : ${sexe || "Non précisé"}
+- Stérilisé : ${sterilise ? "Oui" : "Non"}
+${antecedents ? `- Antécédents médicaux : ${antecedents}` : ""}
+${allergies ? `- Allergies connues : ${allergies}` : ""}
+
+ANAMNÈSE :
+${anamnese}
+
+EXAMEN CLINIQUE :
+${examenClinique}
+
+${examensComplementaires ? `EXAMENS COMPLÉMENTAIRES (texte) :\n${examensComplementaires}` : ""}
+
+${objectPaths && objectPaths.length > 0 ? `Des fichiers joints (radios, échos, bilans sanguins) sont fournis ci-dessus pour compléter votre analyse.` : ""}
+
+Réponds UNIQUEMENT avec un objet JSON valide (sans bloc de code markdown) ayant cette structure exacte :
+{
+  "diagnostics": [
+    {"nom": "Nom du diagnostic 1", "probabilite": "Élevée/Modérée/Faible", "description": "Explication clinique concise basée sur tous les éléments"},
+    {"nom": "Nom du diagnostic 2", "probabilite": "Élevée/Modérée/Faible", "description": "Explication clinique concise"},
+    {"nom": "Nom du diagnostic 3", "probabilite": "Élevée/Modérée/Faible", "description": "Explication clinique concise"}
+  ],
+  "recommandations": "Recommandations thérapeutiques précises basées sur l'ensemble des données disponibles",
+  "urgence": "Urgence vitale/Urgence relative/Non urgent",
+  "texteComplet": "Analyse clinique complète et détaillée intégrant tous les résultats d'examens"
+}`,
+    };
+
+    const contentBlocks: any[] = [textBlock];
+
+    if (Array.isArray(objectPaths) && objectPaths.length > 0) {
+      for (const objPath of objectPaths) {
+        try {
+          const file = await storage.getObjectEntityFile(objPath);
+          const [buffer] = await file.download();
+          const base64 = buffer.toString("base64");
+          const [metadata] = await file.getMetadata();
+          const contentType = (metadata.contentType as string) || "image/jpeg";
+
+          if (contentType === "application/pdf") {
+            contentBlocks.push({
+              type: "document",
+              source: { type: "base64", media_type: "application/pdf", data: base64 },
+            });
+          } else if (["image/jpeg", "image/png", "image/gif", "image/webp"].includes(contentType)) {
+            contentBlocks.push({
+              type: "image",
+              source: { type: "base64", media_type: contentType, data: base64 },
+            });
+          }
+        } catch (fileErr) {
+          req.log.warn({ fileErr, objPath }, "Could not load file for enriched diagnostic");
+        }
+      }
+    }
+
+    const message = await anthropic.messages.create({
+      model: "claude-sonnet-4-6",
+      max_tokens: 8192,
+      messages: [{ role: "user", content: contentBlocks }],
+    });
+
+    const responseContent = message.content[0];
+    if (responseContent.type !== "text") {
+      return res.status(500).json({ error: "Erreur lors de la génération du diagnostic enrichi" });
+    }
+
+    let diagnostic;
+    try {
+      const text = responseContent.text.trim();
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) throw new Error("No JSON found");
+      diagnostic = JSON.parse(jsonMatch[0]);
+    } catch {
+      diagnostic = {
+        diagnostics: [{ nom: "Diagnostic indéterminé", probabilite: "Modérée", description: responseContent.text }],
+        recommandations: "Consulter un spécialiste pour une évaluation approfondie",
+        urgence: "Non urgent",
+        texteComplet: responseContent.text,
+      };
+    }
+
+    return res.json(diagnostic);
+  } catch (err) {
+    req.log.error(err);
+    return res.status(500).json({ error: "Erreur lors du diagnostic enrichi" });
+  }
+});
+
 router.post("/reformuler-anamnese", async (req, res) => {
   try {
     const { transcript } = req.body;
@@ -112,6 +218,100 @@ Réponds UNIQUEMENT avec l'anamnèse reformulée, sans introduction ni commentai
   } catch (err) {
     req.log.error(err);
     return res.status(500).json({ error: "Erreur lors de la reformulation de l'anamnèse" });
+  }
+});
+
+router.post("/structurer-examen-clinique", async (req, res) => {
+  try {
+    const { transcript } = req.body;
+    if (!transcript || typeof transcript !== "string" || !transcript.trim()) {
+      return res.status(400).json({ error: "Le transcript est requis" });
+    }
+
+    const prompt = `Tu es un vétérinaire qui dicte ses notes d'examen clinique. Le texte suivant est une transcription brute de ses observations pendant l'examen physique d'un animal.
+
+TRANSCRIPTION BRUTE :
+${transcript}
+
+Reformule et structure ce texte en un examen clinique vétérinaire complet et professionnel. Le texte doit impérativement couvrir les éléments mentionnés et être organisé selon la structure classique :
+- État général (attitude, état d'alerte, condition corporelle)
+- Muqueuses (couleur, temps de recoloration capillaire)
+- Paramètres vitaux (fréquence cardiaque, fréquence respiratoire, température si mentionnée)
+- Auscultation cardiaque et pulmonaire
+- Palpation abdominale
+- Système locomoteur et posture
+- Peau, pelage et phanères
+- Ganglions lymphatiques
+- Autres observations pertinentes
+
+Garde uniquement ce qui est mentionné dans la transcription. N'invente aucune donnée.
+Réponds UNIQUEMENT avec l'examen clinique structuré, sans introduction ni commentaire.`;
+
+    const message = await anthropic.messages.create({
+      model: "claude-sonnet-4-6",
+      max_tokens: 2048,
+      messages: [{ role: "user", content: prompt }],
+    });
+
+    const content = message.content[0];
+    if (content.type !== "text") {
+      return res.status(500).json({ error: "Erreur lors de la structuration" });
+    }
+
+    return res.json({ examenClinique: content.text.trim() });
+  } catch (err) {
+    req.log.error(err);
+    return res.status(500).json({ error: "Erreur lors de la structuration de l'examen clinique" });
+  }
+});
+
+router.post("/resume-client", async (req, res) => {
+  try {
+    const { diagnostic, ordonnance, notes, espece, nomAnimal, nomProprietaire } = req.body;
+    if (!diagnostic && !ordonnance) {
+      return res.status(400).json({ error: "Diagnostic ou ordonnance requis" });
+    }
+
+    const prompt = `Tu es un vétérinaire bienveillant et pédagogue. Tu dois rédiger un résumé de consultation destiné au propriétaire d'un animal de compagnie. Ce résumé doit être écrit en langage simple, sans jargon médical, pour que le propriétaire comprenne bien ce qui s'est passé et l'importance du traitement.
+
+INFORMATIONS :
+${nomAnimal ? `- Nom de l'animal : ${nomAnimal}` : ""}
+${espece ? `- Espèce : ${espece}` : ""}
+${nomProprietaire ? `- Propriétaire : ${nomProprietaire}` : ""}
+
+DIAGNOSTIC MÉDICAL :
+${diagnostic || "Non précisé"}
+
+ORDONNANCE :
+${ordonnance || "Aucune prescription"}
+
+${notes ? `NOTES COMPLÉMENTAIRES :\n${notes}` : ""}
+
+Rédige un résumé de consultation destiné au propriétaire avec les sections suivantes :
+1. Ce que nous avons fait lors de cette consultation (examen réalisé, de façon simple)
+2. Ce que nous avons trouvé (le diagnostic expliqué simplement, le pronostic)
+3. Le traitement prescrit (chaque médicament expliqué simplement : pourquoi, comment donner, pendant combien de temps)
+4. Les points d'attention importants (signes à surveiller, quand rappeler ou revenir)
+5. Un message de conclusion rassurant et encourageant
+
+Le ton doit être chaleureux, professionnel et rassurant. Écris en "nous" (la clinique vétérinaire). Évite tout terme médical sans explication.
+Réponds UNIQUEMENT avec le résumé, sans introduction ni commentaire.`;
+
+    const message = await anthropic.messages.create({
+      model: "claude-sonnet-4-6",
+      max_tokens: 2048,
+      messages: [{ role: "user", content: prompt }],
+    });
+
+    const content = message.content[0];
+    if (content.type !== "text") {
+      return res.status(500).json({ error: "Erreur lors de la génération du résumé" });
+    }
+
+    return res.json({ resume: content.text.trim() });
+  } catch (err) {
+    req.log.error(err);
+    return res.status(500).json({ error: "Erreur lors de la génération du résumé client" });
   }
 });
 

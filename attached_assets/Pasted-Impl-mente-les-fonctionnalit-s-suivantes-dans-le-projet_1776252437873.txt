@@ -1,0 +1,11 @@
+Implémente les fonctionnalités suivantes dans le projet :
+1. DICTÉE VÉTÉRINAIRE - Examen clinique (étape 3 du wizard)
+Dans l'étape 3 (Examen Clinique) de nouvelle.tsx, ajoute un bouton microphone "🎤 Dicter mes observations" identique au bouton anamnèse. Le vétérinaire dicte ce qu'il a vu et constaté pendant l'examen. Un bouton "✨ Structurer avec l'IA" envoie le transcript à POST /api/ai/structurer-examen-clinique. Claude reformate en examen clinique vétérinaire structuré (état général, auscultation, palpation, muqueuses, etc.) et remplit automatiquement les textareas examenClinique.
+2. UPLOAD DE FICHIERS - Examens complémentaires (étape 3)
+Dans l'étape 3, ajoute une zone d'upload de fichiers qui accepte JPG, PNG, PDF. Libellé : "📎 Ajouter bilans sanguins, écho, radio". Stocke les fichiers via Replit App Storage. Affiche les miniatures/noms des fichiers uploadés avec bouton de suppression.
+3. DIAGNOSTIC IA ENRICHI (étape 4)
+Modifie le bouton "Générer diagnostic IA" pour qu'il envoie à POST /api/ai/diagnostic-enrichi : l'anamnèse, l'examen clinique, les examens complémentaires texte, ET les fichiers uploadés (images et PDFs). Claude analyse tout (il peut lire les images et les PDFs via l'API Anthropic vision) et génère un diagnostic différentiel plus précis basé sur l'ensemble des données.
+4. RÉSUMÉ CLIENT VULGARISÉ (étape 5)
+Dans l'étape 5 (Ordonnance), ajoute un bouton "📄 Générer résumé client" qui envoie à POST /api/ai/resume-client : le diagnostic retenu, l'ordonnance, les notes. Claude génère un texte simple et bienveillant pour le propriétaire expliquant en langage non médical : ce qui a été fait pendant la consultation, le diagnostic, le pronostic et l'importance du traitement prescrit. Affiche ce résumé dans une zone dédiée avec un bouton "Imprimer / Envoyer par email".
+5. BARRE PATIENT EN HAUT
+Sur toutes les pages de consultation (nouvelle.tsx et detail.tsx), ajoute une barre fixe en haut affichant : photo de l'animal (si disponible), nom, espèce, race, âge calculé automatiquement depuis la date de naissance, poids (si saisi), sexe, statut stérilisé. Ces données viennent du patient sélectionné.

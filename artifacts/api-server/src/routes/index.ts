@@ -7,6 +7,7 @@ import actesRouter from "./actes";
 import facturesRouter from "./factures";
 import aiRouter from "./ai";
 import dashboardRouter from "./dashboard";
+import storageRouter from "./storage";
 
 const router: IRouter = Router();
 
@@ -18,5 +19,6 @@ router.use("/actes", actesRouter);
 router.use("/factures", facturesRouter);
 router.use("/ai", aiRouter);
 router.use("/dashboard", dashboardRouter);
+router.use(storageRouter);
 
 export default router;
