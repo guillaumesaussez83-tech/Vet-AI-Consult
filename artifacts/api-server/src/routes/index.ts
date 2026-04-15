@@ -8,6 +8,7 @@ import facturesRouter from "./factures";
 import aiRouter from "./ai";
 import dashboardRouter from "./dashboard";
 import storageRouter from "./storage";
+import rappelsRouter from "./rappels";
 
 const router: IRouter = Router();
 
@@ -19,6 +20,7 @@ router.use("/actes", actesRouter);
 router.use("/factures", facturesRouter);
 router.use("/ai", aiRouter);
 router.use("/dashboard", dashboardRouter);
+router.use("/rappels", rappelsRouter);
 router.use(storageRouter);
 
 export default router;

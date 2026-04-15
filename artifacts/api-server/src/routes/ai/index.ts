@@ -385,7 +385,19 @@ Réponds UNIQUEMENT avec un JSON valide (sans markdown) de cette forme exacte :
       return res.status(500).json({ error: "Impossible de parser la réponse de l'IA" });
     }
 
-    return res.json(result);
+    const actesPrices = new Map(actes.map(a => [a.id, a.prixDefaut]));
+    const lignesCorrigees = (result.lignes ?? []).map((l: any) => {
+      const prix = l.acteId != null && actesPrices.has(l.acteId)
+        ? (actesPrices.get(l.acteId) ?? l.prixUnitaire)
+        : (l.prixUnitaire ?? 0);
+      const montantHT = prix * (l.quantite ?? 1);
+      return { ...l, prixUnitaire: prix, montantHT };
+    });
+    const totalHT = lignesCorrigees.reduce((s: number, l: any) => s + l.montantHT, 0);
+    const totalTVA = totalHT * 0.20;
+    const totalTTC = totalHT + totalTVA;
+
+    return res.json({ ...result, lignes: lignesCorrigees, totalHT, totalTVA, totalTTC });
   } catch (err) {
     req.log.error(err);
     return res.status(500).json({ error: "Erreur lors de la génération de la facture vocale" });

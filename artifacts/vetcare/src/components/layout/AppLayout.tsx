@@ -4,15 +4,15 @@ import { useUser, useClerk } from "@clerk/react";
 import { 
   Activity, 
   Users, 
-  Calendar, 
   FileText, 
   Settings, 
   LogOut,
   Stethoscope,
   StethoscopeIcon,
   Syringe,
-  Pill,
-  Menu
+  Menu,
+  Euro,
+  Bell
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -26,7 +26,9 @@ export function AppLayout({ children }: { children: ReactNode }) {
     { name: "Tableau de bord", href: "/dashboard", icon: Activity },
     { name: "Patients", href: "/patients", icon: Users },
     { name: "Consultations", href: "/consultations", icon: Stethoscope },
-    { name: "Factures", href: "/factures", icon: FileText },
+    { name: "Facturation", href: "/factures", icon: FileText },
+    { name: "Encaissements", href: "/encaissements", icon: Euro },
+    { name: "Rappels", href: "/rappels", icon: Bell },
     { name: "Actes & Produits", href: "/actes", icon: Syringe },
     { name: "Paramètres", href: "/parametres", icon: Settings },
   ];

@@ -21,6 +21,8 @@ import FactureDetailPage from "./pages/factures/detail";
 import FactureImprimerPage from "./pages/factures/imprimer";
 import ActesPage from "./pages/actes/index";
 import ParametresPage from "./pages/parametres/index";
+import EncaissementsPage from "./pages/encaissements/index";
+import RappelsPage from "./pages/rappels/index";
 import { AppLayout } from "./components/layout/AppLayout";
 import NotFound from "@/pages/not-found";
 
@@ -114,6 +116,8 @@ function Router() {
       <Route path="/factures" component={() => <ProtectedRoute component={FacturesPage} />} />
 
       <Route path="/actes" component={() => <ProtectedRoute component={ActesPage} />} />
+      <Route path="/encaissements" component={() => <ProtectedRoute component={EncaissementsPage} />} />
+      <Route path="/rappels" component={() => <ProtectedRoute component={RappelsPage} />} />
       <Route path="/parametres" component={() => <ProtectedRoute component={ParametresPage} />} />
 
       <Route component={NotFound} />

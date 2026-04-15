@@ -221,6 +221,9 @@ router.patch("/:id", async (req, res) => {
     if (body.data.datePaiement) {
       updateData.datePaiement = body.data.datePaiement;
     }
+    if ((req.body as any).modePaiement) {
+      updateData.modePaiement = (req.body as any).modePaiement;
+    }
 
     const [facture] = await db.update(facturesTable).set(updateData).where(eq(facturesTable.id, params.data.id)).returning();
     if (!facture) return res.status(404).json({ error: "Facture non trouvée" });

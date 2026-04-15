@@ -1,0 +1,21 @@
+Voici le prompt à coller dans Replit :
+Refonte complète du module facturation + corrections bugs + amélioration patients. Tout en une fois.
+BUG 1 — Facture vocale à zéro : L'endpoint /api/ai/generer-facture-voix crée des lignes avec total 0. Corriger : les actes identifiés doivent récupérer leurs prix depuis la base de données. Calculer correctement HT, TVA 20%, TTC pour chaque ligne et le total général.
+BUG 2 — Annuler et recommencer une facture : Sur la page détail consultation, ajouter un bouton "🗑️ Annuler la facture" avec confirmation. Supprime la facture + ses lignes. Remet à zéro pour permettre une nouvelle dictée.
+REFONTE MODULE FACTURATION — page /factures :
+Créer une page facturation complète avec 4 onglets :
+
+"À facturer" : consultations terminées sans facture, bouton créer facture pour chacune
+"À régler / encaisser" : factures créées mais non payées, avec montant dû en rouge, bouton "Encaisser"
+"Historique" : toutes les factures payées avec filtres date/client
+"Devis" : liste des devis (statut en attente/accepté/refusé)
+
+Pour chaque facture, afficher : numéro, date, client, animal, montant HT, TVA, TTC, statut (badge coloré). Boutons : Voir | Imprimer | Annuler.
+IMPRESSION FACTURE — page /factures/[id]/imprimer :
+Page d'impression avec CSS print. Contenu : en-tête clinique (nom, adresse, téléphone, email, IBAN), infos client (nom, adresse), infos patient (nom, espèce, race), tableau lignes (libellé, qté, PU HT, PU TTC, total HT, total TTC), récapitulatif par catégorie (Acte / Médicament / Matériel), tableau TVA 20%, Total HT + Total TVA + Total TTC en gras, mentions légales (SELAS, capital, RCS, N°TVA, NAF 7500Z), "Non valable pour encaissement" si devis. Bouton imprimer (window.print()).
+ENCAISSEMENTS — page /encaissements :
+Liste de tous les paiements reçus avec : date/heure, client, montant TTC, mode de paiement (CB/Espèces/Chèque/Virement), statut. Totaux en bas par mode de paiement. Bouton "Encaisser" ouvre modal avec choix du mode de paiement.
+CHAMPS PATIENT MANQUANTS :
+Ajouter dans la table patients et le formulaire patient : numéro de puce électronique (transpondeur), numéro de passeport, assurance (booléen + champ nom compagnie si oui), agressif (booléen). Dans toute l'interface où l'animal apparaît (header consultation, liste, fiche) : si agressif=true, afficher badge rouge "⚠️ AGRESSIF" très visible et contour rouge sur la photo/avatar. C'est une sécurité critique pour l'équipe.
+RAPPELS AUTOMATIQUES — page /rappels :
+Module simple de rappels préventifs. Permettre de créer des modèles de rappel (ex: "Vaccin annuel", "Examen senior", "Leishmaniose") avec périodicité en jours. Afficher la liste des animaux qui devraient être rappelés selon leur dernière consultation de ce type. Bouton "Envoyer rappel" (email simulé pour l'instant).
