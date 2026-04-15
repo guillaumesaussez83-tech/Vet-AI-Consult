@@ -15,6 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Brain, FileText, Sparkles, Check, ChevronRight, Plus, Trash2, Receipt, Loader2, Printer } from "lucide-react";
+import { AnesthesieSection } from "@/components/AnesthesieSection";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PatientBarre } from "@/components/PatientBarre";
 import { VoiceRecorder } from "@/components/VoiceRecorder";
@@ -303,6 +304,14 @@ export default function ConsultationDetailPage() {
           isGeneratingFacture={generateFacture.isPending}
         />
       )}
+
+      <AnesthesieSection
+        consultationId={consultation.id}
+        espece={consultation.patient?.espece}
+        race={consultation.patient?.race ?? undefined}
+        poids={consultation.patient?.poids ?? undefined}
+        diagnostic={consultation.diagnostic ?? undefined}
+      />
     </div>
   );
 }

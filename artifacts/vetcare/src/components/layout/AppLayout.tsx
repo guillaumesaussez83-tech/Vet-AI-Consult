@@ -12,7 +12,11 @@ import {
   Syringe,
   Menu,
   Euro,
-  Bell
+  Bell,
+  CalendarDays,
+  Package,
+  BarChart2,
+  Award,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -24,11 +28,15 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
   const navigation = [
     { name: "Tableau de bord", href: "/dashboard", icon: Activity },
+    { name: "Statistiques", href: "/statistiques", icon: BarChart2 },
+    { name: "Agenda", href: "/agenda", icon: CalendarDays },
     { name: "Patients", href: "/patients", icon: Users },
     { name: "Consultations", href: "/consultations", icon: Stethoscope },
+    { name: "Certificats", href: "/certificats", icon: Award },
     { name: "Facturation", href: "/factures", icon: FileText },
     { name: "Encaissements", href: "/encaissements", icon: Euro },
     { name: "Rappels", href: "/rappels", icon: Bell },
+    { name: "Stock", href: "/stock", icon: Package },
     { name: "Actes & Produits", href: "/actes", icon: Syringe },
     { name: "Paramètres", href: "/parametres", icon: Settings },
   ];

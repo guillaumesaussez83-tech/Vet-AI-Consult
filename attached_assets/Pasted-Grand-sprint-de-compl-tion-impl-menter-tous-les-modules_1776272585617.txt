@@ -1,0 +1,37 @@
+Grand sprint de complétion — implémenter tous les modules métier manquants pour que VétoAI remplace complètement GMVet.
+MODULE 1 — VACCINATIONS (priorité absolue, obligation légale)
+Créer une table vaccinations en DB : id, patient_id, nom_vaccin, date_injection, date_rappel, lot_numero, fabricant, voie_injection, veterinaire_id, notes. Créer la page /patients/[id]/vaccinations avec : timeline visuelle de l'historique vaccinal par animal, badge rouge "RAPPEL EN RETARD" si date_rappel dépassée, badge orange "RAPPEL DANS 30 JOURS" si rappel imminent. Bouton "Ajouter vaccination" avec formulaire complet. Générer automatiquement via Claude un carnet de santé numérique en PDF pour chaque animal avec tous ses vaccins, format officiel avec nom du propriétaire, adresse clinique, signature vétérinaire. Ce PDF doit aussi être accessible depuis la fiche consultation et la page patient.
+MODULE 2 — STOCK MÉDICAMENTS
+Créer une table stock_medicaments : id, nom, reference, quantite_stock, quantite_minimum, prix_achat_ht, prix_vente_ttc, fournisseur, date_peremption, emplacement. Page /stock avec : liste des médicaments avec stock actuel, badge rouge si stock < quantite_minimum, badge orange si péremption < 90 jours. Quand une facture est validée et contient un médicament, décrémenter automatiquement le stock du médicament correspondant (matching par nom ou référence). Bouton "Commander" qui génère une liste de commande PDF pour les médicaments sous le seuil minimum. Historique des mouvements de stock (entrées/sorties avec dates et motifs).
+MODULE 3 — TABLEAU DE BORD STATISTIQUES
+Page /statistiques avec 4 sections :
+
+KPIs du jour : CA aujourd'hui (HT et TTC), nombre de consultations, nombre de factures émises, taux d'encaissement
+Performance mensuelle : graphique courbe sur 12 mois du CA TTC, comparaison mois N vs mois N-1
+Top 10 actes : tableau des actes les plus facturés en volume et en valeur ce mois
+Par vétérinaire : CA par praticien, nombre de consultations, panier moyen — essentiel pour le management MonVeto
+
+Utiliser recharts pour les graphiques (déjà disponible). Toutes les données calculées depuis les factures et consultations existantes en base.
+MODULE 4 — PROTOCOLES ANESTHÉSIQUES
+Dans la page de détail consultation, ajouter un onglet "Anesthésie" visible uniquement si l'acte de la consultation contient de l'anesthésie ou chirurgie. Formulaire structuré avec : poids exact, prémédication (molécule + dose + voie), induction (molécule + dose), maintenance (agent + %), monitoring (FC, FR, SpO2, température toutes les 15min — tableau avec lignes horodatées), réveil (heure, score de réveil 1-5), complications éventuelles. Ce protocole est généré en PDF horodaté et signé numériquement par le vétérinaire. C'est un document médico-légal — il doit être stocké et non modifiable après signature.
+MODULE 5 — CERTIFICATS VÉTÉRINAIRES IA
+Page /certificats avec 5 templates générés par Claude à partir du dossier patient :
+
+Certificat de bonne santé (voyage UE) — mentionne vaccins, puce, état général, date examen
+Certificat de cession (vente animal) — état de santé, vaccins, vermifugations, absence de pathologie connue
+Certificat d'aptitude (concours, élevage) — examen complet
+Attestation de soins (assurance) — liste des actes effectués, diagnostic, pronostic
+Ordonnance sécurisée — format conforme avec numéro d'identification vétérinaire, date, posologie détaillée, durée de traitement, mention "Usage vétérinaire uniquement"
+
+Chaque certificat : bouton "Générer avec l'IA" → Claude remplit le template avec les données du dossier → prévisualisation → PDF téléchargeable avec logo clinique et signature.
+MODULE 6 — AGENDA ET RENDEZ-VOUS
+Page /agenda avec vue calendrier (semaine/jour). Créer table rendez_vous : id, date_heure, duree_minutes, patient_id, proprietaire_id, veterinaire_id, motif, statut (planifié/confirmé/annulé/honoré/absent). Depuis le calendrier : clic sur un créneau = créer RDV, clic sur un RDV existant = voir détails/modifier/annuler. Bouton "Nouveau RDV" avec formulaire : sélection propriétaire → sélection patient → vétérinaire → date/heure → motif → durée. Depuis une fiche patient : voir ses prochains RDV. Quand un RDV passe au statut "honoré" → bouton "Créer consultation" qui pré-remplit la consultation avec patient et vétérinaire.
+MODULE 7 — PORTAIL PROPRIÉTAIRE (fondations)
+Créer une route publique /portail/[token] avec un token unique par propriétaire. Sur cette page le propriétaire voit : liste de ses animaux avec leur photo, pour chaque animal : dernière consultation (résumé vulgarisé), vaccins à jour ou en retard, ordonnances actives avec posologie. Pas de login complexe — le token suffit (comme un lien magique envoyé par email/SMS). Ajouter dans la fiche propriétaire un bouton "Envoyer lien portail" qui copie l'URL unique. C'est la fondation pour l'app mobile Phase 2.
+MODULE 8 — AMÉLIORATIONS UX GLOBALES
+
+Barre de recherche globale en haut qui cherche simultanément dans patients, propriétaires et consultations
+Raccourcis clavier : N = nouvelle consultation, P = nouveau patient, F = nouvelle facture
+Mode sombre (toggle en haut à droite)
+Sur mobile (responsive) : navigation hamburger, wizard consultation adapté tactile
+Notifications in-app : rappels vaccins dus aujourd'hui, factures non payées > 30 jours, stock critique

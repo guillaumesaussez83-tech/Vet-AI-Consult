@@ -23,6 +23,12 @@ import ActesPage from "./pages/actes/index";
 import ParametresPage from "./pages/parametres/index";
 import EncaissementsPage from "./pages/encaissements/index";
 import RappelsPage from "./pages/rappels/index";
+import StatistiquesPage from "./pages/statistiques/index";
+import StockPage from "./pages/stock/index";
+import AgendaPage from "./pages/agenda/index";
+import CertificatsPage from "./pages/certificats/index";
+import VaccinationsPage from "./pages/vaccinations/index";
+import PortailPage from "./pages/portail/index";
 import { AppLayout } from "./components/layout/AppLayout";
 import NotFound from "@/pages/not-found";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
@@ -120,6 +126,12 @@ function Router() {
       <Route path="/encaissements" component={() => <ProtectedRoute component={EncaissementsPage} />} />
       <Route path="/rappels" component={() => <ProtectedRoute component={RappelsPage} />} />
       <Route path="/parametres" component={() => <ProtectedRoute component={ParametresPage} />} />
+      <Route path="/statistiques" component={() => <ProtectedRoute component={StatistiquesPage} />} />
+      <Route path="/stock" component={() => <ProtectedRoute component={StockPage} />} />
+      <Route path="/agenda" component={() => <ProtectedRoute component={AgendaPage} />} />
+      <Route path="/certificats" component={() => <ProtectedRoute component={CertificatsPage} />} />
+      <Route path="/patients/:id/vaccinations" component={() => <ProtectedRoute component={VaccinationsPage} />} />
+      <Route path="/portail/:token" component={PortailPage} />
 
       <Route component={NotFound} />
     </Switch>

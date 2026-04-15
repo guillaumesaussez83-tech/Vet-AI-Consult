@@ -5,3 +5,8 @@ export * from "./consultations";
 export * from "./actes-consultations";
 export * from "./factures";
 export * from "./rappels";
+export * from "./vaccinations";
+export * from "./stock-medicaments";
+export * from "./rendez-vous";
+export * from "./anesthesie-protocoles";
+export * from "./portail-tokens";
