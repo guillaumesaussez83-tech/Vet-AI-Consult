@@ -18,6 +18,7 @@ import NouvelleConsultationPage from "./pages/consultations/nouvelle";
 import ConsultationDetailPage from "./pages/consultations/detail";
 import FacturesPage from "./pages/factures/index";
 import FactureDetailPage from "./pages/factures/detail";
+import FactureImprimerPage from "./pages/factures/imprimer";
 import ActesPage from "./pages/actes/index";
 import ParametresPage from "./pages/parametres/index";
 import { AppLayout } from "./components/layout/AppLayout";
@@ -103,6 +104,12 @@ function Router() {
       <Route path="/consultations/:id" component={() => <ProtectedRoute component={ConsultationDetailPage} />} />
       <Route path="/consultations" component={() => <ProtectedRoute component={ConsultationsPage} />} />
 
+      <Route path="/factures/:id/imprimer" component={() => (
+        <>
+          <Show when="signed-in"><FactureImprimerPage /></Show>
+          <Show when="signed-out"><Redirect to="/sign-in" /></Show>
+        </>
+      )} />
       <Route path="/factures/:id" component={() => <ProtectedRoute component={FactureDetailPage} />} />
       <Route path="/factures" component={() => <ProtectedRoute component={FacturesPage} />} />
 

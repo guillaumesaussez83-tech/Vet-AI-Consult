@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { facturesTable, consultationsTable, patientsTable, ownersTable } from "@workspace/db";
+import { facturesTable, consultationsTable, patientsTable, ownersTable, actesConsultationsTable, actesTable } from "@workspace/db";
 import { GetFactureParams, UpdateFactureStatutParams, UpdateFactureStatutBody, ListFacturesQueryParams } from "@workspace/api-zod";
 import { eq } from "drizzle-orm";
 
@@ -149,9 +149,32 @@ router.get("/:id", async (req, res) => {
       .leftJoin(ownersTable, eq(patientsTable.ownerId, ownersTable.id))
       .where(eq(consultationsTable.id, facture.consultationId));
 
+    const lignes = await db
+      .select({
+        id: actesConsultationsTable.id,
+        acteId: actesConsultationsTable.acteId,
+        quantite: actesConsultationsTable.quantite,
+        prixUnitaire: actesConsultationsTable.prixUnitaire,
+        description: actesConsultationsTable.description,
+        acte: {
+          nom: actesTable.nom,
+          categorie: actesTable.categorie,
+          code: actesTable.code,
+        },
+      })
+      .from(actesConsultationsTable)
+      .leftJoin(actesTable, eq(actesConsultationsTable.acteId, actesTable.id))
+      .where(eq(actesConsultationsTable.consultationId, facture.consultationId));
+
     return res.json({
       ...facture,
       createdAt: facture.createdAt.toISOString(),
+      lignes: lignes.map(l => ({
+        ...l,
+        montantHT: l.prixUnitaire * l.quantite,
+        montantTTC: l.prixUnitaire * l.quantite * 1.2,
+        tvaRate: 20,
+      })),
       consultation: consultation ? {
         ...consultation,
         createdAt: consultation.createdAt.toISOString(),
@@ -168,6 +191,21 @@ router.get("/:id", async (req, res) => {
   } catch (err) {
     req.log.error(err);
     return res.status(500).json({ error: "Erreur interne du serveur" });
+  }
+});
+
+router.delete("/:id", async (req, res) => {
+  try {
+    const params = GetFactureParams.safeParse({ id: Number(req.params.id) });
+    if (!params.success) return res.status(400).json({ error: "ID invalide" });
+
+    const [deleted] = await db.delete(facturesTable).where(eq(facturesTable.id, params.data.id)).returning();
+    if (!deleted) return res.status(404).json({ error: "Facture non trouvée" });
+
+    return res.json({ success: true });
+  } catch (err) {
+    req.log.error(err);
+    return res.status(500).json({ error: "Erreur lors de la suppression" });
   }
 });
 

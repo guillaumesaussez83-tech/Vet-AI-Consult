@@ -89,15 +89,22 @@ export default function PatientsPage() {
           {patients.map((patient) => {
             const Icon = especeIcon[patient.espece] ?? Dog;
             return (
-              <Card key={patient.id} className="hover-elevate transition-all">
+              <Card key={patient.id} className={`hover-elevate transition-all ${(patient as any).agressif ? "border-red-400 bg-red-50" : ""}`}>
                 <CardContent className="p-5">
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center gap-3">
-                      <div className="bg-primary/10 rounded-full p-2">
-                        <Icon className="h-5 w-5 text-primary" />
+                      <div className={`rounded-full p-2 ${(patient as any).agressif ? "bg-red-100" : "bg-primary/10"}`}>
+                        <Icon className={`h-5 w-5 ${(patient as any).agressif ? "text-red-600" : "text-primary"}`} />
                       </div>
                       <div>
-                        <h3 className="font-semibold text-lg">{patient.nom}</h3>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h3 className="font-semibold text-lg">{patient.nom}</h3>
+                          {(patient as any).agressif && (
+                            <span className="inline-flex items-center bg-red-600 text-white text-xs font-bold px-2 py-0.5 rounded tracking-wide">
+                              AGRESSIF
+                            </span>
+                          )}
+                        </div>
                         <p className="text-sm text-muted-foreground">
                           {patient.race || especeLabel[patient.espece] || patient.espece}
                         </p>

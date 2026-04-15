@@ -53,6 +53,12 @@ export default function FactureDetailPage() {
         <Badge variant={facture.statut === "payee" ? "outline" : facture.statut === "annulee" ? "destructive" : "secondary"}>
           {statutLabels[facture.statut] ?? facture.statut}
         </Badge>
+        <Link href={`/factures/${id}/imprimer`}>
+          <Button variant="outline" size="sm">
+            <Printer className="mr-1.5 h-4 w-4" />
+            Imprimer
+          </Button>
+        </Link>
       </div>
 
       <Card>

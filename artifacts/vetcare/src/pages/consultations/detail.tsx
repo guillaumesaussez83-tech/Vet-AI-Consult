@@ -14,10 +14,14 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Brain, FileText, Sparkles, Check, ChevronRight, Plus, Trash2, Receipt, Mic, MicOff, Loader2 } from "lucide-react";
+import { ArrowLeft, Brain, FileText, Sparkles, Check, ChevronRight, Plus, Trash2, Receipt, Mic, MicOff, Loader2, Printer } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
 import { PatientBarre } from "@/components/PatientBarre";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 const ETAPES = [
   { id: 1, label: "Anamnèse", icon: "📋" },
@@ -123,6 +127,29 @@ export default function ConsultationDetailPage() {
   const handleGenerateFacture = async () => {
     try {
       await handleSaveActes();
+      await generateFacture.mutateAsync({ id });
+      queryClient.invalidateQueries({ queryKey: getGetConsultationQueryKey(id) });
+      queryClient.invalidateQueries({ queryKey: getListFacturesQueryKey() });
+      toast({ title: "Facture générée" });
+    } catch {
+      toast({ title: "Erreur lors de la génération de la facture", variant: "destructive" });
+    }
+  };
+
+  const handleGenerateFactureFromActes = async (newActes: ActeLine[]) => {
+    try {
+      await updateConsultation.mutateAsync({
+        id, data: {
+          statut: "terminee",
+          actes: newActes.map(a => ({
+            acteId: a.acteId,
+            quantite: a.quantite,
+            prixUnitaire: a.prixUnitaire,
+            description: a.description || null,
+          }))
+        } as any
+      });
+      queryClient.invalidateQueries({ queryKey: getGetConsultationQueryKey(id) });
       await generateFacture.mutateAsync({ id });
       queryClient.invalidateQueries({ queryKey: getGetConsultationQueryKey(id) });
       queryClient.invalidateQueries({ queryKey: getListFacturesQueryKey() });
@@ -269,6 +296,7 @@ export default function ConsultationDetailPage() {
           onSaveActes={handleSaveActes}
           onGenerateOrdonnance={handleGenerateOrdonnance}
           onGenerateFacture={handleGenerateFacture}
+          onGenerateFactureFromActes={handleGenerateFactureFromActes}
           totalHT={totalHT}
           totalTTC={totalTTC}
           isGeneratingOrdonnance={generateOrdonnance.isPending}
@@ -428,10 +456,12 @@ function EtapeDiagnosticIA({ consultation, onSave, onGenerateIA, isGenerating, o
 
 function EtapeOrdonnanceActes({
   consultation, actes, actesList, onActesChange, onAddActe, onRemoveActe,
-  onSaveActes, onGenerateOrdonnance, onGenerateFacture, totalHT, totalTTC,
+  onSaveActes, onGenerateOrdonnance, onGenerateFacture, onGenerateFactureFromActes, totalHT, totalTTC,
   isGeneratingOrdonnance, isGeneratingFacture
 }: any) {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [isDeletingFacture, setIsDeletingFacture] = useState(false);
   const {
     isListening,
     isSupported,
@@ -496,8 +526,23 @@ function EtapeOrdonnanceActes({
     onActesChange(newActes);
     setVoixPreview(null);
     resetTranscript();
-    toast({ title: "Actes importés depuis la dictée vocale" });
-    await onGenerateFacture();
+    await onGenerateFactureFromActes(newActes);
+  };
+
+  const handleDeleteFacture = async () => {
+    if (!consultation.facture?.id) return;
+    setIsDeletingFacture(true);
+    try {
+      const res = await fetch(`/api/factures/${consultation.facture.id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error();
+      queryClient.invalidateQueries({ queryKey: getGetConsultationQueryKey(consultation.id) });
+      queryClient.invalidateQueries({ queryKey: getListFacturesQueryKey() });
+      toast({ title: "Facture annulée" });
+    } catch {
+      toast({ title: "Erreur lors de la suppression de la facture", variant: "destructive" });
+    } finally {
+      setIsDeletingFacture(false);
+    }
   };
 
   const updateActe = (idx: number, field: string, value: unknown) => {
@@ -623,14 +668,44 @@ function EtapeOrdonnanceActes({
         <CardContent className="space-y-4">
           {consultation.facture ? (
             <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between flex-wrap gap-2">
                 <div>
                   <div className="font-semibold text-green-700">{consultation.facture.numero}</div>
                   <div className="text-sm text-green-600">Montant TTC : {consultation.facture.montantTTC?.toFixed(2)} €</div>
                 </div>
-                <Link href={`/factures/${consultation.facture.id}`}>
-                  <Button variant="outline" size="sm">Voir la facture</Button>
-                </Link>
+                <div className="flex items-center gap-2">
+                  <Link href={`/factures/${consultation.facture.id}/imprimer`}>
+                    <Button variant="outline" size="sm">
+                      <Printer className="mr-1.5 h-3.5 w-3.5" />
+                      Imprimer
+                    </Button>
+                  </Link>
+                  <Link href={`/factures/${consultation.facture.id}`}>
+                    <Button variant="outline" size="sm">Voir la facture</Button>
+                  </Link>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="destructive" size="sm" disabled={isDeletingFacture}>
+                        <Trash2 className="mr-1.5 h-3.5 w-3.5" />
+                        Annuler
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Annuler cette facture ?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Êtes-vous sûr de vouloir annuler la facture {consultation.facture.numero} ? Cette action est irréversible. Vous pourrez en créer une nouvelle ensuite.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Non, garder la facture</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleDeleteFacture} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                          Oui, annuler la facture
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
               </div>
             </div>
           ) : (

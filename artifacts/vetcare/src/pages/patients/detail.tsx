@@ -48,11 +48,18 @@ export default function PatientDetailPage() {
         </Link>
         <div className="flex-1">
           <div className="flex items-center gap-3">
-            <div className="bg-primary/10 rounded-full p-2">
-              <Icon className="h-6 w-6 text-primary" />
+            <div className={`rounded-full p-2 ${(patient as any).agressif ? "bg-red-100" : "bg-primary/10"}`}>
+              <Icon className={`h-6 w-6 ${(patient as any).agressif ? "text-red-600" : "text-primary"}`} />
             </div>
             <div>
-              <h1 className="text-3xl font-bold tracking-tight">{patient.nom}</h1>
+              <div className="flex items-center gap-3 flex-wrap">
+                <h1 className="text-3xl font-bold tracking-tight">{patient.nom}</h1>
+                {(patient as any).agressif && (
+                  <span className="inline-flex items-center bg-red-600 text-white text-sm font-bold px-3 py-1 rounded-lg tracking-wide shadow">
+                    AGRESSIF
+                  </span>
+                )}
+              </div>
               <p className="text-muted-foreground">{patient.race || patient.espece} • {patient.sexe}</p>
             </div>
           </div>
@@ -99,6 +106,28 @@ export default function PatientDetailPage() {
               <div className="border-t pt-3">
                 <p className="text-muted-foreground mb-1">Allergies</p>
                 <p className="bg-destructive/10 text-destructive rounded p-2">{patient.allergies}</p>
+              </div>
+            )}
+            {((patient as any).puce || (patient as any).passeport || (patient as any).assurance) && (
+              <div className="border-t pt-3 space-y-1">
+                {(patient as any).puce && (
+                  <div className="flex gap-2">
+                    <span className="text-muted-foreground">Puce :</span>
+                    <span className="font-mono text-xs">{(patient as any).puce}</span>
+                  </div>
+                )}
+                {(patient as any).passeport && (
+                  <div className="flex gap-2">
+                    <span className="text-muted-foreground">Passeport :</span>
+                    <span className="font-mono text-xs">{(patient as any).passeport}</span>
+                  </div>
+                )}
+                {(patient as any).assurance && (
+                  <div className="flex gap-2">
+                    <span className="text-muted-foreground">Assurance :</span>
+                    <span className="text-green-700 font-medium">{(patient as any).assuranceNom || "Oui"}</span>
+                  </div>
+                )}
               </div>
             )}
           </CardContent>

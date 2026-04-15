@@ -29,7 +29,8 @@ export default function NouveauPatientPage() {
   });
   const [patientForm, setPatientForm] = useState({
     nom: "", espece: "chien", race: "", sexe: "mâle", dateNaissance: "",
-    poids: "", couleur: "", sterilise: false, antecedents: "", allergies: ""
+    poids: "", couleur: "", sterilise: false, antecedents: "", allergies: "",
+    puce: "", passeport: "", assurance: false, assuranceNom: "", agressif: false,
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -65,7 +66,12 @@ export default function NouveauPatientPage() {
           ownerId,
           antecedents: patientForm.antecedents || null,
           allergies: patientForm.allergies || null,
-        }
+          puce: patientForm.puce || null,
+          passeport: patientForm.passeport || null,
+          assurance: patientForm.assurance,
+          assuranceNom: patientForm.assuranceNom || null,
+          agressif: patientForm.agressif,
+        } as any
       });
 
       queryClient.invalidateQueries({ queryKey: getListPatientsQueryKey() });
@@ -214,6 +220,13 @@ export default function NouveauPatientPage() {
                 <Label>Stérilisé(e)</Label>
               </div>
             </div>
+            <div className="flex items-center gap-3 pt-2">
+              <Switch checked={patientForm.agressif} onCheckedChange={v => setPatientForm(f => ({ ...f, agressif: v }))} id="agressif" />
+              <Label htmlFor="agressif" className="text-destructive font-semibold">Animal agressif</Label>
+              {patientForm.agressif && (
+                <span className="inline-flex items-center bg-red-600 text-white text-xs font-bold px-2 py-0.5 rounded">AGRESSIF</span>
+              )}
+            </div>
             <div>
               <Label>Antécédents médicaux</Label>
               <Textarea className="mt-1" rows={3} value={patientForm.antecedents} onChange={e => setPatientForm(f => ({ ...f, antecedents: e.target.value }))} placeholder="Maladies passées, interventions chirurgicales..." />
@@ -221,6 +234,36 @@ export default function NouveauPatientPage() {
             <div>
               <Label>Allergies connues</Label>
               <Textarea className="mt-1" rows={2} value={patientForm.allergies} onChange={e => setPatientForm(f => ({ ...f, allergies: e.target.value }))} placeholder="Allergies connues..." />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Identification &amp; Assurance</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-4 md:grid-cols-2">
+              <div>
+                <Label>Numéro de puce électronique (transpondeur)</Label>
+                <Input className="mt-1" value={patientForm.puce} onChange={e => setPatientForm(f => ({ ...f, puce: e.target.value }))} placeholder="123456789012345" />
+              </div>
+              <div>
+                <Label>Numéro de passeport</Label>
+                <Input className="mt-1" value={patientForm.passeport} onChange={e => setPatientForm(f => ({ ...f, passeport: e.target.value }))} placeholder="FR..." />
+              </div>
+            </div>
+            <div className="space-y-3">
+              <div className="flex items-center gap-3">
+                <Switch checked={patientForm.assurance} onCheckedChange={v => setPatientForm(f => ({ ...f, assurance: v }))} id="assurance" />
+                <Label htmlFor="assurance">Animal assuré</Label>
+              </div>
+              {patientForm.assurance && (
+                <div>
+                  <Label>Nom de la compagnie d'assurance</Label>
+                  <Input className="mt-1" value={patientForm.assuranceNom} onChange={e => setPatientForm(f => ({ ...f, assuranceNom: e.target.value }))} placeholder="Compagnie d'assurance..." />
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>

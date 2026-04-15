@@ -29,6 +29,11 @@ router.get("/", async (req, res) => {
         ownerId: patientsTable.ownerId,
         antecedents: patientsTable.antecedents,
         allergies: patientsTable.allergies,
+        puce: patientsTable.puce,
+        passeport: patientsTable.passeport,
+        assurance: patientsTable.assurance,
+        assuranceNom: patientsTable.assuranceNom,
+        agressif: patientsTable.agressif,
         createdAt: patientsTable.createdAt,
         owner: {
           id: ownersTable.id,
@@ -103,6 +108,11 @@ router.get("/:id", async (req, res) => {
         ownerId: patientsTable.ownerId,
         antecedents: patientsTable.antecedents,
         allergies: patientsTable.allergies,
+        puce: patientsTable.puce,
+        passeport: patientsTable.passeport,
+        assurance: patientsTable.assurance,
+        assuranceNom: patientsTable.assuranceNom,
+        agressif: patientsTable.agressif,
         createdAt: patientsTable.createdAt,
         owner: {
           id: ownersTable.id,

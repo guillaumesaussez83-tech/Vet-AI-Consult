@@ -10,6 +10,11 @@ type Patient = {
   sexe: string;
   sterilise?: boolean | null;
   photoUrl?: string | null;
+  agressif?: boolean | null;
+  puce?: string | null;
+  passeport?: string | null;
+  assurance?: boolean | null;
+  assuranceNom?: string | null;
 };
 
 function calculerAge(dateNaissance: string | null | undefined): string {
@@ -40,27 +45,34 @@ export function PatientBarre({ patient }: { patient: Patient }) {
   const age = calculerAge(patient.dateNaissance);
 
   return (
-    <div className="w-full bg-white border border-border rounded-xl px-4 py-3 flex items-center gap-4 shadow-sm">
-      {patient.photoUrl ? (
-        <img
-          src={`/api/storage${patient.photoUrl}`}
-          alt={patient.nom}
-          className="w-12 h-12 rounded-full object-cover border border-border flex-shrink-0"
-        />
-      ) : (
-        <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center flex-shrink-0 border border-border">
-          <span className="text-xl select-none">
-            {patient.espece === "Chien" ? "🐕" : patient.espece === "Chat" ? "🐈" : patient.espece === "Lapin" ? "🐰" : patient.espece === "Oiseau" ? "🐦" : "🐾"}
-          </span>
-        </div>
-      )}
+    <div className={`w-full bg-white border rounded-xl px-4 py-3 flex items-center gap-4 shadow-sm ${patient.agressif ? "border-red-500 bg-red-50" : "border-border"}`}>
+      <div className="relative flex-shrink-0">
+        {patient.photoUrl ? (
+          <img
+            src={`/api/storage${patient.photoUrl}`}
+            alt={patient.nom}
+            className={`w-12 h-12 rounded-full object-cover border-2 ${patient.agressif ? "border-red-500" : "border-border"}`}
+          />
+        ) : (
+          <div className={`w-12 h-12 rounded-full bg-muted flex items-center justify-center border-2 ${patient.agressif ? "border-red-500 bg-red-100" : "border-border"}`}>
+            <span className="text-xl select-none">
+              {patient.espece?.toLowerCase() === "chien" ? "🐕" : patient.espece?.toLowerCase() === "chat" ? "🐈" : patient.espece?.toLowerCase() === "lapin" ? "🐰" : patient.espece?.toLowerCase() === "oiseau" ? "🐦" : "🐾"}
+            </span>
+          </div>
+        )}
+      </div>
 
       <div className="flex-1 min-w-0">
-        <div className="flex items-baseline gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <span className="text-base font-bold truncate">{patient.nom}</span>
           <span className="text-sm text-muted-foreground">{patient.espece}</span>
           {patient.race && (
             <span className="text-sm text-muted-foreground">— {patient.race}</span>
+          )}
+          {patient.agressif && (
+            <span className="inline-flex items-center bg-red-600 text-white text-xs font-bold px-2 py-0.5 rounded tracking-wide">
+              AGRESSIF
+            </span>
           )}
         </div>
         <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-0.5">
@@ -75,6 +87,14 @@ export function PatientBarre({ patient }: { patient: Patient }) {
           )}
           {patient.poids && (
             <span className="text-xs text-muted-foreground">{patient.poids} kg</span>
+          )}
+          {patient.assurance && patient.assuranceNom && (
+            <span className="text-xs bg-green-50 text-green-700 px-1.5 py-0.5 rounded border border-green-100 font-medium">
+              Assuré : {patient.assuranceNom}
+            </span>
+          )}
+          {patient.puce && (
+            <span className="text-xs text-muted-foreground">Puce : {patient.puce}</span>
           )}
         </div>
       </div>

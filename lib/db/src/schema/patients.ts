@@ -16,6 +16,11 @@ export const patientsTable = pgTable("patients", {
   ownerId: integer("owner_id").notNull().references(() => ownersTable.id),
   antecedents: text("antecedents"),
   allergies: text("allergies"),
+  puce: text("puce"),
+  passeport: text("passeport"),
+  assurance: boolean("assurance").notNull().default(false),
+  assuranceNom: text("assurance_nom"),
+  agressif: boolean("agressif").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });
