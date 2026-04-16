@@ -133,7 +133,7 @@ function CliniqueForm() {
         <div className="space-y-1.5">
           <Label>Nom de la clinique</Label>
           <Input
-            placeholder="Clinique Vétérinaire du Parc"
+            placeholder="Nom de votre clinique"
             value={form.nomClinique}
             onChange={e => update("nomClinique", e.target.value)}
           />
@@ -141,7 +141,7 @@ function CliniqueForm() {
         <div className="space-y-1.5">
           <Label>Adresse</Label>
           <Input
-            placeholder="12 rue des Platanes"
+            placeholder="Adresse complète"
             value={form.adresse}
             onChange={e => update("adresse", e.target.value)}
           />
@@ -150,7 +150,7 @@ function CliniqueForm() {
           <div className="space-y-1.5">
             <Label>Code postal</Label>
             <Input
-              placeholder="75001"
+              placeholder="Code postal"
               value={form.codePostal}
               onChange={e => update("codePostal", e.target.value)}
             />
@@ -158,7 +158,7 @@ function CliniqueForm() {
           <div className="space-y-1.5">
             <Label>Ville</Label>
             <Input
-              placeholder="Paris"
+              placeholder="Ville"
               value={form.ville}
               onChange={e => update("ville", e.target.value)}
             />

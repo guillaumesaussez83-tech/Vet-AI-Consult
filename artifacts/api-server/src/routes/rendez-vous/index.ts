@@ -16,6 +16,8 @@ const selectRdv = {
   statut: rendezVousTable.statut,
   statutSalle: rendezVousTable.statutSalle,
   notes: rendezVousTable.notes,
+  proprietaireNom: rendezVousTable.proprietaireNom,
+  animalNom: rendezVousTable.animalNom,
   createdAt: rendezVousTable.createdAt,
   updatedAt: rendezVousTable.updatedAt,
   patient: {

@@ -15,7 +15,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useUser } from "@clerk/react";
-import { ArrowLeft, ArrowRight, Sparkles, CheckCircle, Loader2, FileText, X, Upload } from "lucide-react";
+import { ArrowLeft, ArrowRight, Sparkles, CheckCircle, Loader2, FileText, X, Upload, AlertTriangle } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { formatDateFR } from "@/lib/utils";
 import { PatientBarre } from "@/components/PatientBarre";
 import { VoiceRecorder } from "@/components/VoiceRecorder";
 
@@ -378,8 +380,16 @@ export default function NouvelleConsultationPage() {
             <CardContent className="space-y-4">
               <div>
                 <Label>Prescription</Label>
+                {step3.poids && parseFloat(step3.poids) > 0 && (
+                  <Alert className="mt-2 border-amber-300 bg-amber-50 text-amber-800">
+                    <AlertTriangle className="h-4 w-4 text-amber-600" />
+                    <AlertDescription>
+                      Poids relevé : <strong>{step3.poids} kg</strong> — Pensez à adapter les posologies par kg (ex : 0.1 mL/kg, 10 mg/kg…)
+                    </AlertDescription>
+                  </Alert>
+                )}
                 <Textarea
-                  className="mt-1 font-mono text-sm"
+                  className="mt-2 font-mono text-sm"
                   rows={8}
                   value={step5.ordonnance}
                   onChange={e => setStep5(f => ({ ...f, ordonnance: e.target.value }))}
@@ -430,7 +440,7 @@ export default function NouvelleConsultationPage() {
               <span className="text-muted-foreground">Vétérinaire</span>
               <span>{step1.veterinaire || "—"}</span>
               <span className="text-muted-foreground">Date</span>
-              <span>{step1.date}</span>
+              <span>{formatDateFR(step1.date)}</span>
               {step1.motif && (
                 <>
                   <span className="text-muted-foreground">Motif</span>

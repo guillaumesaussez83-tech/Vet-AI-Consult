@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -183,6 +183,22 @@ export default function RappelsPage() {
     },
     onError: () => toast({ title: "Erreur", description: "Impossible de supprimer.", variant: "destructive" }),
   });
+
+  const seeded = useRef(false);
+  useEffect(() => {
+    if (!loadingModeles && modeles !== undefined && modeles.length === 0 && !seeded.current) {
+      seeded.current = true;
+      const defaults = [
+        { nom: "Vaccin annuel", description: "Rappel annuel des vaccinations obligatoires", periodiciteJours: 365 },
+        { nom: "Bilan annuel", description: "Examen clinique complet de routine", periodiciteJours: 365 },
+        { nom: "Détartrage", description: "Contrôle et nettoyage dentaire", periodiciteJours: 180 },
+        { nom: "Suivi post-chirurgie", description: "Contrôle cicatrisation et rétablissement", periodiciteJours: 30 },
+      ];
+      Promise.all(defaults.map(d => createModele(d))).then(() => {
+        qc.invalidateQueries({ queryKey: ["rappels-modeles"] });
+      });
+    }
+  }, [modeles, loadingModeles, qc]);
 
   const urgents = (dus ?? []).filter((d: RappelDu) => d.urgent);
   const normaux = (dus ?? []).filter((d: RappelDu) => !d.urgent);

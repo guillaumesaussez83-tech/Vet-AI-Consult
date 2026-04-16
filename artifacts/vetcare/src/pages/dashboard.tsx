@@ -5,7 +5,6 @@ import { Users, Activity, CreditCard, Stethoscope, ArrowRight } from "lucide-rea
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 
 export default function Dashboard() {
@@ -26,13 +25,11 @@ export default function Dashboard() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            {isStatsLoading ? (
-              <Skeleton className="h-8 w-20" />
-            ) : (
-              <div className="text-2xl font-bold">{stats?.totalPatients || 0}</div>
-            )}
+            <div className={`text-2xl font-bold transition-opacity ${isStatsLoading ? "opacity-30" : ""}`}>
+              {isStatsLoading ? "—" : (stats?.totalPatients ?? 0)}
+            </div>
             <p className="text-xs text-muted-foreground mt-1">
-              {stats?.totalProprietaires || 0} propriétaires
+              {isStatsLoading ? "—" : `${stats?.totalProprietaires ?? 0} propriétaires`}
             </p>
           </CardContent>
         </Card>
@@ -43,13 +40,11 @@ export default function Dashboard() {
             <Stethoscope className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            {isStatsLoading ? (
-              <Skeleton className="h-8 w-20" />
-            ) : (
-              <div className="text-2xl font-bold">{stats?.consultationsAujourdhui || 0}</div>
-            )}
+            <div className={`text-2xl font-bold transition-opacity ${isStatsLoading ? "opacity-30" : ""}`}>
+              {isStatsLoading ? "—" : (stats?.consultationsAujourdhui ?? 0)}
+            </div>
             <p className="text-xs text-muted-foreground mt-1">
-              {stats?.consultationsEnCours || 0} en cours
+              {isStatsLoading ? "—" : `${stats?.consultationsEnCours ?? 0} en cours`}
             </p>
           </CardContent>
         </Card>
@@ -60,14 +55,10 @@ export default function Dashboard() {
             <Activity className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            {isStatsLoading ? (
-              <Skeleton className="h-8 w-20" />
-            ) : (
-              <div className="text-2xl font-bold">{stats?.chiffreAffaireMois?.toFixed(2) || "0.00"} €</div>
-            )}
-            <p className="text-xs text-muted-foreground mt-1">
-              Total généré ce mois
-            </p>
+            <div className={`text-2xl font-bold transition-opacity ${isStatsLoading ? "opacity-30" : ""}`}>
+              {isStatsLoading ? "—" : stats?.chiffreAffaireMois ? `${stats.chiffreAffaireMois.toFixed(2)} €` : "—"}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">Total généré ce mois</p>
           </CardContent>
         </Card>
 
@@ -77,14 +68,10 @@ export default function Dashboard() {
             <CreditCard className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            {isStatsLoading ? (
-              <Skeleton className="h-8 w-20" />
-            ) : (
-              <div className="text-2xl font-bold text-destructive">{stats?.facturesImpayees || 0}</div>
-            )}
-            <p className="text-xs text-muted-foreground mt-1">
-              En attente de règlement
-            </p>
+            <div className={`text-2xl font-bold transition-opacity ${isStatsLoading ? "opacity-30" : (stats?.facturesImpayees ?? 0) > 0 ? "text-destructive" : ""}`}>
+              {isStatsLoading ? "—" : (stats?.facturesImpayees ?? 0)}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">En attente de règlement</p>
           </CardContent>
         </Card>
       </div>
@@ -106,7 +93,7 @@ export default function Dashboard() {
             {isConsultationsLoading ? (
               <div className="space-y-4">
                 {[1, 2, 3].map((i) => (
-                  <Skeleton key={i} className="h-16 w-full" />
+                  <div key={i} className="h-16 w-full rounded-lg bg-muted/50 animate-pulse" />
                 ))}
               </div>
             ) : consultations?.length === 0 ? (

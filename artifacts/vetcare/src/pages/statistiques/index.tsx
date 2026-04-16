@@ -78,6 +78,12 @@ export default function StatistiquesPage() {
   const topActes = data?.topActes ?? [];
   const parVet = data?.parVeterinaire ?? [];
 
+  const hasData = monthly.some((m: any) => (m.ca ?? 0) > 0) || (kpis.caThisMonth ?? 0) > 0;
+  function kpiVal(val: number | null | undefined, suffix = ""): string {
+    if (!data || val == null || val === 0) return "—";
+    return `${val.toLocaleString("fr-FR", { minimumFractionDigits: suffix === " €" ? 2 : 0 })}${suffix}`;
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -88,28 +94,28 @@ export default function StatistiquesPage() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <KpiCard
           title="CA aujourd'hui"
-          value={`${(kpis.caAujourdhui ?? 0).toLocaleString("fr-FR", { minimumFractionDigits: 2 })} €`}
+          value={kpiVal(kpis.caAujourdhui, " €")}
           icon={Euro}
           sub="TTC"
         />
         <KpiCard
           title="Consultations aujourd'hui"
-          value={`${kpis.consultationsAujourdhui ?? 0}`}
+          value={kpiVal(kpis.consultationsAujourdhui)}
           icon={Stethoscope}
           sub="ce jour"
         />
         <KpiCard
           title="CA ce mois"
-          value={`${(kpis.caThisMonth ?? 0).toLocaleString("fr-FR", { minimumFractionDigits: 2 })} €`}
+          value={kpiVal(kpis.caThisMonth, " €")}
           icon={FileText}
-          trend={kpis.evolutionMensuelle}
+          trend={hasData ? kpis.evolutionMensuelle : null}
           sub="vs mois précédent"
         />
         <KpiCard
           title="Taux d'encaissement"
-          value={`${kpis.tauxEncaissement ?? 0} %`}
+          value={kpiVal(kpis.tauxEncaissement, " %")}
           icon={Percent}
-          sub={`${kpis.facturesEmisesAujourdhui ?? 0} factures émises`}
+          sub={kpis.facturesEmisesAujourdhui ? `${kpis.facturesEmisesAujourdhui} factures émises` : undefined}
         />
       </div>
 
@@ -118,6 +124,13 @@ export default function StatistiquesPage() {
           <CardTitle className="text-base">Chiffre d'affaires mensuel (12 mois)</CardTitle>
         </CardHeader>
         <CardContent>
+          {!hasData ? (
+            <div className="flex flex-col items-center justify-center py-16 text-center text-muted-foreground">
+              <Euro className="h-10 w-10 mb-3 opacity-20" />
+              <p className="font-medium text-base">Aucune donnée pour cette période</p>
+              <p className="text-sm mt-1 max-w-xs">Les statistiques apparaîtront après vos premières consultations facturées.</p>
+            </div>
+          ) : (
           <ResponsiveContainer width="100%" height={260}>
             <AreaChart data={monthly}>
               <defs>
@@ -136,6 +149,7 @@ export default function StatistiquesPage() {
               <Area type="monotone" dataKey="ca" stroke="hsl(var(--primary))" fill="url(#gradCA)" strokeWidth={2} name="CA TTC" />
             </AreaChart>
           </ResponsiveContainer>
+          )}
         </CardContent>
       </Card>
 

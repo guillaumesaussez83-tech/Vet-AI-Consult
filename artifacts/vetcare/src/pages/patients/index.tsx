@@ -9,17 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Plus, Search, Dog, Cat, Rabbit, Bird, Trash2, Eye } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 
 const especeIcon: Record<string, React.ElementType> = {
   chien: Dog,
@@ -38,16 +29,21 @@ const especeLabel: Record<string, string> = {
 
 export default function PatientsPage() {
   const [search, setSearch] = useState("");
+  const [deleteTarget, setDeleteTarget] = useState<{ id: number; nom: string } | null>(null);
+  const [confirmName, setConfirmName] = useState("");
   const { data: patients, isLoading } = useListPatients(search ? { search } : {});
   const deletePatient = useDeletePatient();
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  const handleDelete = async (id: number) => {
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
     try {
-      await deletePatient.mutateAsync({ id });
+      await deletePatient.mutateAsync({ id: deleteTarget.id });
       queryClient.invalidateQueries({ queryKey: getListPatientsQueryKey() });
       toast({ title: "Patient supprimé avec succès" });
+      setDeleteTarget(null);
+      setConfirmName("");
     } catch {
       toast({ title: "Erreur lors de la suppression", variant: "destructive" });
     }
@@ -89,7 +85,7 @@ export default function PatientsPage() {
           {patients.map((patient) => {
             const Icon = especeIcon[patient.espece] ?? Dog;
             return (
-              <Card key={patient.id} className={`hover-elevate transition-all ${(patient as any).agressif ? "border-red-400 bg-red-50" : ""}`}>
+              <Card key={patient.id} className={`hover-elevate transition-all group ${(patient as any).agressif ? "border-red-400 bg-red-50" : ""}`}>
                 <CardContent className="p-5">
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center gap-3">
@@ -116,27 +112,14 @@ export default function PatientsPage() {
                           <Eye className="h-4 w-4" />
                         </Button>
                       </Link>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button size="icon" variant="ghost" className="text-destructive hover:text-destructive">
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Supprimer {patient.nom} ?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Cette action est irréversible. Toutes les données de ce patient seront supprimées.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Annuler</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => handleDelete(patient.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                              Supprimer
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="text-destructive hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={() => { setDeleteTarget({ id: patient.id, nom: patient.nom }); setConfirmName(""); }}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </div>
                   </div>
                   <div className="space-y-1 text-sm">
@@ -176,6 +159,37 @@ export default function PatientsPage() {
           </Link>
         </div>
       )}
+
+      <Dialog open={!!deleteTarget} onOpenChange={open => { if (!open) { setDeleteTarget(null); setConfirmName(""); } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Supprimer {deleteTarget?.nom} ?</DialogTitle>
+            <DialogDescription>
+              Cette action est irréversible. Toutes les données de ce patient seront définitivement supprimées.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 py-2">
+            <Label className="text-sm">
+              Tapez <strong>{deleteTarget?.nom}</strong> pour confirmer la suppression
+            </Label>
+            <Input
+              value={confirmName}
+              onChange={e => setConfirmName(e.target.value)}
+              placeholder={deleteTarget?.nom ?? ""}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setDeleteTarget(null); setConfirmName(""); }}>Annuler</Button>
+            <Button
+              variant="destructive"
+              disabled={confirmName !== deleteTarget?.nom}
+              onClick={handleDelete}
+            >
+              Supprimer définitivement
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

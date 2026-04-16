@@ -15,6 +15,8 @@ type RDV = {
   motif?: string | null;
   statut: string;
   statutSalle: string;
+  proprietaireNom?: string | null;
+  animalNom?: string | null;
   patient?: { id: number; nom: string; espece: string } | null;
   owner?: { id: number; nom: string; prenom?: string | null; telephone?: string | null } | null;
 };
@@ -249,17 +251,19 @@ export default function SalleAttentePage() {
                           <div className="flex items-center gap-1.5 min-w-0">
                             <span className="text-lg leading-none">{emoji}</span>
                             <span className="font-bold text-base truncate">
-                              {rdv.patient?.nom ?? "Sans patient"}
+                              {rdv.patient?.nom ?? rdv.animalNom ?? "Client sans dossier"}
                             </span>
                           </div>
                           <ElapsedBadge rdv={rdv} />
                         </div>
 
                         {/* Owner */}
-                        {rdv.owner && (
+                        {(rdv.owner || rdv.proprietaireNom) && (
                           <div className="flex items-center gap-1 text-xs text-muted-foreground mb-1.5">
                             <User className="h-3 w-3 shrink-0" />
-                            <span className="truncate">{rdv.owner.prenom} {rdv.owner.nom}</span>
+                            <span className="truncate">
+                              {rdv.owner ? `${rdv.owner.prenom ?? ""} ${rdv.owner.nom}`.trim() : rdv.proprietaireNom}
+                            </span>
                           </div>
                         )}
 

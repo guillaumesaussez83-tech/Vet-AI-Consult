@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, Plus, Calendar, Dog, Cat, Rabbit, Bird, Syringe } from "lucide-react";
+import { formatDateFR } from "@/lib/utils";
 
 const especeIcon: Record<string, React.ElementType> = {
   chien: Dog, chat: Cat, lapin: Rabbit, oiseau: Bird,
@@ -93,7 +94,7 @@ export default function PatientDetailPage() {
               <span>{patient.sexe} {patient.sterilise && <Badge variant="secondary" className="ml-1 text-xs">Stérilisé(e)</Badge>}</span>
               {patient.dateNaissance && <>
                 <span className="text-muted-foreground">Naissance</span>
-                <span>{patient.dateNaissance}</span>
+                <span>{formatDateFR(patient.dateNaissance)}</span>
               </>}
               {patient.poids && <>
                 <span className="text-muted-foreground">Poids</span>

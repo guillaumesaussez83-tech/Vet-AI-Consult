@@ -7,7 +7,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { Award, Loader2, Printer, CheckCircle, FileText, Heart, Shield, ClipboardList, Pill } from "lucide-react";
 import { useListPatients } from "@workspace/api-client-react";
@@ -20,11 +19,11 @@ type TypeCertificat = {
 };
 
 const TYPES: TypeCertificat[] = [
-  { id: "bonne_sante", label: "Bonne sante", description: "Pour voyage UE, importation ou exposition. Atteste le bon etat de sante de l'animal.", icon: Heart, color: "bg-green-50 border-green-200 text-green-700" },
-  { id: "cession", label: "Cession / Vente", description: "Pour la vente ou cession d'un animal. Confirme l'etat de sante et les vaccinations.", icon: Shield, color: "bg-blue-50 border-blue-200 text-blue-700" },
-  { id: "aptitude", label: "Aptitude", description: "Pour concours, reproduction ou elevage. Examen approfondi de tous les systemes.", icon: CheckCircle, color: "bg-purple-50 border-purple-200 text-purple-700" },
-  { id: "soins", label: "Attestation de soins", description: "Pour remboursement assurance. Detaille les actes realises et le diagnostic.", icon: ClipboardList, color: "bg-orange-50 border-orange-200 text-orange-700" },
-  { id: "ordonnance", label: "Ordonnance", description: "Ordonnance veterinaire securisee avec posologie et mentions legales.", icon: Pill, color: "bg-red-50 border-red-200 text-red-700" },
+  { id: "bonne_sante", label: "Bonne santé", description: "Pour voyage UE, importation ou exposition. Atteste le bon état de santé de l'animal.", icon: Heart, color: "bg-green-50 border-green-200 text-green-700" },
+  { id: "cession", label: "Cession / Vente", description: "Pour la vente ou cession d'un animal. Confirme l'état de santé et les vaccinations.", icon: Shield, color: "bg-blue-50 border-blue-200 text-blue-700" },
+  { id: "aptitude", label: "Aptitude", description: "Pour concours, reproduction ou élevage. Examen approfondi de tous les systèmes.", icon: CheckCircle, color: "bg-purple-50 border-purple-200 text-purple-700" },
+  { id: "soins", label: "Attestation de soins", description: "Pour remboursement assurance. Détaille les actes réalisés et le diagnostic.", icon: ClipboardList, color: "bg-orange-50 border-orange-200 text-orange-700" },
+  { id: "ordonnance", label: "Ordonnance vétérinaire", description: "Ordonnance vétérinaire sécurisée avec posologie et mentions légales.", icon: Pill, color: "bg-red-50 border-red-200 text-red-700" },
 ];
 
 export default function CertificatsPage() {
@@ -70,10 +69,10 @@ export default function CertificatsPage() {
         }),
       });
       const data = await r.json();
-      setCertificatText(data.certificat ?? "Erreur de generation");
+      setCertificatText(data.certificat ?? "Erreur de génération");
       setPreviewOpen(true);
     } catch {
-      toast({ title: "Erreur lors de la generation", variant: "destructive" });
+      toast({ title: "Erreur lors de la génération", variant: "destructive" });
     } finally {
       setGenerating(false);
     }
@@ -86,8 +85,8 @@ export default function CertificatsPage() {
       <div className="flex items-center gap-3">
         <Award className="h-6 w-6 text-primary" />
         <div>
-          <h1 className="text-2xl font-bold">Certificats veterinaires</h1>
-          <p className="text-sm text-muted-foreground">Generez vos certificats et ordonnances grace a l'IA</p>
+          <h1 className="text-2xl font-bold">Certificats vétérinaires</h1>
+          <p className="text-sm text-muted-foreground">Générez vos certificats et ordonnances grâce à l'IA</p>
         </div>
       </div>
 
@@ -111,7 +110,7 @@ export default function CertificatsPage() {
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
                         <p className="font-semibold text-sm">{t.label}</p>
-                        {isSelected && <Badge className="text-xs">Selectionne</Badge>}
+                        {isSelected && <Badge className="text-xs">Sélectionné</Badge>}
                       </div>
                       <p className="text-xs text-muted-foreground mt-0.5">{t.description}</p>
                     </div>
@@ -130,7 +129,7 @@ export default function CertificatsPage() {
                 <Label>Patient *</Label>
                 <Select value={patientId} onValueChange={setPatientId}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Selectionner un patient..." />
+                    <SelectValue placeholder="Sélectionner un patient..." />
                   </SelectTrigger>
                   <SelectContent>
                     {patients.map(p => (
@@ -145,19 +144,19 @@ export default function CertificatsPage() {
               {selectedPatient && (
                 <div className="bg-muted/30 rounded-lg p-3 text-sm space-y-1">
                   <p><strong>Animal :</strong> {selectedPatient.nom}</p>
-                  <p><strong>Espece :</strong> {selectedPatient.espece} {selectedPatient.race ? `— ${selectedPatient.race}` : ""}</p>
-                  {(vaccinations as any[]).length > 0 && <p><strong>Vaccinations :</strong> {(vaccinations as any[]).length} enregistree(s)</p>}
+                  <p><strong>Espèce :</strong> {selectedPatient.espece} {selectedPatient.race ? `— ${selectedPatient.race}` : ""}</p>
+                  {(vaccinations as any[]).length > 0 && <p><strong>Vaccinations :</strong> {(vaccinations as any[]).length} enregistrée(s)</p>}
                 </div>
               )}
 
               <div className="space-y-1">
-                <Label>Veterinaire signataire</Label>
-                <Input value={veterinaire} onChange={e => setVeterinaire(e.target.value)} placeholder="Dupont" />
+                <Label>Vétérinaire signataire</Label>
+                <Input value={veterinaire} onChange={e => setVeterinaire(e.target.value)} placeholder="Dr. Dupont" />
               </div>
 
               <div className="space-y-1">
                 <Label>Nom de la clinique</Label>
-                <Input value={clinique} onChange={e => setClinique(e.target.value)} placeholder="Clinique Veterinaire du Centre" />
+                <Input value={clinique} onChange={e => setClinique(e.target.value)} placeholder="Clinique Vétérinaire du Centre" />
               </div>
 
               <Button
@@ -166,9 +165,9 @@ export default function CertificatsPage() {
                 onClick={generer}
               >
                 {generating ? (
-                  <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Generation en cours...</>
+                  <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Génération en cours...</>
                 ) : (
-                  <><FileText className="h-4 w-4 mr-2" />Generer le certificat</>
+                  <><FileText className="h-4 w-4 mr-2" />Générer le certificat</>
                 )}
               </Button>
             </CardContent>
