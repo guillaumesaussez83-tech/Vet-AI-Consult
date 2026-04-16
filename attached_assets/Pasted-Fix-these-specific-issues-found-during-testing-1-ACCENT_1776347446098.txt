@@ -1,0 +1,67 @@
+Fix these specific issues found during testing:
+
+1. ACCENTS in /certificats page: fix all missing accents —
+   "Bonne santé", "Choisissez", "Générer", "Vétérinaire signataire",
+   "Cession / Vente", "Attestation de soins", "Ordonnance vétérinaire
+   sécurisée". Check the entire certificats page and fix every word
+   missing an accent.
+
+2. PARAMÈTRES FORM: the clinic form fields must show empty placeholder
+   text only, NOT pre-filled with fake data like "Clinique Vétérinaire
+   du Parc", "12 rue des Platanes", "75001", "Paris". These should be
+   empty inputs with placeholder hint text only. If data exists in DB,
+   show it. If not, show empty fields.
+
+3. DATE FORMAT: create a shared utility formatDateFR(date) that returns
+   DD/MM/YYYY format. Apply it everywhere a date is shown to the user:
+   consultation detail header, patient record (date naissance),
+   consultation recap summary, invoice dates, agenda, planning.
+   Never show YYYY-MM-DD to end users.
+
+4. PRESCRIPTION DOSAGE WARNING: in the Ordonnance section of
+   consultation step 5 (Ordonnance & Actes), add a yellow alert banner
+   above the prescription textarea:
+   "⚠️ Posologies indicatives — vérifiez et adaptez selon le poids
+   de l'animal ([POIDS] kg) avant de valider."
+   Replace [POIDS] with the patient's actual weight from the
+   consultation. Use shadcn Alert component with variant warning.
+
+5. STATISTICS EMPTY STATE: when revenue data is zero or absent,
+   replace the flat empty chart with a centered empty state message:
+   "Aucune donnée pour cette période
+   Les statistiques apparaîtront après vos premières consultations
+   facturées."
+   Show "—" instead of "0.00 €" in KPI cards when there is no real
+   data yet (not just zeros).
+
+6. RAPPELS AUTO-SEED: on first load of /rappels, if no rappel_modeles
+   exist for this clinic_id, automatically create these 4 defaults:
+   - nom: "Rappel vaccin annuel", delai_jours: 365, type: "vaccination"
+   - nom: "Rappel antiparasitaire", delai_jours: 90, type: "traitement"
+   - nom: "Contrôle post-opératoire", delai_jours: 7, type: "suivi"
+   - nom: "Bilan annuel de santé", delai_jours: 365, type: "bilan"
+   Show these immediately so the page is never empty on first visit.
+
+7. PATIENT DELETE SAFETY:
+   - Hide the red delete button on patient cards by default
+   - Show it only on hover (opacity-0 group-hover:opacity-100)
+   - When clicked, open a confirmation Dialog (shadcn) that says:
+     "Suppression définitive · Cette action est irréversible.
+     Tapez le nom de l'animal pour confirmer."
+   - Add a text input inside the dialog
+   - The confirm button stays disabled until the typed name matches
+     exactly the patient name (case insensitive)
+   - Only then allow deletion
+
+8. DASHBOARD KPI LOADING: replace skeleton loaders on KPI numbers
+   with instant "—" placeholder. If data loads within 500ms show the
+   real number. Never show a skeleton loader for more than 500ms on
+   the dashboard — it creates a bad first impression.
+
+9. SALLE D'ATTENTE empty card label: when a rendez_vous has no
+   linked patient (patient_id is null), show "Client sans dossier"
+   instead of "Sans patient". Also show the proprietaire_nom if
+   available on the card.
+
+After all fixes, run tsc --noEmit to confirm zero TypeScript errors.
+Report each fix with the file(s) changed.
