@@ -6,6 +6,7 @@ import {
 } from "@workspace/db";
 import { eq, asc, desc, and, ne } from "drizzle-orm";
 import { analyserConsommationTous, genererCommandeSuggereIA, genererAlertes, detecterAnomalies, decrementerConsultationFEFO } from "./ia-engine";
+import { runStockSeeder } from "./seeder";
 
 const router = Router();
 
@@ -451,6 +452,26 @@ router.post("/decrementer-consultation", async (req, res) => {
       message: `${resultats.filter(r => !r.notFound).length} produits décrémentés (FEFO). ${nonTrouves.length > 0 ? `Non trouvés : ${nonTrouves.join(", ")}` : ""}`,
     });
   } catch (err) { req.log.error(err); return res.status(500).json({ error: "Erreur interne" }); }
+});
+
+// ──────────────────────────────────────────
+// SEEDER DÉMO
+// ──────────────────────────────────────────
+router.post("/seeder/demo", async (req, res) => {
+  try {
+    const force = req.query.force === "1" || req.body.force === true;
+    const result = await runStockSeeder(force);
+    if (result.inserted === 0) {
+      return res.json({ message: "Stock déjà initialisé — aucune donnée insérée.", ...result });
+    }
+    return res.json({
+      message: `Stock initialisé : ${result.inserted} produits, ${result.lots} lots, ${result.alertes} alertes générées.`,
+      ...result,
+    });
+  } catch (err) {
+    req.log.error(err);
+    return res.status(500).json({ error: "Erreur lors du seeding du stock" });
+  }
 });
 
 // ──────────────────────────────────────────

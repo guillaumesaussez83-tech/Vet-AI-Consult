@@ -1,0 +1,76 @@
+In the VétoAI app, create a database seeder that populates 
+the stock_medicaments table with realistic veterinary inventory 
+for a French small animal clinic (3 vets, ~20 consultations/day).
+
+Insert 40 products with realistic data:
+
+MÉDICAMENTS (15 produits):
+- Amoxicilline 200mg/ml suspension injectable, stock 8, min 3, max 15, prix achat 12.50€
+- Amoxicilline/Acide clavulanique cp 500mg, stock 45, min 20, max 80, prix achat 0.85€/cp
+- Métronidazole 250mg cp, stock 60, min 30, max 100, prix achat 0.25€/cp
+- Prednisolone 20mg cp, stock 80, min 40, max 150, prix achat 0.18€/cp
+- Meloxicam 1.5mg/ml solution orale, stock 4, min 2, max 8, prix achat 18.90€
+- Maropitant (Cerenia) 16mg cp, stock 24, min 10, max 40, prix achat 4.20€/cp
+- Cefovecin (Convenia) 80mg/ml inj, stock 3, min 2, max 6, prix achat 42.00€
+- Robenacoxib (Onsior) 6mg cp chat, stock 18, min 8, max 30, prix achat 3.80€/cp
+- Furosémide 40mg cp, stock 50, min 20, max 80, prix achat 0.12€/cp
+- Oméprazole 20mg gél, stock 35, min 15, max 60, prix achat 0.28€/cp
+- Tramadol 50mg cp, stock 40, min 20, max 70, prix achat 0.22€/cp
+- Kétamine 500mg/10ml inj, stock 5, min 2, max 8, prix achat 28.50€
+- Propofol 200mg/20ml inj, stock 6, min 3, max 10, prix achat 14.80€
+- Médétomidine 1mg/ml inj, stock 4, min 2, max 6, prix achat 32.00€
+- Butorphanol 10mg/ml inj, stock 3, min 2, max 5, prix achat 38.00€
+
+VACCINS (8 produits):
+- Eurican DHPPI2-L, stock 12, min 5, max 20, prix achat 8.20€
+- Eurican DHPPI2-LR, stock 8, min 4, max 15, prix achat 11.50€
+- Feligen CRP, stock 15, min 6, max 25, prix achat 6.80€
+- Purevax RCPCh, stock 10, min 5, max 18, prix achat 9.40€
+- Nobivac Rabies, stock 20, min 8, max 30, prix achat 4.90€
+- Leucorifelin, stock 8, min 4, max 12, prix achat 12.30€
+- Novibac Myxo-RHD Plus, stock 6, min 3, max 10, prix achat 7.60€
+- Protek 4, stock 5, min 2, max 8, prix achat 15.40€
+
+ANTIPARASITAIRES (7 produits):
+- Nexgard Spectra chien M (7-15kg), stock 18, min 8, max 30, prix achat 9.80€
+- Nexgard Spectra chien L (15-30kg), stock 15, min 6, max 25, prix achat 11.20€
+- Bravecto chien M (10-20kg), stock 10, min 4, max 16, prix achat 22.50€
+- Stronghold Plus chat 2.5-7.5kg, stock 20, min 8, max 35, prix achat 7.40€
+- Broadline chat, stock 16, min 6, max 28, prix achat 8.90€
+- Milbemax chien cp, stock 24, min 10, max 40, prix achat 2.80€/cp
+- Milbemax chat cp, stock 20, min 8, max 35, prix achat 2.60€/cp
+
+PERFUSIONS & SOLUTÉS (5 produits):
+- NaCl 0.9% 500ml, stock 24, min 12, max 40, prix achat 2.10€
+- Ringer Lactate 500ml, stock 18, min 10, max 30, prix achat 2.40€
+- Glucose 5% 500ml, stock 12, min 6, max 20, prix achat 2.20€
+- NaCl 0.9% 1000ml, stock 10, min 4, max 16, prix achat 3.50€
+- Plasma-Lyte 500ml, stock 6, min 3, max 10, prix achat 8.90€
+
+CONSOMMABLES (5 produits):
+- Seringues 5ml (boîte 100), stock 8, min 3, max 12, prix achat 6.50€
+- Aiguilles 21G (boîte 100), stock 10, min 4, max 15, prix achat 4.80€
+- Cathéters IV 22G (boîte 50), stock 5, min 2, max 8, prix achat 18.50€
+- Compresses stériles 10x10 (boîte 100), stock 12, min 5, max 20, prix achat 7.20€
+- Gants latex M (boîte 100), stock 6, min 2, max 10, prix achat 8.90€
+
+For each product set:
+- reference_centravet: format 'CV' + 5 random digits
+- fournisseur_principal: 'CENTRAVET'
+- delai_livraison_jours: 1
+- date_peremption_lot: random date between 6 months and 24 months from today
+- categorie: appropriate ('medicament'|'vaccin'|'antiparasitaire'|'consommable'|'perfusion')
+- unite: appropriate ('flacon'|'boite'|'comprime'|'unite'|'poche')
+- actif: true
+- Use the clinic_id of the first existing clinic in the database
+
+Also create 3 stock_lots records for the first 3 medications with realistic lot numbers 
+(format: LOT-YYYYMM-XXX) and expiry dates.
+
+Create an API endpoint POST /api/stock/seeder/demo that runs this seeder.
+Call this endpoint automatically once when the server starts if stock_medicaments 
+table is empty for this clinic.
+
+After seeding, also run the anomaly detection to generate realistic alerts 
+(some products will be below their reorder points by design — 
+set stock=2 for Propofol and stock=1 for Kétamine to trigger critical alerts).

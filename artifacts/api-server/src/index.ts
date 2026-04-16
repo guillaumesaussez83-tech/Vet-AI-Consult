@@ -1,5 +1,6 @@
 import app from "./app";
 import { logger } from "./lib/logger";
+import { runStockSeeder } from "./routes/stock/seeder";
 
 const rawPort = process.env["PORT"];
 
@@ -22,4 +23,15 @@ app.listen(port, (err) => {
   }
 
   logger.info({ port }, "Server listening");
+
+  // Auto-seed stock demo data if stock is empty
+  runStockSeeder()
+    .then(result => {
+      if (result.inserted > 0) {
+        logger.info(result, "Stock initialisé automatiquement avec les données démo");
+      }
+    })
+    .catch(err => {
+      logger.warn({ err }, "Auto-seeding du stock ignoré (erreur non bloquante)");
+    });
 });
