@@ -46,7 +46,7 @@ See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and pa
 1. **Vaccinations** (`/patients/:id/vaccinations`) — timeline par patient, alertes rappel, bilan IA
 2. **Stock médicaments** (`/stock`) — gestion CRUD Phase 2 : alertes rupture/expiration, mouvements, lots FEFO, commandes CENTRAVET, réception BL, IA (ADC+EOQ+safety stock), anomalies, export TransNet CSV
 3. **Statistiques** (`/statistiques`) — CA, consultations, recharts AreaChart+BarChart, top actes, par veto
-4. **Agenda** (`/agenda`) — calendrier semaine, RDV CRUD, click sur créneau, dialogues
+4. **Agenda multi-vétérinaire** (`/agenda`) — 3 onglets : Agenda (grille semaine multi-vet avec colonnes colorées par vétérinaire, RDV cliquables, création rapide par clic), Planning (calendrier mensuel par vétérinaire, exceptions), Configuration (CRUD vétérinaires, planning type par jour, rotations weekend automatiques). Engine de créneaux disponibles (planning type + exceptions + rotations + chevauchements RDV)
 5. **Certificats** (`/certificats`) — 5 types, génération Claude AI, aperçu + impression
 6. **Protocole anesthésie** — section collapsible dans chaque consultation, génération IA
 7. **Portail client** (`/portail/:token`) — accès public par token, vaccinations, dernier RDV
@@ -72,6 +72,18 @@ See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and pa
 - `GET/POST/PATCH/DELETE /api/vaccinations` — carnet vaccinal par patient
 - `GET/POST/PATCH/DELETE /api/stock` + `PATCH /api/stock/:id/mouvement` — stock médicaments
 - `GET/POST/PATCH/DELETE /api/rendez-vous` — agenda avec filtres date/vet, join patient+owner
+- `GET /api/agenda/veterinaires` — vétérinaires actifs (couleur, initiales)
+- `POST /api/agenda/veterinaires` + `PUT /:id` + `DELETE /:id` — CRUD vétérinaires
+- `GET /api/agenda/slots/:vetId/:date` — créneaux disponibles pour un vétérinaire (planning type + exceptions + rotations + chevauchements)
+- `GET /api/agenda/slots/multi/:date` — créneaux pour tous les vétérinaires d'un jour
+- `GET /api/agenda/rendez-vous/semaine/:dateDebut` — RDV de la semaine avec join vet+patient+owner
+- `GET /api/agenda/planning/mois/:annee/:mois` — vue mensuelle (travaille/nbRdv/exception/garde)
+- `POST /api/agenda/rendez-vous` — créer RDV avec validation créneau (409 si pris + prochains disponibles)
+- `PUT /api/agenda/rendez-vous/:id` + `/statut-salle` — mise à jour RDV ou statut salle
+- `GET/POST /api/agenda/planning/semaine-type/:vetId` — planning type hebdomadaire (upsert)
+- `POST/DELETE /api/agenda/planning/exception` — exceptions (congé/maladie/formation/garde/fermeture)
+- `POST /api/agenda/rotations/generer` — génération rotations weekend équitables (aperçu + confirmation)
+- `GET /api/agenda/prochain-creneau?vetId=` — prochain créneau disponible
 - `GET/POST /api/anesthesie` + `/api/anesthesie/generer-ia` — protocoles anesthésie par consultation
 - `GET /api/portail/:token` + `POST /api/portail/generate/:ownerId` — portail public client
 - `GET /api/statistiques` — KPIs, mensuel 12 mois, top actes, par vétérinaire
@@ -111,6 +123,11 @@ See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and pa
 - `artifacts/vetcare/src/pages/statistiques/index.tsx` — dashboard recharts
 - `artifacts/vetcare/src/pages/stock/index.tsx` — gestion stock médicaments
 - `artifacts/vetcare/src/pages/vaccinations/index.tsx` — carnet vaccinations par patient
-- `artifacts/vetcare/src/pages/agenda/index.tsx` — calendrier semaine interactif
+- `artifacts/vetcare/src/pages/agenda/index.tsx` — agenda multi-vet 3 onglets (WeekGrid, PlanningTab, ConfigTab)
+- `artifacts/api-server/src/routes/agenda/index.ts` — engine créneaux + toutes routes agenda
+- `lib/db/src/schema/veterinaires.ts` — table veterinaires (UUID, couleur, initiales)
+- `lib/db/src/schema/planning-semaine-type.ts` — planning hebdomadaire type par vétérinaire/jour
+- `lib/db/src/schema/exceptions-planning.ts` — congés/exceptions par vétérinaire
+- `lib/db/src/schema/rotations-weekend.ts` — rotations gardes weekend
 - `artifacts/vetcare/src/pages/certificats/index.tsx` — générateur certificats IA
 - `artifacts/vetcare/src/pages/portail/index.tsx` — portail public propriétaire (sans auth)

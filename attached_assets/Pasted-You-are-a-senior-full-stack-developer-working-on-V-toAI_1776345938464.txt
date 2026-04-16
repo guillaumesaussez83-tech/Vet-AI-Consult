@@ -1,0 +1,147 @@
+You are a senior full-stack developer working on VétoAI, a French veterinary SaaS (React + TypeScript + Vite frontend, Express backend, PostgreSQL + Drizzle ORM, Clerk auth multi-tenant with clinic_id, shadcn/ui components, React Query, Wouter routing). The app already has a basic /agenda page and a /salle-attente page. We need to completely upgrade both with a professional multi-vet scheduling system.
+
+══════════════════════════════════════════════════════════════
+MISSION: BUILD THE COMPLETE MULTI-VET AGENDA MODULE
+══════════════════════════════════════════════════════════════
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PART 1: DATABASE SCHEMA
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Create these tables in lib/db/src/schema/:
+
+TABLE: veterinaires
+- id (uuid, primary key)
+- clinic_id (text, not null)
+- nom (text, not null)
+- prenom (text, not null)
+- rpps (text)
+- couleur (text, not null) — hex color: #2563EB, #16A34A, #F59E0B, #EF4444, #8B5CF6
+- initiales (text) — e.g. "GS"
+- actif (boolean, default true)
+- created_at, updated_at
+
+TABLE: planning_semaine_type
+- id (uuid, primary key)
+- clinic_id (text, not null)
+- veterinaire_id (uuid, references veterinaires)
+- jour_semaine (integer) — 0=Lundi ... 6=Dimanche
+- heure_debut (text) — "08:30"
+- heure_fin (text) — "19:00"
+- pause_debut (text, nullable) — "12:00"
+- pause_fin (text, nullable) — "14:00"
+- actif (boolean, default true)
+UNIQUE: (veterinaire_id, jour_semaine)
+
+TABLE: exceptions_planning
+- id (uuid, primary key)
+- clinic_id (text, not null)
+- veterinaire_id (uuid, references veterinaires)
+- date_debut (date, not null)
+- date_fin (date, not null)
+- type_exception: 'conge' | 'formation' | 'maladie' | 'garde_exceptionnelle' | 'fermeture_clinique'
+- motif (text, nullable)
+- heure_debut_override (text, nullable)
+- heure_fin_override (text, nullable)
+- created_at
+
+TABLE: rotations_weekend
+- id (uuid, primary key)
+- clinic_id (text, not null)
+- date_weekend (date, not null) — always a Saturday
+- veterinaire_id (uuid, references veterinaires)
+- type_garde: 'samedi' | 'dimanche' | 'weekend_complet'
+- created_at
+UNIQUE: (clinic_id, date_weekend, type_garde)
+
+Extend existing rendez_vous table — add if missing:
+- veterinaire_id (uuid, references veterinaires)
+- proprietaire_nom (text)
+- proprietaire_telephone (text)
+- animal_nom (text)
+- animal_espece: 'chien' | 'chat' | 'nac' | 'cheval' | 'autre'
+- type_rdv: 'consultation' | 'vaccination' | 'chirurgie' | 'urgence' | 'suivi' | 'bilan' | 'autre'
+- duree_minutes (integer, default 20)
+- statut_salle: 'en_attente_arrivee' | 'arrive' | 'en_consultation' | 'en_attente_resultat' | 'a_encaisser' | 'termine'
+- created_by (text)
+
+Add indexes on clinic_id for all new tables.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PART 2: BACKEND — Available Slots Engine
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Create artifacts/api-server/src/routes/agenda/index.ts
+
+CORE FUNCTION getAvailableSlots(vetId, date, clinicId, slotDuration=20):
+1. Get semaine_type for this day of week → if none, return []
+2. Check exceptions_planning covering this date:
+   - conge/maladie/formation/fermeture → return []
+   - garde_exceptionnelle → use override hours
+3. Check rotations_weekend: if Sat/Sun and vet not in rotation → return []
+4. Generate slots between heure_debut and heure_fin, skip pause window
+5. Remove slots overlapping existing rendez_vous
+6. Return [{ heure: "09:00", disponible: true }, ...]
+
+ROUTES:
+
+GET /api/agenda/veterinaires
+→ All active vets for clinic with couleur and initiales
+
+GET /api/agenda/slots/:vetId/:date
+→ Available slots for one vet on one date
+
+GET /api/agenda/slots/multi/:date
+→ Available slots for ALL vets on a date
+→ { [vetId]: { vet, slots, travaille: boolean } }
+
+GET /api/agenda/rendez-vous/semaine/:dateDebut
+→ All rdv for the week, grouped by day then by vet, include vet couleur
+
+GET /api/agenda/planning/mois/:annee/:mois
+→ For each day × each vet: { travaille, nb_rdv, exception, est_garde_weekend }
+
+POST /api/agenda/rendez-vous
+→ Validate slot available → if taken return 409 with next available slots
+→ Create rdv with statut_salle='en_attente_arrivee'
+
+PUT /api/agenda/rendez-vous/:id
+→ Validate new slot if time/vet changed → update
+
+PUT /api/agenda/rendez-vous/:id/statut-salle
+→ Update statut_salle only (for kanban drag & drop)
+
+POST /api/agenda/planning/exception
+→ Create exception, check for rdv conflicts
+→ If conflicts: return { conflits: [{rdv_id, date, heure, animal, proprietaire}] }
+
+DELETE /api/agenda/planning/exception/:id
+
+POST /api/agenda/planning/semaine-type
+→ Upsert planning_semaine_type for vet+day
+
+POST /api/agenda/rotations/generer
+→ Input: { vetIds, dateDebut, dateFin, cycle, confirmer }
+→ Generate fair rotation (vet1 week1, vet2 week2...), preview if confirmer=false, save if true
+
+GET /api/agenda/prochain-creneau/:vetId?
+→ Find next available slot for one vet or any vet
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PART 3: FRONTEND — /agenda with 3 tabs
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Replace the existing /agenda page with 3 tabs:
+[📅 Agenda] [📋 Planning] [⚙️ Configuration]
+
+────────────────────
+TAB 1 — AGENDA (booking view)
+────────────────────
+
+Header: ← Semaine précédente | Semaine du 14 au 20 avril 2026 | → + [Aujourd'hui] + [+ Nouveau RDV]
+
+Week grid: columns = Mon to Sat, rows = time slots every 20 min from 8:00 to 19:30
+Sub-columns per day = one per vet (colored header with dot + initials + name)
+
+Vet column states:
+- Working day: white
