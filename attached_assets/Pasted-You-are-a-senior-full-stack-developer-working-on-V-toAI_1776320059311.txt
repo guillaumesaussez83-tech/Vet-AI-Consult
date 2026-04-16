@@ -1,0 +1,147 @@
+You are a senior full-stack developer working on VétoAI, a French veterinary SaaS built in React + TypeScript + Vite (frontend) + Express (backend) + PostgreSQL + Drizzle ORM. The app already has: patients, consultations (5-step wizard with voice), invoicing (voice-dictated), agenda, statistics, vaccinations, certificates, encaissements. Authentication is via Clerk (multi-tenant with clinic_id). AI is Claude Anthropic (API key already configured). The purchasing cooperative used by the clinic is CENTRAVET, whose ordering platform is called TransNet (transnet.centravet.net).
+
+══════════════════════════════════════════════════════════════
+MISSION: BUILD THE COMPLETE AI-DRIVEN JUST-IN-TIME STOCK MODULE
+══════════════════════════════════════════════════════════════
+
+Build a world-class AI stock management module that eliminates medication over-stocking (clinics waste 8-10% of budget on expirations) and under-stocking (stockouts during consultations). The system must be so simple that veterinary technicians (ASVs) can operate it entirely — no vet involved in stock management.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PART 1: DATABASE SCHEMA (Drizzle ORM)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Create/extend these tables in lib/db/src/schema/:
+
+TABLE: stock_medicaments (extend existing if present)
+- id (uuid, primary key)
+- clinic_id (text, not null) ← multi-tenant isolation
+- nom (text, not null) — product name
+- reference_centravet (text) — CENTRAVET product code (for order export)
+- code_ean (text) — barcode EAN13
+- categorie (text) — 'medicament' | 'vaccin' | 'consommable' | 'aliment' | 'materiel'
+- unite (text) — 'comprime' | 'flacon' | 'ml' | 'boite' | 'sachet' | 'unite'
+- quantite_stock (numeric, default 0)
+- quantite_min (numeric) — safety stock (auto-calculated by AI, editable)
+- quantite_max (numeric) — max stock level (auto-calculated by AI, editable)
+- point_commande (numeric) — reorder point (AI-calculated)
+- quantite_commande_optimale (numeric) — EOQ (AI-calculated)
+- prix_achat_ht (numeric) — purchase price excl. tax
+- prix_vente_ttc (numeric) — selling price incl. tax (synced with actes_catalog)
+- tva_taux (numeric, default 20)
+- delai_livraison_jours (integer, default 1) — CENTRAVET delivers next day
+- fournisseur_principal (text, default 'CENTRAVET')
+- date_peremption_lot (date) — nearest expiry date across batches
+- actif (boolean, default true)
+- created_at, updated_at
+
+TABLE: stock_lots
+- id (uuid, primary key)
+- clinic_id (text, not null)
+- medicament_id (uuid, references stock_medicaments)
+- numero_lot (text) — lot/batch number
+- date_peremption (date, not null)
+- quantite_initiale (numeric)
+- quantite_restante (numeric)
+- date_reception (date)
+- bon_livraison_id (uuid, references bons_livraison)
+- created_at
+
+TABLE: mouvements_stock
+- id (uuid, primary key)
+- clinic_id (text, not null)
+- medicament_id (uuid, references stock_medicaments)
+- lot_id (uuid, references stock_lots, nullable)
+- type_mouvement: 'entree_reception' | 'sortie_consultation' | 'sortie_vente' | 'perte_peremption' | 'ajustement_inventaire' | 'retour_fournisseur'
+- quantite (numeric) — positive for entries, negative for exits
+- consultation_id (uuid, nullable) — link to consultation if exit via prescription
+- facture_id (uuid, nullable) — link to invoice
+- bon_livraison_id (uuid, nullable) — link to delivery
+- prix_unitaire_ht (numeric)
+- motif (text) — free text for adjustments
+- utilisateur (text) — who performed the movement
+- created_at
+
+TABLE: commandes_centravet
+- id (uuid, primary key)
+- clinic_id (text, not null)
+- numero_commande (text, unique) — auto-generated: CMD-YYYYMM-NNNN
+- statut: 'brouillon' | 'validee' | 'envoyee_centravet' | 'en_cours_livraison' | 'livree_partielle' | 'livree_complete' | 'annulee'
+- type_declenchement: 'ia_automatique' | 'asv_manuel' | 'urgence'
+- date_creation (timestamp)
+- date_validation (timestamp)
+- date_envoi_centravet (timestamp)
+- date_livraison_prevue (date)
+- montant_total_ht (numeric)
+- notes_ia (text) — AI reasoning for why this order was generated
+- notes_asv (text) — ASV notes
+- fichier_export_url (text) — CSV/PDF export for TransNet import
+- created_at, updated_at
+
+TABLE: lignes_commande
+- id (uuid, primary key)
+- commande_id (uuid, references commandes_centravet)
+- medicament_id (uuid, references stock_medicaments)
+- quantite_commandee (numeric)
+- quantite_recue (numeric, default 0)
+- prix_unitaire_ht (numeric)
+- reference_centravet (text)
+- statut_ligne: 'en_attente' | 'recue_complete' | 'recue_partielle' | 'manquante' | 'rupture_centravet'
+- lot_numero (text) — filled on reception
+- date_peremption_recu (date) — filled on reception
+- ecart_notes (text) — ASV notes on discrepancy
+
+TABLE: bons_livraison
+- id (uuid, primary key)
+- clinic_id (text, not null)
+- commande_id (uuid, references commandes_centravet)
+- numero_bl (text) — CENTRAVET delivery note number
+- date_livraison (date)
+- statut: 'a_valider' | 'valide' | 'litige'
+- valide_par (text) — ASV name
+- date_validation (timestamp)
+- created_at
+
+TABLE: alertes_stock
+- id (uuid, primary key)
+- clinic_id (text, not null)
+- medicament_id (uuid, references stock_medicaments)
+- type_alerte: 'rupture' | 'stock_bas' | 'peremption_proche' | 'peremption_30j' | 'surstockage' | 'commande_suggeree'
+- niveau_urgence: 'critique' | 'warning' | 'info'
+- message (text)
+- est_traitee (boolean, default false)
+- created_at
+
+Add indexes: clinic_id on all tables, medicament_id on mouvements_stock, statut on commandes_centravet.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PART 2: AI ENGINE — Express API routes in artifacts/api-server/src/routes/stock/
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Create file: artifacts/api-server/src/routes/stock/ia-engine.ts
+
+ALGORITHM — calculateStockMetrics(medicamentId, clinicId):
+```typescript
+// 1. Get consumption history (last 90 days from mouvements_stock where type='sortie_*')
+// 2. Calculate daily average consumption (ADC) with exponential smoothing (α=0.3)
+// 3. Calculate standard deviation of daily demand (σ)
+// 4. Safety stock = 1.65 × σ × √(lead_time) [95% service level, Z=1.65]
+// 5. Reorder point = ADC × lead_time + safety_stock
+// 6. EOQ = √(2 × annual_demand × order_cost / holding_cost_rate)
+//    - order_cost = 15€ (fixed cost per order line)
+//    - holding_cost_rate = 0.25 (25% of item value per year)
+// 7. Max stock = reorder_point + EOQ
+// 8. Apply seasonal coefficient: analyze same period last year, calculate ratio
+// 9. Round to nearest pack size (quantite_min_commande from catalog)
+```
+
+POST /api/stock/ia/analyser-consommation
+- Input: { clinicId, periodesJours: 90 }
+- For each active medicament, run calculateStockMetrics
+- Update stock_medicaments with new point_commande, quantite_min, quantite_max, quantite_commande_optimale
+- Return summary of changes
+
+POST /api/stock/ia/generer-commande-suggeree
+- Find all medicaments where quantite_stock <= point_commande
+- For each: calculate quantity to order = quantite_commande_optimale (or enough to reach quantite_max)
+- Group by fournisseur (all CENTRAVET here)
+- Call Claude API with this prompt:
