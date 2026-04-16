@@ -73,8 +73,7 @@ export default function AgendaPage() {
     queryFn: () => fetch(`${API_BASE}/rendez-vous?from=${from}&to=${to}`).then(r => r.json()),
   });
 
-  const { data: patientsData } = useListPatients({ limit: 200 });
-  const patients = patientsData?.patients ?? [];
+  const { data: patients = [] } = useListPatients();
 
   const saveMutation = useMutation({
     mutationFn: async () => {

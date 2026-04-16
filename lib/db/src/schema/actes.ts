@@ -8,6 +8,7 @@ export const actesTable = pgTable("actes", {
   nom: text("nom").notNull(),
   categorie: text("categorie").notNull(),
   prixDefaut: real("prix_defaut").notNull(),
+  tvaRate: real("tva_rate").notNull().default(20),
   description: text("description"),
   unite: text("unite").notNull().default("unité"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

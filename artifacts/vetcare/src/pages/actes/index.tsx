@@ -43,14 +43,16 @@ export default function ActesPage() {
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      const code = form.nom.toUpperCase().replace(/[^A-Z0-9]/g, "_").slice(0, 20) + "_" + Date.now().toString(36).toUpperCase().slice(-4);
       await createActe.mutateAsync({
         data: {
+          code,
           nom: form.nom,
           categorie: form.categorie,
           prixDefaut: parseFloat(form.prixDefaut),
           tvaRate: parseFloat(form.tvaRate),
           description: form.description || null,
-          unite: form.unite || null,
+          unite: form.unite || "",
         }
       });
       queryClient.invalidateQueries({ queryKey: getListActesQueryKey() });
@@ -163,7 +165,7 @@ export default function ActesPage() {
                           <span className="font-semibold">{acte.prixDefaut?.toFixed(2)} €</span>
                           <span className="text-xs text-muted-foreground ml-1">HT</span>
                         </div>
-                        <span className="text-xs text-muted-foreground">TVA {acte.tvaRate}%</span>
+                        <span className="text-xs text-muted-foreground">TVA {acte.tvaRate ?? 20}%</span>
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
                             <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive">

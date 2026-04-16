@@ -29,6 +29,18 @@ pnpm workspace monorepo using TypeScript — VetCare Pro, logiciel vétérinaire
 
 See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details.
 
+## Quality Sprint (completé)
+
+- TypeScript: 0 erreurs (réduit de 60 → 0) dans `artifacts/vetcare`
+- `tvaRate` ajouté à la table `actes` (DB + schéma + types générés)
+- `Acte.tvaRate` et `CreateActeBody.tvaRate` ajoutés aux types API générés
+- `useListPatients()` corrigé : retourne `PatientWithOwner[]` directement (pas `{ patients: [...] }`)
+- `ListPatientsParams` : paramètre `limit` supprimé (non supporté par le backend)
+- `FactureWithDetails.lignes` et `montantTVA` : accès via cast type-safe
+- `queryKey` requis ajouté dans `useGetFacture` et `useListPatientConsultations`
+- `api-client-react` dist/ rebuildet après chaque changement de schéma
+- Colonne `code` auto-générée lors de la création d'un acte
+
 ## Modules complets (11 modules ajoutés)
 
 1. **Vaccinations** (`/patients/:id/vaccinations`) — timeline par patient, alertes rappel, bilan IA

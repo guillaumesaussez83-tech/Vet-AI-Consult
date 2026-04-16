@@ -9,7 +9,7 @@ export default function FactureImprimerPage() {
   const id = parseInt(params?.id ?? "0");
 
   const { data: facture, isLoading } = useGetFacture(id, {
-    query: { enabled: !!id }
+    query: { enabled: !!id, queryKey: ["facture", id] }
   });
 
   if (isLoading) return (

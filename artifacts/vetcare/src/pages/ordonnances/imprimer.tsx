@@ -29,6 +29,8 @@ interface ParametresClinique {
   siret: string | null;
   numeroOrdre: string | null;
   numTVA: string | null;
+  horaires: string | null;
+  mentionsLegales: string | null;
 }
 
 async function fetchOrdonnance(id: number): Promise<Ordonnance> {

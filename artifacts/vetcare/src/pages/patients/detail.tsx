@@ -24,7 +24,7 @@ export default function PatientDetailPage() {
     query: { enabled: !!id, queryKey: getGetPatientQueryKey(id) }
   });
   const { data: consultations } = useListPatientConsultations(id, {
-    query: { enabled: !!id }
+    query: { enabled: !!id, queryKey: ["patient-consultations", id] }
   });
 
   if (isLoading) return (

@@ -1,0 +1,146 @@
+You are a senior full-stack developer working on VétoAI. 
+Do NOT add any new features. This sprint is exclusively about 
+code quality, bug fixing, and UI/UX consistency.
+
+══════════════════════════════════════════════════════════════
+MISSION: CLEAN, CONSOLIDATE, AND POLISH THE ENTIRE CODEBASE
+══════════════════════════════════════════════════════════════
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PART 1: FIX ALL ERRORS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+- Run TypeScript compiler (tsc --noEmit) and fix ALL type errors
+- Fix all ESLint warnings and errors
+- Remove all console.log() statements from production code
+- Fix any broken imports (missing files, wrong paths)
+- Fix any 404 API routes (routes defined in frontend but missing in backend)
+- Fix any missing database indexes
+- Ensure all React Query keys are consistent and don't conflict
+- Fix any "Cannot read property of undefined" runtime errors by 
+  adding proper null checks and optional chaining
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PART 2: CODE CONSOLIDATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+- Remove all unused imports, variables, components, and files
+- Merge any duplicate utility functions into shared lib/utils.ts
+- Ensure ONE consistent API base URL pattern (no hardcoded URLs)
+- Consolidate all date formatting into a single formatDate() utility
+- Consolidate all currency formatting into formatEuro() utility
+- Remove any commented-out code blocks older than the current features
+- Ensure all API error handling follows ONE pattern:
+  try/catch → toast.error(message) → return early
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PART 3: UI/UX CONSISTENCY AUDIT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Apply these design principles consistently across ALL pages:
+
+VISUAL HIERARCHY & SPACING:
+- Page padding: p-6 on desktop, p-4 on mobile (consistent everywhere)
+- Section spacing: space-y-6 between major sections
+- Card padding: p-6 inside all cards
+- Use 8px grid: all spacing values multiples of 2 (Tailwind: 2,4,6,8,10,12...)
+
+COLOR PALETTE — calm and professional:
+- Primary actions: blue-600 (#2563EB)
+- Success/done: green-600 (#16A34A)
+- Warning/attention: amber-500 (#F59E0B)
+- Danger/delete: red-600 (#DC2626)
+- Page background: gray-50 (#F9FAFB)
+- Card background: white with shadow-sm
+- Text primary: gray-900
+- Text secondary: gray-500
+- Borders: gray-200
+- NO bright purple, no neon colors, no dark backgrounds on main content
+
+TYPOGRAPHY (consistent across all pages):
+- Page title: text-2xl font-bold text-gray-900
+- Section title: text-lg font-semibold text-gray-800
+- Card title: text-base font-medium text-gray-700
+- Body text: text-sm text-gray-600
+- Label: text-sm font-medium text-gray-700
+- Small/meta: text-xs text-gray-500
+
+BUTTONS — standardize everywhere:
+- Primary: Button variant="default" (blue) — ONE per page section
+- Secondary: Button variant="outline" — supporting actions
+- Danger: Button variant="destructive" — delete/cancel only
+- Ghost: Button variant="ghost" — table row actions
+- All buttons: consistent size (h-9 for normal, h-8 for compact tables)
+- Icon buttons: always with tooltip or visible label (no mystery icons)
+
+LOADING STATES — add where missing:
+- Every data fetch shows a Skeleton loader (not a spinner)
+- Skeleton shape must match the actual content layout
+- Buttons show disabled + loading spinner during async operations
+- Never show empty screen while loading
+
+EMPTY STATES — add where missing:
+- Every list/table that can be empty shows an illustrated empty state
+- Empty state: icon (large, gray-300) + title + subtitle + primary action button
+- Example: "Aucun patient · Ajoutez votre premier patient pour commencer" + [+ Ajouter un patient]
+
+ERROR STATES:
+- API errors show inline error message (not just a toast)
+- Form validation errors appear below each field in red text
+- Network errors show retry button
+
+FORMS — standardize:
+- All inputs: consistent height h-9
+- All selects use shadcn Select component (not native HTML select)
+- Required fields marked with * in label
+- Submit button always at bottom right
+- Cancel/Reset button at bottom left
+- Form sections grouped in Cards with clear section titles
+
+TABLES — standardize:
+- Zebra striping: odd rows white, even rows gray-50
+- Hover: bg-blue-50 on row hover
+- Action buttons appear on hover only (to reduce visual noise)
+- Sort indicators on sortable columns
+- Pagination: show "Affichage de X à Y sur Z résultats"
+
+MOBILE RESPONSIVENESS:
+- All pages work on tablet (768px+) — this is minimum requirement
+- Tables: on mobile, switch to card list view
+- Modals: full screen on mobile
+- Sidebar: collapsible on tablet
+
+NAVIGATION SIDEBAR:
+- Active page: bg-blue-50 + text-blue-700 + blue left border (border-l-2)
+- Icons: consistent 20px size
+- Notification badges: only for critical alerts (ruptures stock, RDV urgent)
+- Group items logically: 
+  [Accueil] 
+  ── Patients [Patients] [Consultations] [Ordonnances] [Vaccinations]
+  ── Clinique [Agenda] [Encaissements] [Statistiques]
+  ── Gestion [Stock] [Rappels] [Certificats]
+  ── Paramètres [Paramètres clinique]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PART 4: PERFORMANCE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+- Add React.memo() to heavy list components (patient list, consultation list)
+- Add useMemo() for filtered/sorted lists computed from large datasets
+- Ensure large catalogs (actes_catalog 487 items) use virtual scrolling 
+  or pagination — never load all 487 at once in a Select dropdown
+- Add debounce (300ms) to all search inputs
+- Lazy load heavy pages (/statistiques, /stock) with React.lazy()
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PART 5: FINAL CHECK
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+After all fixes:
+- Run tsc --noEmit again → must show 0 errors
+- Test every page loads without crashing
+- Test every API route returns expected data
+- Verify all French translations (no English text visible to end users)
+- Check all pages have proper <title> tags (for browser tab)
+
+Report: list every file changed and what was fixed/improved.

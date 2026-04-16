@@ -37,8 +37,7 @@ export default function CertificatsPage() {
   const [certificatText, setCertificatText] = useState("");
   const [previewOpen, setPreviewOpen] = useState(false);
 
-  const { data: patientsData } = useListPatients({ limit: 200 });
-  const patients = patientsData?.patients ?? [];
+  const { data: patients = [] } = useListPatients();
 
   const selectedPatient = patients.find(p => p.id.toString() === patientId);
 

@@ -120,6 +120,7 @@ export interface Acte {
   nom: string;
   categorie: string;
   prixDefaut: number;
+  tvaRate: number;
   /** @nullable */
   description?: string | null;
   unite: string;
@@ -202,6 +203,7 @@ export interface CreateActeBody {
   nom: string;
   categorie: string;
   prixDefaut: number;
+  tvaRate?: number;
   /** @nullable */
   description?: string | null;
   unite: string;

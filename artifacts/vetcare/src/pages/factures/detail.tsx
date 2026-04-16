@@ -96,11 +96,11 @@ export default function FactureDetailPage() {
               <span className="text-right">Qté × Prix</span>
               <span className="text-right">Total HT</span>
             </div>
-            {facture.lignes?.map((ligne, idx) => (
+            {((facture as unknown as Record<string, unknown>).lignes as Array<Record<string, unknown>> | undefined)?.map((ligne, idx) => (
               <div key={idx} className="grid grid-cols-4 gap-3 text-sm py-1">
-                <span className="col-span-2">{ligne.description}</span>
-                <span className="text-right text-muted-foreground">{ligne.quantite} × {ligne.prixUnitaire?.toFixed(2)} €</span>
-                <span className="text-right font-medium">{ligne.montantHT?.toFixed(2)} €</span>
+                <span className="col-span-2">{String(ligne.description ?? "")}</span>
+                <span className="text-right text-muted-foreground">{Number(ligne.quantite)} × {(Number(ligne.prixUnitaire)).toFixed(2)} €</span>
+                <span className="text-right font-medium">{(Number(ligne.montantHT)).toFixed(2)} €</span>
               </div>
             ))}
           </div>
@@ -111,7 +111,7 @@ export default function FactureDetailPage() {
             </div>
             <div className="flex justify-between text-muted-foreground">
               <span>TVA</span>
-              <span>{facture.montantTVA?.toFixed(2)} €</span>
+              <span>{facture.tva?.toFixed(2)} €</span>
             </div>
             <div className="flex justify-between font-bold text-lg border-t pt-1">
               <span>Total TTC</span>
