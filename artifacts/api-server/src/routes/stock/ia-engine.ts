@@ -1,8 +1,8 @@
 import { db } from "@workspace/db";
 import {
-  mouvementsStockTable, stockMedicamentsTable, commandesCentravetTable, lignesCommandeTable,
+  mouvementsStockTable, stockMedicamentsTable, commandesCentravetTable, lignesCommandeTable, alertesStockTable,
 } from "@workspace/db";
-import { eq, and, gte, like, sql } from "drizzle-orm";
+import { eq, and, gte, lte, like, lt, sql, desc, asc } from "drizzle-orm";
 import { anthropic } from "@workspace/integrations-anthropic-ai";
 import { AI_MODEL, AI_MAX_TOKENS } from "../../lib/constants";
 
@@ -318,4 +318,232 @@ export async function genererAlertes(): Promise<number> {
   }
 
   return count;
+}
+
+// ──────────────────────────────────────────────────────────
+// DÉTECTION D'ANOMALIES IA
+// ──────────────────────────────────────────────────────────
+export interface Anomalie {
+  medicamentId?: number;
+  nomMedicament?: string;
+  typeAnomalie: string;
+  niveauUrgence: "critique" | "warning" | "info";
+  detail: string;
+  valeurActuelle?: number;
+  valeurReference?: number;
+}
+
+export async function detecterAnomalies(): Promise<Anomalie[]> {
+  const anomalies: Anomalie[] = [];
+  const medicaments = await db.select().from(stockMedicamentsTable);
+  const today = new Date();
+  const in30Days = new Date(); in30Days.setDate(today.getDate() + 30);
+  const avant60Jours = new Date(); avant60Jours.setDate(today.getDate() - 60);
+  const avant7Jours = new Date(); avant7Jours.setDate(today.getDate() - 7);
+  const avant90Jours = new Date(); avant90Jours.setDate(today.getDate() - 90);
+
+  for (const m of medicaments) {
+    // 1. Stock négatif (erreur de données)
+    if ((m.quantiteStock ?? 0) < 0) {
+      const a: Anomalie = {
+        medicamentId: m.id, nomMedicament: m.nom, typeAnomalie: "stock_negatif",
+        niveauUrgence: "critique",
+        detail: `Stock négatif détecté : ${m.quantiteStock} ${m.unite ?? "unités"} — erreur de données à corriger`,
+        valeurActuelle: m.quantiteStock ?? 0,
+      };
+      anomalies.push(a);
+      await db.insert(alertesStockTable).values({
+        medicamentId: m.id, typeAlerte: "rupture", niveauUrgence: "critique",
+        message: `ANOMALIE : Stock négatif (${m.quantiteStock}) pour ${m.nom} — correction requise`,
+        estTraitee: false,
+      });
+    }
+
+    // 2. Pic de consommation >300% de la moyenne
+    const mvts7j = await db.select({ qte: sql<number>`ABS(SUM(${mouvementsStockTable.quantite}))` })
+      .from(mouvementsStockTable)
+      .where(and(
+        eq(mouvementsStockTable.medicamentId, m.id),
+        gte(mouvementsStockTable.createdAt, avant7Jours),
+        like(mouvementsStockTable.typeMouvement, "sortie_%"),
+      ));
+    const mvts90j = await db.select({ qte: sql<number>`ABS(SUM(${mouvementsStockTable.quantite}))` })
+      .from(mouvementsStockTable)
+      .where(and(
+        eq(mouvementsStockTable.medicamentId, m.id),
+        gte(mouvementsStockTable.createdAt, avant90Jours),
+        like(mouvementsStockTable.typeMouvement, "sortie_%"),
+      ));
+    const conso7j = Number(mvts7j[0]?.qte ?? 0);
+    const moy7jSur90 = Number(mvts90j[0]?.qte ?? 0) / 90 * 7;
+    if (moy7jSur90 > 0 && conso7j > moy7jSur90 * 3) {
+      const a: Anomalie = {
+        medicamentId: m.id, nomMedicament: m.nom, typeAnomalie: "pic_consommation",
+        niveauUrgence: "warning",
+        detail: `Pic de consommation : ${conso7j.toFixed(1)} unités en 7j (moyenne attendue : ${moy7jSur90.toFixed(1)}) — +${Math.round(conso7j / moy7jSur90 * 100 - 100)}%`,
+        valeurActuelle: conso7j, valeurReference: moy7jSur90,
+      };
+      anomalies.push(a);
+      await db.insert(alertesStockTable).values({
+        medicamentId: m.id, typeAlerte: "commande_suggeree", niveauUrgence: "warning",
+        message: `Pic de consommation : ${m.nom} — ${conso7j.toFixed(0)} unités/7j vs moyenne ${moy7jSur90.toFixed(0)}`,
+        estTraitee: false,
+      });
+    }
+
+    // 3. Péremption <30j avec stock élevé (>15j de stock restant)
+    const datePerem = m.datePeremptionLot ?? m.datePeremption;
+    if (datePerem) {
+      const dPerem = new Date(datePerem);
+      const adc = m.quantiteStock && m.quantiteStock > 0 ? (m.quantiteStock ?? 0) : 0;
+      const joursRestants = Math.floor((dPerem.getTime() - today.getTime()) / 86400000);
+      if (joursRestants > 0 && joursRestants <= 30 && adc > 15) {
+        const a: Anomalie = {
+          medicamentId: m.id, nomMedicament: m.nom, typeAnomalie: "peremption_stock_eleve",
+          niveauUrgence: "warning",
+          detail: `Péremption dans ${joursRestants}j mais stock élevé (${m.quantiteStock} ${m.unite ?? "unités"}) — risque de perte`,
+          valeurActuelle: m.quantiteStock ?? 0, valeurReference: joursRestants,
+        };
+        anomalies.push(a);
+        await db.insert(alertesStockTable).values({
+          medicamentId: m.id, typeAlerte: "peremption_30j", niveauUrgence: "warning",
+          message: `Risque de perte : ${m.nom} expire dans ${joursRestants}j avec ${m.quantiteStock} ${m.unite ?? "unités"} en stock`,
+          estTraitee: false,
+        });
+      }
+    }
+
+    // 4. Stock mort — aucun mouvement depuis >60 jours
+    const dernierMvt = await db.select({ date: mouvementsStockTable.createdAt })
+      .from(mouvementsStockTable)
+      .where(eq(mouvementsStockTable.medicamentId, m.id))
+      .orderBy(desc(mouvementsStockTable.createdAt))
+      .limit(1);
+
+    const stockActuel = m.quantiteStock ?? 0;
+    const pasDeHistorique = dernierMvt.length === 0;
+    const sansMouvement = dernierMvt.length > 0 && dernierMvt[0].date < avant60Jours;
+
+    if (stockActuel > 0 && (pasDeHistorique || sansMouvement)) {
+      const joursInactif = pasDeHistorique ? 99 : Math.floor((today.getTime() - dernierMvt[0].date.getTime()) / 86400000);
+      const a: Anomalie = {
+        medicamentId: m.id, nomMedicament: m.nom, typeAnomalie: "stock_mort",
+        niveauUrgence: "info",
+        detail: `Stock mort : ${m.nom} — ${stockActuel} ${m.unite ?? "unités"} sans mouvement depuis ${joursInactif}j`,
+        valeurActuelle: stockActuel, valeurReference: joursInactif,
+      };
+      anomalies.push(a);
+      await db.insert(alertesStockTable).values({
+        medicamentId: m.id, typeAlerte: "surstockage", niveauUrgence: "info",
+        message: `Stock mort : ${m.nom} — ${stockActuel} ${m.unite ?? "unités"} immobiles depuis ${joursInactif}j`,
+        estTraitee: false,
+      });
+    }
+  }
+
+  return anomalies;
+}
+
+// ──────────────────────────────────────────────────────────
+// FEFO DECREMENT — sortie stock consultation
+// ──────────────────────────────────────────────────────────
+export async function decrementerConsultationFEFO(
+  consultationId: number,
+  factureLignes: Array<{ nom: string; quantite: number; ean?: string }>,
+): Promise<Array<{ nom: string; medicamentId?: number; qtePrise: number; alerteCreee: boolean; notFound?: boolean }>> {
+  const { stockLotsTable } = await import("@workspace/db");
+  const resultats = [];
+
+  for (const ligne of factureLignes) {
+    const { nom, quantite, ean } = ligne;
+    let qtePrise = 0;
+    let alerteCreee = false;
+
+    // Find medicament by name (case-insensitive) or EAN
+    const meds = await db.select().from(stockMedicamentsTable);
+    const med = meds.find(m =>
+      m.nom.toLowerCase().includes(nom.toLowerCase()) ||
+      (ean && m.codeEan === ean)
+    );
+
+    if (!med) {
+      resultats.push({ nom, qtePrise: 0, alerteCreee: false, notFound: true });
+      continue;
+    }
+
+    let qteRestante = quantite;
+
+    // FEFO: consommer par ordre d'expiration croissante
+    const lots = await db.select().from(stockLotsTable)
+      .where(and(
+        eq(stockLotsTable.medicamentId, med.id),
+        sql`${stockLotsTable.quantiteRestante} > 0`,
+      ))
+      .orderBy(asc(stockLotsTable.datePeremption));
+
+    for (const lot of lots) {
+      if (qteRestante <= 0) break;
+      const dispo = lot.quantiteRestante ?? 0;
+      const prise = Math.min(dispo, qteRestante);
+
+      await db.update(stockLotsTable)
+        .set({ quantiteRestante: dispo - prise })
+        .where(eq(stockLotsTable.id, lot.id));
+
+      qteRestante -= prise;
+      qtePrise += prise;
+    }
+
+    // Si pas assez de lots, prendre sur stock global
+    if (qteRestante > 0) qtePrise += qteRestante;
+
+    // Décrémenter stock global
+    const newQty = Math.max(0, (med.quantiteStock ?? 0) - quantite);
+    await db.update(stockMedicamentsTable)
+      .set({ quantiteStock: newQty })
+      .where(eq(stockMedicamentsTable.id, med.id));
+
+    // Enregistrer mouvement
+    await db.insert(mouvementsStockTable).values({
+      medicamentId: med.id,
+      typeMouvement: "sortie_consultation",
+      quantite: -quantite,
+      consultationId,
+      prixUnitaireHT: med.prixAchatHT ?? undefined,
+      motif: `Consultation #${consultationId} — FEFO`,
+    });
+
+    // Mise à jour datePeremptionLot (prochain lot non vide)
+    const lotsRestants = await db.select().from(stockLotsTable)
+      .where(and(
+        eq(stockLotsTable.medicamentId, med.id),
+        sql`${stockLotsTable.quantiteRestante} > 0`,
+      ))
+      .orderBy(asc(stockLotsTable.datePeremption))
+      .limit(1);
+
+    if (lotsRestants.length > 0) {
+      await db.update(stockMedicamentsTable)
+        .set({ datePeremptionLot: lotsRestants[0].datePeremption })
+        .where(eq(stockMedicamentsTable.id, med.id));
+    }
+
+    // Alerte si stock sous le point de commande
+    if (newQty <= (med.pointCommande ?? med.quantiteMinimum ?? 5)) {
+      await db.insert(alertesStockTable).values({
+        medicamentId: med.id,
+        typeAlerte: newQty === 0 ? "rupture" : "stock_bas",
+        niveauUrgence: newQty === 0 ? "critique" : "warning",
+        message: newQty === 0
+          ? `RUPTURE après consultation #${consultationId} : ${med.nom}`
+          : `Stock bas après consultation #${consultationId} : ${med.nom} — ${newQty} ${med.unite ?? "unités"} restants`,
+        estTraitee: false,
+      });
+      alerteCreee = true;
+    }
+
+    resultats.push({ nom, medicamentId: med.id, qtePrise, alerteCreee, notFound: false });
+  }
+
+  return resultats;
 }

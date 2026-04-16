@@ -112,6 +112,15 @@ function AlertesTab() {
     onError: () => toast({ title: "Erreur IA", variant: "destructive" }),
   });
 
+  const anomaliesMutation = useMutation({
+    mutationFn: () => fetch(`${API_BASE}/stock/ia/detecter-anomalies`, { method: "POST" }).then(r => r.json()),
+    onSuccess: (data) => {
+      toast({ title: `${data.count} anomalie${data.count !== 1 ? "s" : ""} détectée${data.count !== 1 ? "s" : ""}` });
+      qc.invalidateQueries({ queryKey: ["alertes-stock"] });
+    },
+    onError: () => toast({ title: "Erreur détection anomalies", variant: "destructive" }),
+  });
+
   const filtered = filter === "all" ? alertes : alertes.filter(a => a.niveauUrgence === filter);
   const critiques = alertes.filter(a => a.niveauUrgence === "critique").length;
   const warnings = alertes.filter(a => a.niveauUrgence === "warning").length;
@@ -119,12 +128,17 @@ function AlertesTab() {
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-center gap-3 justify-between">
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button variant="outline" size="sm" onClick={() => genererMutation.mutate()} disabled={genererMutation.isPending}>
-            <RefreshCw className={`h-4 w-4 mr-2 ${genererMutation.isPending ? "animate-spin" : ""}`} />Actualiser les alertes
+            <RefreshCw className={`h-4 w-4 mr-2 ${genererMutation.isPending ? "animate-spin" : ""}`} />Actualiser
           </Button>
           <Button variant="outline" size="sm" onClick={() => analyserMutation.mutate()} disabled={analyserMutation.isPending}>
-            <Brain className={`h-4 w-4 mr-2 ${analyserMutation.isPending ? "animate-spin" : ""}`} />Analyse IA consommation
+            <Brain className={`h-4 w-4 mr-2 ${analyserMutation.isPending ? "animate-spin" : ""}`} />Analyse consommation
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => anomaliesMutation.mutate()} disabled={anomaliesMutation.isPending}
+            className="border-purple-300 text-purple-700 hover:bg-purple-50">
+            {anomaliesMutation.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Brain className="h-4 w-4 mr-2" />}
+            Détecter anomalies
           </Button>
         </div>
         <div className="flex gap-2">
@@ -420,8 +434,19 @@ function CommandesTab() {
     }
   };
 
-  const exportCSV = (id: number, numero: string) => {
-    window.open(`${API_BASE}/stock/commandes/${id}/export-csv`, "_blank");
+  const exportTransNet = async (id: number, numero: string) => {
+    try {
+      const r = await fetch(`${API_BASE}/stock/commandes/${id}/exporter-centravet`, { method: "POST" });
+      if (!r.ok) { toast({ title: "Erreur export", variant: "destructive" }); return; }
+      const blob = await r.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url; a.download = `TransNet-${numero}.csv`;
+      document.body.appendChild(a); a.click();
+      document.body.removeChild(a); URL.revokeObjectURL(url);
+      toast({ title: `Export TransNet généré : ${numero}` });
+      qc.invalidateQueries({ queryKey: ["commandes"] });
+    } catch { toast({ title: "Erreur lors de l'export", variant: "destructive" }); }
   };
 
   const openDetail = (c: Commande) => { setSelectedCommande(c); setDetailOpen(true); };
@@ -488,7 +513,7 @@ function CommandesTab() {
                         {c.statut === "validee" && (
                           <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => updateStatutMutation.mutate({ id: c.id, statut: "envoyee_centravet" })}>Envoyer</Button>
                         )}
-                        <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => exportCSV(c.id, c.numeroCommande)} title="Export CSV TransNet"><Download className="h-3.5 w-3.5" /></Button>
+                        <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => exportTransNet(c.id, c.numeroCommande)} title="Export TransNet CSV"><Download className="h-3.5 w-3.5" /></Button>
                       </div>
                     </td>
                   </tr>
@@ -544,7 +569,7 @@ function CommandesTab() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDetailOpen(false)}>Fermer</Button>
-            {commandeDetail && <Button variant="outline" onClick={() => exportCSV(commandeDetail.id, commandeDetail.numeroCommande)}><Download className="h-4 w-4 mr-2" />Export TransNet CSV</Button>}
+            {commandeDetail && <Button variant="outline" onClick={() => exportTransNet(commandeDetail.id, commandeDetail.numeroCommande)}><Download className="h-4 w-4 mr-2" />Export TransNet CSV</Button>}
           </DialogFooter>
         </DialogContent>
       </Dialog>

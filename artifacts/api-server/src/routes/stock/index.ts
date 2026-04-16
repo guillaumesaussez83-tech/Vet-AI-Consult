@@ -5,7 +5,7 @@ import {
   bonsLivraisonTable, mouvementsStockTable, alertesStockTable, stockLotsTable,
 } from "@workspace/db";
 import { eq, asc, desc, and, ne } from "drizzle-orm";
-import { analyserConsommationTous, genererCommandeSuggereIA, genererAlertes } from "./ia-engine";
+import { analyserConsommationTous, genererCommandeSuggereIA, genererAlertes, detecterAnomalies, decrementerConsultationFEFO } from "./ia-engine";
 
 const router = Router();
 
@@ -153,6 +153,16 @@ router.post("/ia/generer-commande-suggeree", async (req, res) => {
     req.log.error(err);
     if (err?.message?.includes("Aucun")) return res.status(400).json({ error: err.message });
     return res.status(500).json({ error: "Erreur lors de la génération de commande IA" });
+  }
+});
+
+router.post("/ia/detecter-anomalies", async (req, res) => {
+  try {
+    const anomalies = await detecterAnomalies();
+    return res.json({ count: anomalies.length, anomalies });
+  } catch (err) {
+    req.log.error(err);
+    return res.status(500).json({ error: "Erreur lors de la détection d'anomalies" });
   }
 });
 
@@ -421,6 +431,75 @@ router.patch("/alertes/:id/traiter", async (req, res) => {
     if (isNaN(id)) return res.status(400).json({ error: "ID invalide" });
     const [updated] = await db.update(alertesStockTable).set({ estTraitee: true }).where(eq(alertesStockTable.id, id)).returning();
     return res.json(updated);
+  } catch (err) { req.log.error(err); return res.status(500).json({ error: "Erreur interne" }); }
+});
+
+// ──────────────────────────────────────────
+// DÉCRÉMENT CONSULTATION — FEFO
+// ──────────────────────────────────────────
+router.post("/decrementer-consultation", async (req, res) => {
+  try {
+    const { consultationId, factureLignes } = req.body;
+    if (!consultationId || !Array.isArray(factureLignes) || factureLignes.length === 0) {
+      return res.status(400).json({ error: "consultationId et factureLignes requis" });
+    }
+    const resultats = await decrementerConsultationFEFO(parseInt(consultationId), factureLignes);
+    const nonTrouves = resultats.filter(r => r.notFound).map(r => r.nom);
+    return res.json({
+      resultats,
+      nonTrouvesDansStock: nonTrouves,
+      message: `${resultats.filter(r => !r.notFound).length} produits décrémentés (FEFO). ${nonTrouves.length > 0 ? `Non trouvés : ${nonTrouves.join(", ")}` : ""}`,
+    });
+  } catch (err) { req.log.error(err); return res.status(500).json({ error: "Erreur interne" }); }
+});
+
+// ──────────────────────────────────────────
+// EXPORT CENTRAVET TRANSNET (CSV)
+// ──────────────────────────────────────────
+router.post("/commandes/:id/exporter-centravet", async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ error: "ID invalide" });
+
+    const [commande] = await db.select().from(commandesCentravetTable).where(eq(commandesCentravetTable.id, id));
+    if (!commande) return res.status(404).json({ error: "Commande non trouvée" });
+
+    const lignes = await db
+      .select({
+        referenceCentravet: lignesCommandeTable.referenceCentravet,
+        nom: stockMedicamentsTable.nom,
+        codeEan: stockMedicamentsTable.codeEan,
+        quantiteCommandee: lignesCommandeTable.quantiteCommandee,
+        prixUnitaireHT: lignesCommandeTable.prixUnitaireHT,
+        unite: stockMedicamentsTable.unite,
+      })
+      .from(lignesCommandeTable)
+      .leftJoin(stockMedicamentsTable, eq(lignesCommandeTable.medicamentId, stockMedicamentsTable.id))
+      .where(eq(lignesCommandeTable.commandeId, id));
+
+    // Format TransNet CENTRAVET — semicolon CSV, UTF-8 BOM
+    const dateExport = new Date().toLocaleDateString("fr-FR");
+    let csv = `Commande TransNet CENTRAVET;${commande.numeroCommande};${dateExport}\n`;
+    csv += `Ref. Article;Designation;Code EAN;Quantite;Unite;Prix HT\n`;
+    for (const l of lignes) {
+      const ref = l.referenceCentravet ?? "";
+      const nom = (l.nom ?? "").replace(/;/g, ",");
+      const ean = l.codeEan ?? "";
+      const qty = l.quantiteCommandee;
+      const unite = l.unite ?? "unité";
+      const prix = l.prixUnitaireHT != null ? l.prixUnitaireHT.toFixed(2).replace(".", ",") : "";
+      csv += `${ref};${nom};${ean};${qty};${unite};${prix}\n`;
+    }
+    csv += `\nTotal lignes;${lignes.length};Montant total HT;${commande.montantTotalHT?.toFixed(2).replace(".", ",") ?? ""};\n`;
+
+    // Mark as sent to CENTRAVET
+    await db.update(commandesCentravetTable)
+      .set({ statut: "envoyee_centravet", dateEnvoiCentravet: new Date() })
+      .where(eq(commandesCentravetTable.id, id));
+
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.setHeader("Content-Disposition", `attachment; filename="TransNet-${commande.numeroCommande}.csv"`);
+    return res.send("\uFEFF" + csv);
   } catch (err) { req.log.error(err); return res.status(500).json({ error: "Erreur interne" }); }
 });
 
