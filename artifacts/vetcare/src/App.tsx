@@ -28,6 +28,7 @@ import StockPage from "./pages/stock/index";
 import OrdonnancesPage from "./pages/ordonnances/index";
 import OrdonnanceImprimerPage from "./pages/ordonnances/imprimer";
 import AgendaPage from "./pages/agenda/index";
+import SalleAttentePage from "./pages/salle-attente/index";
 import CertificatsPage from "./pages/certificats/index";
 import VaccinationsPage from "./pages/vaccinations/index";
 import PortailPage from "./pages/portail/index";
@@ -137,6 +138,7 @@ function Router() {
         </>
       )} />
       <Route path="/ordonnances" component={() => <ProtectedRoute component={OrdonnancesPage} />} />
+      <Route path="/salle-attente" component={() => <ProtectedRoute component={SalleAttentePage} />} />
       <Route path="/agenda" component={() => <ProtectedRoute component={AgendaPage} />} />
       <Route path="/certificats" component={() => <ProtectedRoute component={CertificatsPage} />} />
       <Route path="/patients/:id/vaccinations" component={() => <ProtectedRoute component={VaccinationsPage} />} />

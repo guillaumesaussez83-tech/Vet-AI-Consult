@@ -13,6 +13,7 @@ export const rendezVousTable = pgTable("rendez_vous", {
   veterinaire: text("veterinaire"),
   motif: text("motif"),
   statut: text("statut").notNull().default("planifié"),
+  statutSalle: text("statut_salle").notNull().default("en_attente_arrivee"),
   notes: text("notes"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),

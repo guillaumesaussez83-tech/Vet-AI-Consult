@@ -18,6 +18,7 @@ import {
   BarChart2,
   Award,
   ClipboardList,
+  LayoutDashboard,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -30,6 +31,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const navigation = [
     { name: "Tableau de bord", href: "/dashboard", icon: Activity },
     { name: "Statistiques", href: "/statistiques", icon: BarChart2 },
+    { name: "Salle d'attente", href: "/salle-attente", icon: LayoutDashboard },
     { name: "Agenda", href: "/agenda", icon: CalendarDays },
     { name: "Patients", href: "/patients", icon: Users },
     { name: "Consultations", href: "/consultations", icon: Stethoscope },
@@ -135,8 +137,8 @@ export function AppLayout({ children }: { children: ReactNode }) {
           </Sheet>
         </header>
 
-        <div className="flex-1 p-4 md:p-8 overflow-y-auto">
-          <div className="max-w-6xl mx-auto w-full">
+        <div className={`flex-1 overflow-y-auto ${currentPath === "/salle-attente" ? "" : "p-4 md:p-6"}`}>
+          <div className={currentPath === "/salle-attente" ? "h-full" : "max-w-6xl mx-auto w-full"}>
             {children}
           </div>
         </div>

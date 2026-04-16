@@ -41,7 +41,7 @@ See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and pa
 - `api-client-react` dist/ rebuildet après chaque changement de schéma
 - Colonne `code` auto-générée lors de la création d'un acte
 
-## Modules complets (11 modules ajoutés)
+## Modules complets (12 modules ajoutés)
 
 1. **Vaccinations** (`/patients/:id/vaccinations`) — timeline par patient, alertes rappel, bilan IA
 2. **Stock médicaments** (`/stock`) — gestion CRUD Phase 2 : alertes rupture/expiration, mouvements, lots FEFO, commandes CENTRAVET, réception BL, IA (ADC+EOQ+safety stock), anomalies, export TransNet CSV
@@ -54,6 +54,7 @@ See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and pa
 9. **Paramètres clinique** (`/parametres`) — formulaire complet : nom, adresse, SIRET, N° Ordre vétérinaire, TVA, horaires, mentions légales — données utilisées dans ordonnances et factures
 10. **Intégration FEFO→Facture** — décrément automatique du stock (FEFO par lot) quand une facture est marquée comme payée (hook dans `PATCH /api/factures/:id`)
 11. **DB tables** — vaccinations, stock_medicaments, rendez_vous, anesthesie_protocoles, portail_tokens + stock phase 2 (commandes_centravet, bons_livraison, stock_lots, mouvements_stock, lignes_commande, alertes_stock) + ordonnances + parametres_clinique (21 tables total)
+12. **Salle d'attente** (`/salle-attente`) — tableau kanban plein écran avec 5 colonnes (en_attente_arrivee→arrive→en_consultation→a_encaisser→termine), drag & drop natif HTML5, boutons flèches, badge temps d'attente amber/rouge (>15min/>30min), auto-refresh 30s, horloge live, résumé en-tête, colonne `statut_salle` dans `rendez_vous`, route API GET `/salle-attente` + PATCH `/:id/statut-salle`, optimistic updates
 
 ## AI Endpoints (POST /api/ai/...)
 
