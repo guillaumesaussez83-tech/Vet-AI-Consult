@@ -29,16 +29,19 @@ pnpm workspace monorepo using TypeScript — VetCare Pro, logiciel vétérinaire
 
 See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details.
 
-## Modules complets (8 modules ajoutés)
+## Modules complets (11 modules ajoutés)
 
 1. **Vaccinations** (`/patients/:id/vaccinations`) — timeline par patient, alertes rappel, bilan IA
-2. **Stock médicaments** (`/stock`) — gestion CRUD, alertes rupture/expiration, mouvements
+2. **Stock médicaments** (`/stock`) — gestion CRUD Phase 2 : alertes rupture/expiration, mouvements, lots FEFO, commandes CENTRAVET, réception BL, IA (ADC+EOQ+safety stock), anomalies, export TransNet CSV
 3. **Statistiques** (`/statistiques`) — CA, consultations, recharts AreaChart+BarChart, top actes, par veto
 4. **Agenda** (`/agenda`) — calendrier semaine, RDV CRUD, click sur créneau, dialogues
 5. **Certificats** (`/certificats`) — 5 types, génération Claude AI, aperçu + impression
 6. **Protocole anesthésie** — section collapsible dans chaque consultation, génération IA
 7. **Portail client** (`/portail/:token`) — accès public par token, vaccinations, dernier RDV
-8. **DB tables** — vaccinations, stock_medicaments, rendez_vous, anesthesie_protocoles, portail_tokens
+8. **Ordonnances** (`/ordonnances`) — prescriptions IA depuis consultation, vue liste + impression, mise en page professionnelle avec en-tête clinique, zone signature
+9. **Paramètres clinique** (`/parametres`) — formulaire complet : nom, adresse, SIRET, N° Ordre vétérinaire, TVA, horaires, mentions légales — données utilisées dans ordonnances et factures
+10. **Intégration FEFO→Facture** — décrément automatique du stock (FEFO par lot) quand une facture est marquée comme payée (hook dans `PATCH /api/factures/:id`)
+11. **DB tables** — vaccinations, stock_medicaments, rendez_vous, anesthesie_protocoles, portail_tokens + stock phase 2 (commandes_centravet, bons_livraison, stock_lots, mouvements_stock, lignes_commande, alertes_stock) + ordonnances + parametres_clinique (21 tables total)
 
 ## AI Endpoints (POST /api/ai/...)
 
@@ -59,6 +62,9 @@ See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and pa
 - `GET/POST /api/anesthesie` + `/api/anesthesie/generer-ia` — protocoles anesthésie par consultation
 - `GET /api/portail/:token` + `POST /api/portail/generate/:ownerId` — portail public client
 - `GET /api/statistiques` — KPIs, mensuel 12 mois, top actes, par vétérinaire
+- `GET/POST/PATCH/DELETE /api/ordonnances` + `POST /api/ordonnances/ia/generer` — prescriptions IA Claude
+- `GET/PUT /api/parametres-clinique` — paramètres clinique (SIRET, RPPS, adresse, horaires)
+- Stock Phase 2 : 16+ routes commandes CENTRAVET, réception BL, alertes, mouvements FEFO, export TransNet CSV
 
 ## File Upload Architecture
 

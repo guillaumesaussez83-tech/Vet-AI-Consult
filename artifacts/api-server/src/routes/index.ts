@@ -15,6 +15,8 @@ import rendezVousRouter from "./rendez-vous";
 import anesthesieRouter from "./anesthesie";
 import portailRouter from "./portail";
 import statistiquesRouter from "./statistiques";
+import ordonnancesRouter from "./ordonnances";
+import parametresCliniqueRouter from "./parametres-clinique";
 
 const router: IRouter = Router();
 
@@ -33,6 +35,8 @@ router.use("/rendez-vous", rendezVousRouter);
 router.use("/anesthesie", anesthesieRouter);
 router.use("/statistiques", statistiquesRouter);
 router.use("/portail", portailRouter);
+router.use("/ordonnances", ordonnancesRouter);
+router.use("/parametres-clinique", parametresCliniqueRouter);
 router.use(storageRouter);
 
 export default router;

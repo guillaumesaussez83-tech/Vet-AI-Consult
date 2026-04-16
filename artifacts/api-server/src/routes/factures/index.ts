@@ -3,6 +3,7 @@ import { db } from "@workspace/db";
 import { facturesTable, consultationsTable, patientsTable, ownersTable, actesConsultationsTable, actesTable } from "@workspace/db";
 import { GetFactureParams, UpdateFactureStatutParams, UpdateFactureStatutBody, ListFacturesQueryParams } from "@workspace/api-zod";
 import { eq } from "drizzle-orm";
+import { decrementerConsultationFEFO } from "../stock/ia-engine";
 
 const router = Router();
 
@@ -225,8 +226,42 @@ router.patch("/:id", async (req, res) => {
       updateData.modePaiement = (req.body as any).modePaiement;
     }
 
+    const [factureBefore] = await db.select().from(facturesTable).where(eq(facturesTable.id, params.data.id));
+    if (!factureBefore) return res.status(404).json({ error: "Facture non trouvée" });
+
     const [facture] = await db.update(facturesTable).set(updateData).where(eq(facturesTable.id, params.data.id)).returning();
     if (!facture) return res.status(404).json({ error: "Facture non trouvée" });
+
+    // FEFO auto-decrement when invoice is paid for the first time
+    if (body.data.statut === "payee" && factureBefore.statut !== "payee") {
+      try {
+        const lignes = await db
+          .select({
+            nom: actesTable.nom,
+            categorie: actesTable.categorie,
+            code: actesTable.code,
+            quantite: actesConsultationsTable.quantite,
+          })
+          .from(actesConsultationsTable)
+          .leftJoin(actesTable, eq(actesConsultationsTable.acteId, actesTable.id))
+          .where(eq(actesConsultationsTable.consultationId, facture.consultationId));
+
+        const medicamentLignes = lignes
+          .filter(l => l.nom && (
+            l.categorie?.toLowerCase().includes("médic") ||
+            l.categorie?.toLowerCase().includes("medic") ||
+            l.code?.startsWith("MED") ||
+            l.code?.startsWith("VACCI")
+          ))
+          .map(l => ({ nom: l.nom!, quantite: l.quantite ?? 1 }));
+
+        if (medicamentLignes.length > 0) {
+          await decrementerConsultationFEFO(facture.consultationId, medicamentLignes);
+        }
+      } catch (fefoErr) {
+        req.log.warn({ err: fefoErr }, "FEFO auto-decrement failed (non-blocking)");
+      }
+    }
 
     return res.json({ ...facture, createdAt: facture.createdAt.toISOString() });
   } catch (err) {

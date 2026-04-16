@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Brain, FileText, Sparkles, Check, ChevronRight, Plus, Trash2, Receipt, Loader2, Printer } from "lucide-react";
+import { ArrowLeft, Brain, FileText, Sparkles, Check, ChevronRight, Plus, Trash2, Receipt, Loader2, Printer, ExternalLink } from "lucide-react";
 import { AnesthesieSection } from "@/components/AnesthesieSection";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PatientBarre } from "@/components/PatientBarre";
@@ -470,6 +470,27 @@ function EtapeOrdonnanceActes({
 }: any) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [creatingOrdonnanceIA, setCreatingOrdonnanceIA] = useState(false);
+  const [ordonnanceIAId, setOrdonnanceIAId] = useState<number | null>(null);
+
+  async function handleCreateOrdonnanceIA() {
+    setCreatingOrdonnanceIA(true);
+    try {
+      const res = await fetch("/api/ordonnances/ia/generer", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ consultationId: consultation.id }),
+      });
+      if (!res.ok) throw new Error("Erreur serveur");
+      const data = await res.json();
+      setOrdonnanceIAId(data.id);
+      toast({ title: "Ordonnance créée", description: "L'ordonnance structurée a été générée par l'IA." });
+    } catch {
+      toast({ title: "Erreur", description: "Impossible de créer l'ordonnance.", variant: "destructive" });
+    } finally {
+      setCreatingOrdonnanceIA(false);
+    }
+  }
   const [isDeletingFacture, setIsDeletingFacture] = useState(false);
   const [voixPreview, setVoixPreview] = useState<{
     lignes: { acteId: number | null; description: string; quantite: number; prixUnitaire: number; tvaRate: number; montantHT: number }[];
@@ -628,10 +649,32 @@ function EtapeOrdonnanceActes({
           ) : (
             <p className="text-muted-foreground text-sm">Aucune ordonnance générée</p>
           )}
-          <Button onClick={onGenerateOrdonnance} disabled={isGeneratingOrdonnance} className="w-full">
-            <Sparkles className="mr-2 h-4 w-4" />
-            {isGeneratingOrdonnance ? "Génération en cours..." : "Générer l'ordonnance avec Claude"}
-          </Button>
+          <div className="flex gap-2">
+            <Button onClick={onGenerateOrdonnance} disabled={isGeneratingOrdonnance} className="flex-1">
+              <Sparkles className="mr-2 h-4 w-4" />
+              {isGeneratingOrdonnance ? "Génération en cours..." : "Générer avec Claude"}
+            </Button>
+            {ordonnanceIAId ? (
+              <a href={`/ordonnances/${ordonnanceIAId}/imprimer`} target="_blank" rel="noreferrer">
+                <Button variant="outline">
+                  <Printer className="mr-2 h-4 w-4" />
+                  Imprimer
+                </Button>
+              </a>
+            ) : (
+              <Button
+                variant="outline"
+                onClick={handleCreateOrdonnanceIA}
+                disabled={creatingOrdonnanceIA}
+              >
+                {creatingOrdonnanceIA ? (
+                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Création...</>
+                ) : (
+                  <><FileText className="mr-2 h-4 w-4" />Créer ordonnance</>
+                )}
+              </Button>
+            )}
+          </div>
         </CardContent>
       </Card>
 

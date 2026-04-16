@@ -17,6 +17,7 @@ import {
   Package,
   BarChart2,
   Award,
+  ClipboardList,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -35,6 +36,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
     { name: "Certificats", href: "/certificats", icon: Award },
     { name: "Facturation", href: "/factures", icon: FileText },
     { name: "Encaissements", href: "/encaissements", icon: Euro },
+    { name: "Ordonnances", href: "/ordonnances", icon: ClipboardList },
     { name: "Rappels", href: "/rappels", icon: Bell },
     { name: "Stock", href: "/stock", icon: Package },
     { name: "Actes & Produits", href: "/actes", icon: Syringe },

@@ -25,6 +25,8 @@ import EncaissementsPage from "./pages/encaissements/index";
 import RappelsPage from "./pages/rappels/index";
 import StatistiquesPage from "./pages/statistiques/index";
 import StockPage from "./pages/stock/index";
+import OrdonnancesPage from "./pages/ordonnances/index";
+import OrdonnanceImprimerPage from "./pages/ordonnances/imprimer";
 import AgendaPage from "./pages/agenda/index";
 import CertificatsPage from "./pages/certificats/index";
 import VaccinationsPage from "./pages/vaccinations/index";
@@ -128,6 +130,13 @@ function Router() {
       <Route path="/parametres" component={() => <ProtectedRoute component={ParametresPage} />} />
       <Route path="/statistiques" component={() => <ProtectedRoute component={StatistiquesPage} />} />
       <Route path="/stock" component={() => <ProtectedRoute component={StockPage} />} />
+      <Route path="/ordonnances/:id/imprimer" component={() => (
+        <>
+          <Show when="signed-in"><OrdonnanceImprimerPage /></Show>
+          <Show when="signed-out"><Redirect to="/sign-in" /></Show>
+        </>
+      )} />
+      <Route path="/ordonnances" component={() => <ProtectedRoute component={OrdonnancesPage} />} />
       <Route path="/agenda" component={() => <ProtectedRoute component={AgendaPage} />} />
       <Route path="/certificats" component={() => <ProtectedRoute component={CertificatsPage} />} />
       <Route path="/patients/:id/vaccinations" component={() => <ProtectedRoute component={VaccinationsPage} />} />

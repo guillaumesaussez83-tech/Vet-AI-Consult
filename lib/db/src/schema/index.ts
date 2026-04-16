@@ -16,3 +16,5 @@ export * from "./stock-lots";
 export * from "./mouvements-stock";
 export * from "./lignes-commande";
 export * from "./alertes-stock";
+export * from "./ordonnances";
+export * from "./parametres-clinique";
