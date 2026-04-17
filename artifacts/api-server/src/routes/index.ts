@@ -1,4 +1,5 @@
 import { Router, type IRouter } from "express";
+import { aiLimiter } from "../middlewares/rateLimiter";
 import healthRouter from "./health";
 import ownersRouter from "./owners";
 import patientsRouter from "./patients";
@@ -27,7 +28,7 @@ router.use("/patients", patientsRouter);
 router.use("/consultations", consultationsRouter);
 router.use("/actes", actesRouter);
 router.use("/factures", facturesRouter);
-router.use("/ai", aiRouter);
+router.use("/ai", aiLimiter, aiRouter);
 router.use("/dashboard", dashboardRouter);
 router.use("/rappels", rappelsRouter);
 router.use("/vaccinations", vaccinationsRouter);

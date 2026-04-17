@@ -83,7 +83,7 @@ export default function FactureDetailPage() {
     ? facAny.montantTTC
     : totalHT + totalTVA;
 
-  const modePaiementLabel = MODES_PAIEMENT.find(m => m.value === facture.modePaiement)?.label;
+  const modePaiementLabel = MODES_PAIEMENT.find(m => m.value === facAny.modePaiement)?.label;
 
   return (
     <div className="space-y-6 max-w-2xl">

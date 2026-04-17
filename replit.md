@@ -56,6 +56,39 @@ See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and pa
 11. **DB tables** — vaccinations, stock_medicaments, rendez_vous, anesthesie_protocoles, portail_tokens + stock phase 2 (commandes_centravet, bons_livraison, stock_lots, mouvements_stock, lignes_commande, alertes_stock) + ordonnances + parametres_clinique (21 tables total)
 12. **Salle d'attente** (`/salle-attente`) — tableau kanban plein écran avec 5 colonnes (en_attente_arrivee→arrive→en_consultation→a_encaisser→termine), drag & drop natif HTML5, boutons flèches, badge temps d'attente amber/rouge (>15min/>30min), auto-refresh 30s, horloge live, résumé en-tête, colonne `statut_salle` dans `rendez_vous`, route API GET `/salle-attente` + PATCH `/:id/statut-salle`, optimistic updates
 
+## Sprint Refactoring Senior-Grade — completé
+
+### BLOC 2 — Validation Zod middleware
+- `artifacts/api-server/src/middlewares/validate.ts` — `validate(schema)` + `validateQuery(schema)` génériques
+- Retourne 400 avec `details: fieldErrors` Zod si invalide
+- Prêt à appliquer sur tous les `POST/PUT` handlers
+
+### BLOC 3 — Error handling robuste
+- `artifacts/api-server/src/middlewares/errorHandler.ts` — hiérarchie AppError : `NotFoundError`, `UnauthorizedError`, `ForbiddenError`, `ValidationError`, `ConflictError`
+- `artifacts/api-server/src/middlewares/asyncWrapper.ts` — `asyncHandler(fn)` wrapper pour éviter try/catch répétitifs
+- Gestion Postgres 23505 (duplicate) et 23503 (foreign key) automatique
+- Ajouté dans `app.ts` en dernier middleware
+
+### BLOC 4 — Sécurité & Performance
+- `express-rate-limit` installé : `apiLimiter` (300 req/15min) sur `/api/*`, `aiLimiter` (15 req/min) sur `/api/ai/*`
+- `helmet` installé : headers HTTP sécurisés (CSP désactivé pour compatibilité Clerk)
+- `artifacts/api-server/src/middlewares/rateLimiter.ts`
+
+### BLOC 5 — Service layer
+- `artifacts/api-server/src/services/factureService.ts` — `FactureService` : recalcul montants, génération numéro, validation paiement, vérif existence
+- `artifacts/api-server/src/services/stockService.ts` — `StockService` : vérif disponibilité, création mouvement (transactionnel), alerte seuil
+
+### BLOC 7 — Frontend error handling
+- `artifacts/vetcare/src/hooks/useApiMutation.ts` — `useApiMutation<TData, TError, TVariables, TContext>` wrapper `useMutation` avec toast automatique succès/erreur
+
+### BLOC 8 — Config typée
+- `artifacts/api-server/src/config.ts` — Zod env schema, `process.exit(1)` si variable manquante au démarrage
+
+### TypeScript
+- `0 erreurs` après typecheck complet frontend (`pnpm run typecheck`)
+- Corrigé `DicteeOrdonnanceDialog.tsx` (consultationId hors scope)
+- Corrigé `factures/detail.tsx` (modePaiement via facAny)
+
 ## Mega Sprint (Bloc 1-6) — completé
 
 ### Bloc 2 — Modes de paiement + Rendu monnaie espèces

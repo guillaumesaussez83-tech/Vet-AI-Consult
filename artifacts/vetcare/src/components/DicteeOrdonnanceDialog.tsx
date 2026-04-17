@@ -84,7 +84,7 @@ export default function DicteeOrdonnanceDialog({ open, onClose, onConfirmed }: P
       const res = await fetch(`${API_BASE}/ai/dictee-ordonnance`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ transcription: transcript, consultationId }),
+        body: JSON.stringify({ transcription: transcript }),
       });
       if (!res.ok) throw new Error(await res.text());
       const data = await res.json();
