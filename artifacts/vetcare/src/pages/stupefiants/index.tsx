@@ -22,7 +22,7 @@ export default function StupefiantsPage() {
   const { user } = useUser();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [produitId, setProduitId] = useState<string>("");
+  const [produitId, setProduitId] = useState<string>("all");
   const [entreeOpen, setEntreeOpen] = useState(false);
   const [sortieOpen, setSortieOpen] = useState(false);
   const [entreeForm, setEntreeForm] = useState({ stockMedicamentId: "", quantite: "", numeroLot: "", dateExpirationLot: "", motif: "" });
@@ -31,7 +31,7 @@ export default function StupefiantsPage() {
   const { data, isLoading } = useQuery<{ stupefiants: any[]; lignes: any[] }>({
     queryKey: ["registre-stupefiants", produitId],
     queryFn: async () => {
-      const url = produitId ? `${API}/stock/stupefiants/registre?produitId=${produitId}` : `${API}/stock/stupefiants/registre`;
+      const url = (produitId && produitId !== "all") ? `${API}/stock/stupefiants/registre?produitId=${produitId}` : `${API}/stock/stupefiants/registre`;
       const res = await fetch(url);
       if (!res.ok) throw new Error("Erreur chargement registre");
       return res.json();
@@ -138,7 +138,7 @@ export default function StupefiantsPage() {
               <SelectValue placeholder="Tous les stupéfiants" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Tous les produits</SelectItem>
+              <SelectItem value="all">Tous les produits</SelectItem>
               {stupefiants.map(s => (
                 <SelectItem key={s.id} value={String(s.id)}>
                   {s.nom} (stock: {s.quantiteStock} {s.unite})

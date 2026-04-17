@@ -833,11 +833,17 @@ function EtapeOrdonnanceActes({
                 </div>
               )}
 
-              {!voixPreview && (
+              {!voixPreview && actes.length > 0 && (
                 <Button onClick={onGenerateFacture} disabled={isGeneratingFacture} variant="outline" className="w-full">
                   <Receipt className="mr-2 h-4 w-4" />
-                  {isGeneratingFacture ? "Génération en cours..." : "Générer la facture depuis les actes"}
+                  {isGeneratingFacture ? "Génération en cours..." : `Générer la facture (${actes.length} acte${actes.length > 1 ? "s" : ""})`}
                 </Button>
+              )}
+              {!voixPreview && actes.length === 0 && (
+                <div className="text-center py-4 text-muted-foreground border-2 border-dashed rounded-lg text-sm">
+                  <Receipt className="h-8 w-8 mx-auto mb-2 opacity-30" />
+                  <p>Ajoutez et enregistrez vos actes pour générer la facture.</p>
+                </div>
               )}
             </>
           )}

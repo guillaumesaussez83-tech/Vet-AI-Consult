@@ -1,0 +1,60 @@
+Corrige ces 2 bugs critiques visibles en production :
+
+## BUG 1 — CRASH page /stupefiants (BLOQUANT)
+Erreur : "A <Select.Item /> must have a value prop that is not an empty string"
+
+Dans le composant de la page Stupéfiants (probablement StupefiiantsPage.tsx ou similaire),
+il y a un <SelectItem value=""> qui plante React/shadcn.
+
+Fix : Chercher TOUS les <SelectItem value=""> dans les composants Select de cette page
+et remplacer par <SelectItem value="all"> (ou "tous", "aucun" — n'importe quoi sauf "").
+
+Exemple :
+// AVANT (plante)
+<SelectItem value="">Tous les produits</SelectItem>
+
+// APRÈS (correct)
+<SelectItem value="all">Tous les produits</SelectItem>
+
+Puis dans le handler du Select, adapter la condition :
+// Si l'ancienne logique était : if (value === "") → montrer tout
+// Remplacer par : if (value === "all") → montrer tout
+
+Chercher ce pattern dans TOUS les composants Select de l'app — il peut exister
+sur d'autres pages (stock, consultations, agenda) et causer des crashes silencieux.
+
+## BUG 2 — Facture créée à 0.00 € avant que les actes soient saisis
+Constaté : FACT-2026-0006 créée automatiquement à 0.00 € TTC dès l'étape 5,
+avant même qu'un acte soit ajouté.
+
+Le problème : la facture est instanciée trop tôt, au chargement de l'étape 5,
+au lieu d'être créée seulement quand l'utilisateur clique "Enregistrer les actes".
+
+Fix en 2 parties :
+
+Partie A — Ne créer la facture QUE quand il y a des actes à facturer :
+Dans le composant Étape 5, remplacer la logique de création automatique par :
+- Afficher le bouton "Enregistrer les actes" seulement quand lignes.length > 0
+- Créer la facture uniquement au clic sur "Enregistrer les actes"
+- Si aucun acte : ne pas créer de facture, afficher "Aucun acte à facturer"
+
+Partie B — Recalcul côté serveur obligatoire (fix bug montants à zéro) :
+Dans POST /api/factures ET PUT /api/factures/:id/valider,
+recalculer TOUJOURS les montants depuis les lignes_facture en base :
+
+const lignes = await db.select().from(lignesFacture)
+  .where(eq(lignesFacture.factureId, factureId));
+
+const montantHt = lignes.reduce((sum, l) =>
+  sum + (Number(l.quantite) * Number(l.prixUnitaireHt)), 0);
+const montantTva = lignes.reduce((sum, l) =>
+  sum + (Number(l.quantite) * Number(l.prixUnitaireHt) * Number(l.tauxTva) / 100), 0);
+const montantTtc = montantHt + montantTva;
+
+await db.update(factures).set({
+  montantHt: montantHt.toFixed(2),
+  montantTva: montantTva.toFixed(2),
+  montantTtc: montantTtc.toFixed(2),
+}).where(eq(factures.id, factureId));
+
+Ne jamais faire confiance aux montants envoyés par le frontend.

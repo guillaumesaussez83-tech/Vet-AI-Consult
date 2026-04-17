@@ -312,6 +312,10 @@ router.post("/:id/facture", async (req, res) => {
       return res.json({ ...existingFacture, createdAt: existingFacture.createdAt.toISOString() });
     }
 
+    if (actes.length === 0) {
+      return res.status(400).json({ error: "Aucun acte saisi — veuillez ajouter et enregistrer vos actes avant de générer la facture." });
+    }
+
     const year = new Date().getFullYear();
     const [lastFacture] = await db.select().from(facturesTable).orderBy(sql`${facturesTable.id} DESC`).limit(1);
     const nextNum = lastFacture ? (parseInt(lastFacture.numero.split("-")[2] ?? "0") + 1) : 1;
