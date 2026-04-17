@@ -78,7 +78,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
           <div className="bg-primary/20 p-2 rounded-xl text-primary-foreground">
             <StethoscopeIcon className="h-6 w-6 text-primary-foreground" />
           </div>
-          <span className="font-bold text-xl tracking-tight text-sidebar-foreground">VetCare Pro</span>
+          <span className="font-bold text-xl tracking-tight text-sidebar-foreground">VétoAI</span>
         </div>
         
         <div className="flex-1 overflow-y-auto px-3">
@@ -114,7 +114,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
             <div className="bg-primary/20 p-1.5 rounded-lg text-primary-foreground">
               <StethoscopeIcon className="h-5 w-5 text-primary" />
             </div>
-            <span className="font-bold text-lg text-card-foreground">VetCare Pro</span>
+            <span className="font-bold text-lg text-card-foreground">VétoAI</span>
           </div>
           
           <Sheet>
@@ -128,7 +128,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
                 <div className="bg-primary/20 p-2 rounded-xl text-primary-foreground">
                   <StethoscopeIcon className="h-6 w-6 text-primary-foreground" />
                 </div>
-                <span className="font-bold text-xl text-sidebar-foreground">VetCare Pro</span>
+                <span className="font-bold text-xl text-sidebar-foreground">VétoAI</span>
               </div>
               <div className="px-3">
                 <NavLinks />

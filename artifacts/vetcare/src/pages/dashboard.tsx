@@ -15,7 +15,7 @@ export default function Dashboard() {
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold tracking-tight text-foreground">Tableau de bord</h1>
-        <p className="text-muted-foreground">Bienvenue dans votre espace de travail VetCare Pro.</p>
+        <p className="text-muted-foreground">Bienvenue dans votre espace de travail VétoAI.</p>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">

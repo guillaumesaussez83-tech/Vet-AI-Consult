@@ -1,6 +1,7 @@
 import { Router } from "express";
-import { db, actesTable } from "@workspace/db";
+import { db, actesTable, stockMedicamentsTable, ordonnancesTable, facturesTable, mouvementsStockTable } from "@workspace/db"; // actesTable used by generer-facture-voix
 import { GetDiagnosticIABody } from "@workspace/api-zod";
+import { eq, ilike, desc, sql as drizzleSql } from "drizzle-orm";
 import { ObjectStorageService } from "../../lib/objectStorage";
 import {
   reformulerAnamnese,
@@ -199,6 +200,129 @@ Réponds en français, de façon claire et lisible pour le propriétaire.`;
   } catch (err) {
     req.log.error(err);
     return res.status(500).json({ error: "Erreur lors de la génération du carnet" });
+  }
+});
+
+router.post("/dictee-ordonnance", async (req, res) => {
+  try {
+    const { transcription } = req.body;
+    if (!transcription || typeof transcription !== "string" || !transcription.trim()) {
+      return res.status(400).json({ error: "Le texte de la dictée est requis" });
+    }
+
+    const { anthropic } = await import("@workspace/integrations-anthropic-ai");
+    const message = await anthropic.messages.create({
+      model: "claude-sonnet-4-6",
+      max_tokens: 2048,
+      messages: [{
+        role: "user",
+        content: `Tu es un assistant vétérinaire. Extrait de ce texte les prescriptions médicamenteuses sous forme JSON structuré :
+[{
+  "nom_medicament": string,
+  "dose": string,
+  "voie_administration": string,
+  "frequence": string,
+  "duree": string,
+  "quantite_a_delivrer": number,
+  "unite": string
+}]
+Réponds UNIQUEMENT avec le JSON, sans texte supplémentaire.
+
+Texte de la dictée : "${transcription}"`
+      }],
+    });
+
+    const raw = message.content[0].type === "text" ? message.content[0].text : "[]";
+    let prescriptions: any[] = [];
+    try {
+      const jsonStr = raw.replace(/^```json\n?/, "").replace(/\n?```$/, "").trim();
+      prescriptions = JSON.parse(jsonStr);
+    } catch {
+      return res.status(422).json({ error: "Impossible de parser les prescriptions depuis la transcription" });
+    }
+
+    const resultats = await Promise.all(prescriptions.map(async (p) => {
+      const mots = p.nom_medicament.split(/\s+/).filter((m: string) => m.length > 2);
+      let match = null;
+      for (const mot of mots) {
+        const [found] = await db
+          .select({ id: stockMedicamentsTable.id, nom: stockMedicamentsTable.nom, prixVenteTTC: stockMedicamentsTable.prixVenteTTC, quantiteStock: stockMedicamentsTable.quantiteStock, unite: stockMedicamentsTable.unite })
+          .from(stockMedicamentsTable)
+          .where(ilike(stockMedicamentsTable.nom, `%${mot}%`))
+          .limit(1);
+        if (found) { match = found; break; }
+      }
+      return { ...p, stockMatch: match };
+    }));
+
+    return res.json({ prescriptions: resultats });
+  } catch (err) {
+    req.log.error(err);
+    return res.status(500).json({ error: "Erreur lors de la dictée ordonnance" });
+  }
+});
+
+router.post("/confirmer-dictee-ordonnance", async (req, res) => {
+  try {
+    const { consultationId, patientId, veterinaire, prescriptions } = req.body;
+    if (!consultationId || !prescriptions?.length) {
+      return res.status(400).json({ error: "consultationId et prescriptions requis" });
+    }
+
+    const year = new Date().getFullYear();
+    const [lastOrd] = await db
+      .select({ num: ordonnancesTable.numeroOrdonnance })
+      .from(ordonnancesTable)
+      .where(drizzleSql`numero_ordonnance LIKE ${"ORD-" + year + "-%"}`)
+      .orderBy(desc(ordonnancesTable.id))
+      .limit(1);
+    const lastSeq = lastOrd?.num ? parseInt(lastOrd.num.split("-")[2] ?? "0") : 0;
+    const numeroOrdonnance = `ORD-${year}-${String(lastSeq + 1).padStart(5, "0")}`;
+
+    const contenu = prescriptions.map((p: any) =>
+      `${p.nom_medicament} — ${p.dose} — ${p.voie_administration} — ${p.frequence} — pendant ${p.duree} — Qté: ${p.quantite_a_delivrer} ${p.unite}`
+    ).join("\n");
+
+    const [ordonnance] = await db.insert(ordonnancesTable).values({
+      consultationId: Number(consultationId),
+      patientId: patientId ? Number(patientId) : null,
+      veterinaire: veterinaire ?? null,
+      contenu,
+      numeroOrdonnance,
+      genereIA: true,
+    }).returning();
+
+    const [existingFacture] = await db
+      .select({ id: facturesTable.id })
+      .from(facturesTable)
+      .where(eq(facturesTable.consultationId, Number(consultationId)));
+
+    for (const p of prescriptions) {
+      if (!p.stockMatch?.id) continue;
+      const quantite = Math.max(1, Math.round(p.quantite_a_delivrer ?? 1));
+
+      await db.insert(mouvementsStockTable).values({
+        medicamentId: p.stockMatch.id,
+        typeMouvement: "sortie_consultation",
+        quantite: -quantite,
+        consultationId: Number(consultationId),
+        factureId: existingFacture?.id ?? null,
+        motif: `Ordonnance ${numeroOrdonnance} — ${p.nom_medicament}`,
+        utilisateur: veterinaire ?? "Système",
+      });
+
+      await db.update(stockMedicamentsTable)
+        .set({ quantiteStock: drizzleSql`quantite_stock - ${quantite}` })
+        .where(eq(stockMedicamentsTable.id, p.stockMatch.id));
+    }
+
+    return res.status(201).json({
+      ordonnance: { ...ordonnance, createdAt: ordonnance.createdAt.toISOString(), updatedAt: ordonnance.updatedAt.toISOString() },
+      factureId: existingFacture?.id ?? null,
+    });
+  } catch (err) {
+    req.log.error(err);
+    return res.status(500).json({ error: "Erreur lors de la confirmation de l'ordonnance" });
   }
 });
 

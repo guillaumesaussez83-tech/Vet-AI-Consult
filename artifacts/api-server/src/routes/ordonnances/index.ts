@@ -9,7 +9,7 @@ import {
   actesTable,
   parametresCliniqueTable,
 } from "@workspace/db";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, sql } from "drizzle-orm";
 import { AI_MODEL, AI_MAX_TOKENS } from "../../lib/constants";
 import { anthropic } from "@workspace/integrations-anthropic-ai";
 
@@ -73,11 +73,22 @@ router.post("/", async (req, res) => {
     if (!consultationId || !contenu) {
       return res.status(400).json({ error: "consultationId et contenu requis" });
     }
+    const year = new Date().getFullYear();
+    const [lastOrd] = await db
+      .select({ num: ordonnancesTable.numeroOrdonnance })
+      .from(ordonnancesTable)
+      .where(sql`numero_ordonnance LIKE ${`ORD-${year}-%`}`)
+      .orderBy(desc(ordonnancesTable.id))
+      .limit(1);
+    const lastSeq = lastOrd?.num ? parseInt(lastOrd.num.split("-")[2] ?? "0") : 0;
+    const numeroOrdonnance = `ORD-${year}-${String(lastSeq + 1).padStart(5, "0")}`;
+
     const [row] = await db.insert(ordonnancesTable).values({
       consultationId: Number(consultationId),
       patientId: patientId ? Number(patientId) : null,
       veterinaire: veterinaire ?? null,
       contenu,
+      numeroOrdonnance,
       genereIA: genereIA ?? false,
       instructionsClient: instructionsClient ?? null,
     }).returning();
@@ -246,11 +257,22 @@ Réponds en JSON strict (sans markdown) :
       parsed = { contenu: raw, instructionsClient: "" };
     }
 
+    const yearAI = new Date().getFullYear();
+    const [lastOrdAI] = await db
+      .select({ num: ordonnancesTable.numeroOrdonnance })
+      .from(ordonnancesTable)
+      .where(sql`numero_ordonnance LIKE ${`ORD-${yearAI}-%`}`)
+      .orderBy(desc(ordonnancesTable.id))
+      .limit(1);
+    const lastSeqAI = lastOrdAI?.num ? parseInt(lastOrdAI.num.split("-")[2] ?? "0") : 0;
+    const numeroOrdonnanceAI = `ORD-${yearAI}-${String(lastSeqAI + 1).padStart(5, "0")}`;
+
     const [ordonnance] = await db.insert(ordonnancesTable).values({
       consultationId: Number(consultationId),
       patientId: consultation.patient?.id ?? null,
       veterinaire: consultation.veterinaire ?? clinique?.nomClinique ?? null,
       contenu: parsed.contenu,
+      numeroOrdonnance: numeroOrdonnanceAI,
       genereIA: true,
       instructionsClient: parsed.instructionsClient || null,
     }).returning();

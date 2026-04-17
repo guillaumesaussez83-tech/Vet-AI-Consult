@@ -65,12 +65,12 @@ export default function FactureImprimerPage() {
       <div className="max-w-3xl mx-auto px-8 py-12">
         <div className="flex items-start justify-between mb-10">
           <div>
-            <div className="text-2xl font-bold text-blue-900">VetCare Pro</div>
+            <div className="text-2xl font-bold text-blue-900">VétoAI</div>
             <div className="text-sm text-gray-600 mt-1">Cabinet Vétérinaire</div>
             <div className="text-sm text-gray-500 mt-3">
               12 rue des Lilas, 75011 Paris<br />
               Tél : 01 23 45 67 89<br />
-              Email : contact@vetcare-pro.fr<br />
+              Email : contact@vetoai.fr<br />
               IBAN : FR76 1234 5678 9012 3456 7890 123
             </div>
           </div>
@@ -202,7 +202,7 @@ export default function FactureImprimerPage() {
         </div>
 
         <div className="border-t pt-6 text-xs text-gray-400 space-y-1">
-          <p>SELAS VetCare Pro — SIRET : 123 456 789 00012 — Capital : 10 000 € — RCS Paris B 123 456 789</p>
+          <p>SELAS VétoAI — SIRET : 123 456 789 00012 — Capital : 10 000 € — RCS Paris B 123 456 789</p>
           <p>N° TVA intracommunautaire : FR12 123456789 — Code NAF : 7500Z (Activités vétérinaires)</p>
           <p>Règlement par virement, espèces ou carte bancaire. Tout retard de paiement entraîne des pénalités de 3 fois le taux légal.</p>
         </div>

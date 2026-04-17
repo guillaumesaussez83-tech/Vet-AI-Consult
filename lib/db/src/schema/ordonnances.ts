@@ -10,6 +10,7 @@ export const ordonnancesTable = pgTable("ordonnances", {
   patientId: integer("patient_id").references(() => patientsTable.id),
   veterinaire: text("veterinaire"),
   contenu: text("contenu").notNull(),
+  numeroOrdonnance: text("numero_ordonnance"),
   genereIA: boolean("genere_ia").default(false),
   instructionsClient: text("instructions_client"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

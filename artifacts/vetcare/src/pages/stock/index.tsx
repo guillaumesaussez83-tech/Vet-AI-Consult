@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { useToast } from "@/hooks/use-toast";
 import {
   Package, AlertTriangle, ShoppingCart, Truck, Activity, Plus, Search,
-  Pencil, ArrowUpDown, Download, Brain, CheckCircle, RefreshCw, X, Loader2, Eye,
+  Pencil, ArrowUpDown, Download, Brain, CheckCircle, RefreshCw, X, Loader2, Eye, Printer,
 } from "lucide-react";
 
 const API_BASE = "/api";
@@ -24,6 +24,7 @@ type Medicament = {
   pointCommande?: number; quantiteCommandeOptimale?: number; prixAchatHT?: number;
   prixVenteTTC?: number; tvaTaux?: number; fournisseurPrincipal?: string; delaiLivraisonJours?: number;
   datePeremption?: string; datePeremptionLot?: string; emplacement?: string; unite?: string; actif?: boolean;
+  estStupefiant?: boolean;
 };
 
 type Alerte = {
@@ -311,7 +312,14 @@ function ProduitsTab() {
               {filtered.map(m => (
                 <tr key={m.id} className="border-b last:border-b-0 hover:bg-muted/10">
                   <td className="p-3 font-medium">
-                    <div>{m.nom}</div>
+                    <div className="flex items-center gap-2">
+                      {m.nom}
+                      {m.estStupefiant && (
+                        <Badge variant="destructive" className="text-[10px] px-1 py-0 font-bold uppercase tracking-wide">
+                          Stupéfiant
+                        </Badge>
+                      )}
+                    </div>
                     {m.emplacement && <div className="text-xs text-muted-foreground">{m.emplacement}</div>}
                   </td>
                   <td className="p-3 text-muted-foreground hidden lg:table-cell font-mono text-xs">{m.referenceCentravet || m.reference || "—"}</td>
@@ -801,6 +809,80 @@ function MouvementsTab() {
   );
 }
 
+function RegistreStupefiantsTab() {
+  const { data: registre = [], isLoading } = useQuery<any[]>({
+    queryKey: ["stupefiants-registre"],
+    queryFn: () => fetch(`${API_BASE}/stock/stupefiants/registre`).then(r => r.json()),
+  });
+
+  const handleExportPDF = () => window.print();
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="font-semibold text-base">Registre des stupéfiants</h3>
+          <p className="text-xs text-muted-foreground">Entrées et sorties réglementaires — obligatoire depuis sept. 2024</p>
+        </div>
+        <Button variant="outline" size="sm" onClick={handleExportPDF} className="print:hidden">
+          <Printer className="h-4 w-4 mr-1.5" />
+          Exporter PDF
+        </Button>
+      </div>
+
+      {isLoading && <div className="space-y-3">{[...Array(5)].map((_, i) => <Skeleton key={i} className="h-12" />)}</div>}
+
+      {!isLoading && registre.length === 0 && (
+        <div className="text-center py-16 text-muted-foreground">
+          <Badge variant="destructive" className="mb-3">Stupéfiant</Badge>
+          <p className="font-medium">Aucun mouvement stupéfiant enregistré</p>
+          <p className="text-xs mt-1">Les sorties de kétamine et butorphanol apparaîtront ici</p>
+        </div>
+      )}
+
+      {registre.length > 0 && (
+        <div className="overflow-x-auto rounded-lg border">
+          <table className="w-full text-sm">
+            <thead className="bg-red-50 border-b">
+              <tr>
+                <th className="text-left p-3 font-medium">Date</th>
+                <th className="text-left p-3 font-medium">Produit</th>
+                <th className="text-left p-3 font-medium hidden md:table-cell">N° Lot</th>
+                <th className="text-right p-3 font-medium">Mouvement</th>
+                <th className="text-left p-3 font-medium hidden md:table-cell">Animal / Motif</th>
+                <th className="text-left p-3 font-medium hidden lg:table-cell">Vétérinaire</th>
+                <th className="text-right p-3 font-medium">Solde</th>
+              </tr>
+            </thead>
+            <tbody>
+              {registre.map((m: any) => (
+                <tr key={m.id} className="border-b last:border-b-0 hover:bg-muted/10">
+                  <td className="p-3 text-xs">{new Date(m.createdAt).toLocaleString("fr-FR")}</td>
+                  <td className="p-3 font-medium">
+                    <div className="flex items-center gap-1.5">
+                      <Badge variant="destructive" className="text-[10px] px-1 py-0">STU</Badge>
+                      {m.nomProduit}
+                    </div>
+                  </td>
+                  <td className="p-3 text-muted-foreground text-xs hidden md:table-cell">{m.numeroLot ?? "—"}</td>
+                  <td className={`p-3 text-right font-bold ${m.quantite > 0 ? "text-green-600" : "text-red-600"}`}>
+                    {m.quantite > 0 ? "+" : ""}{m.quantite}
+                  </td>
+                  <td className="p-3 text-muted-foreground text-xs hidden md:table-cell truncate max-w-[180px]">
+                    {m.motif ?? "—"}
+                  </td>
+                  <td className="p-3 text-muted-foreground text-xs hidden lg:table-cell">{m.utilisateur ?? "—"}</td>
+                  <td className="p-3 text-right font-semibold">{m.soldeCumule ?? 0}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─────────────────────────────────────────
 // PAGE PRINCIPALE
 // ─────────────────────────────────────────
@@ -856,6 +938,9 @@ export default function StockPage() {
           </TabsTrigger>
           <TabsTrigger value="reception"><Truck className="h-4 w-4 mr-1.5" />Réception</TabsTrigger>
           <TabsTrigger value="mouvements"><Activity className="h-4 w-4 mr-1.5" />Mouvements</TabsTrigger>
+          <TabsTrigger value="stupefiants" className="text-red-700">
+            <span className="font-semibold">Stupéfiants</span>
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="alertes" className="mt-4"><AlertesTab /></TabsContent>
@@ -863,6 +948,7 @@ export default function StockPage() {
         <TabsContent value="commandes" className="mt-4"><CommandesTab /></TabsContent>
         <TabsContent value="reception" className="mt-4"><ReceptionTab /></TabsContent>
         <TabsContent value="mouvements" className="mt-4"><MouvementsTab /></TabsContent>
+        <TabsContent value="stupefiants" className="mt-4"><RegistreStupefiantsTab /></TabsContent>
       </Tabs>
     </div>
   );

@@ -15,11 +15,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useUser } from "@clerk/react";
-import { ArrowLeft, ArrowRight, Sparkles, CheckCircle, Loader2, FileText, X, Upload, AlertTriangle } from "lucide-react";
+import { ArrowLeft, ArrowRight, Sparkles, CheckCircle, Loader2, FileText, X, Upload, AlertTriangle, Mic } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { formatDateFR } from "@/lib/utils";
 import { PatientBarre } from "@/components/PatientBarre";
 import { VoiceRecorder } from "@/components/VoiceRecorder";
+import DicteeOrdonnanceDialog, { PrescriptionConfirmee } from "@/components/DicteeOrdonnanceDialog";
 
 const ETAPES = [
   { id: 1, label: "Patient & Contexte" },
@@ -71,6 +72,8 @@ export default function NouvelleConsultationPage() {
   } | null>(null);
   const [step5, setStep5] = useState({ ordonnance: "", notes: "" });
   const [uploadedFiles, setUploadedFiles] = useState<{ name: string; objectPath: string; type: string; previewUrl?: string }[]>([]);
+  const [dicteeOpen, setDicteeOpen] = useState(false);
+  const [pendingPrescriptions, setPendingPrescriptions] = useState<PrescriptionConfirmee[]>([]);
 
   useEffect(() => {
     if (user && !step1.veterinaire) {
@@ -156,6 +159,19 @@ export default function NouvelleConsultationPage() {
           statut: "en_cours",
         } as any,
       });
+
+      if (pendingPrescriptions.length > 0) {
+        await fetch("/api/ai/confirmer-dictee-ordonnance", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            consultationId: consultation.id,
+            patientId: parseInt(step1.patientId),
+            veterinaire: step1.veterinaire,
+            prescriptions: pendingPrescriptions,
+          }),
+        });
+      }
 
       queryClient.invalidateQueries({ queryKey: getListConsultationsQueryKey() });
       toast({ title: "Consultation créée avec succès" });
@@ -379,7 +395,27 @@ export default function NouvelleConsultationPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <Label>Prescription</Label>
+                <div className="flex items-center justify-between mb-1">
+                  <Label>Prescription</Label>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="gap-2 text-primary border-primary/40 hover:bg-primary/5"
+                    onClick={() => setDicteeOpen(true)}
+                  >
+                    <Mic className="h-4 w-4" />
+                    Dicter l'ordonnance
+                  </Button>
+                </div>
+                {pendingPrescriptions.length > 0 && (
+                  <Alert className="mb-2 border-green-300 bg-green-50 text-green-800">
+                    <CheckCircle className="h-4 w-4 text-green-600" />
+                    <AlertDescription>
+                      {pendingPrescriptions.length} médicament{pendingPrescriptions.length > 1 ? "s" : ""} issu{pendingPrescriptions.length > 1 ? "s" : ""} de la dictée — stock sera décrémenté à la sauvegarde.
+                    </AlertDescription>
+                  </Alert>
+                )}
                 {step3.poids && parseFloat(step3.poids) > 0 && (
                   <Alert className="mt-2 border-amber-300 bg-amber-50 text-amber-800">
                     <AlertTriangle className="h-4 w-4 text-amber-600" />
@@ -511,6 +547,15 @@ export default function NouvelleConsultationPage() {
           </Button>
         )}
       </div>
+
+      <DicteeOrdonnanceDialog
+        open={dicteeOpen}
+        onClose={() => setDicteeOpen(false)}
+        onConfirmed={(prescriptions, texte) => {
+          setPendingPrescriptions(prescriptions);
+          setStep5(f => ({ ...f, ordonnance: texte }));
+        }}
+      />
     </div>
   );
 }

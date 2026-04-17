@@ -32,7 +32,9 @@ import SalleAttentePage from "./pages/salle-attente/index";
 import CertificatsPage from "./pages/certificats/index";
 import VaccinationsPage from "./pages/vaccinations/index";
 import PortailPage from "./pages/portail/index";
+import ConfidentialitePage from "./pages/confidentialite";
 import { AppLayout } from "./components/layout/AppLayout";
+import IaDisclaimerModal from "./components/IaDisclaimerModal";
 import NotFound from "@/pages/not-found";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 
@@ -89,6 +91,7 @@ function ProtectedRoute({ component: Component }: { component: React.ComponentTy
     <>
       <Show when="signed-in">
         <AppLayout>
+          <IaDisclaimerModal />
           <Component />
         </AppLayout>
       </Show>
@@ -143,6 +146,7 @@ function Router() {
       <Route path="/certificats" component={() => <ProtectedRoute component={CertificatsPage} />} />
       <Route path="/patients/:id/vaccinations" component={() => <ProtectedRoute component={VaccinationsPage} />} />
       <Route path="/portail/:token" component={PortailPage} />
+      <Route path="/confidentialite" component={ConfidentialitePage} />
 
       <Route component={NotFound} />
     </Switch>

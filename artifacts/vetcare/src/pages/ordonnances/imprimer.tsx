@@ -13,6 +13,7 @@ interface Ordonnance {
   patientId: number | null;
   veterinaire: string | null;
   contenu: string;
+  numeroOrdonnance: string | null;
   genereIA: boolean;
   instructionsClient: string | null;
   createdAt: string;
@@ -144,7 +145,7 @@ export default function OrdonnanceImprimerPage() {
                 <p className="text-xs text-blue-700 mt-0.5">Prescription médicale — Document officiel</p>
               </div>
               <div className="text-right text-sm">
-                <p className="font-medium">N° {String(ordonnance.id).padStart(5, "0")}</p>
+                <p className="font-medium">{ordonnance.numeroOrdonnance ?? `N° ${String(ordonnance.id).padStart(5, "0")}`}</p>
                 <p className="text-muted-foreground text-xs">{dateOrd}</p>
               </div>
             </div>

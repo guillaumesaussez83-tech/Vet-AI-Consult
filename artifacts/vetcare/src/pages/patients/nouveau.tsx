@@ -27,6 +27,7 @@ export default function NouveauPatientPage() {
   const [ownerForm, setOwnerForm] = useState({
     nom: "", prenom: "", email: "", telephone: "", adresse: ""
   });
+  const [consentementRgpd, setConsentementRgpd] = useState(false);
   const [patientForm, setPatientForm] = useState({
     nom: "", espece: "chien", race: "", sexe: "mâle", dateNaissance: "",
     poids: "", couleur: "", sterilise: false, antecedents: "", allergies: "",
@@ -35,6 +36,10 @@ export default function NouveauPatientPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!consentementRgpd) {
+      toast({ title: "Le consentement RGPD est obligatoire", variant: "destructive" });
+      return;
+    }
     try {
       let ownerId: number;
 
@@ -71,6 +76,8 @@ export default function NouveauPatientPage() {
           assurance: patientForm.assurance,
           assuranceNom: patientForm.assuranceNom || null,
           agressif: patientForm.agressif,
+          consentementRgpd: true,
+          dateConsentement: new Date().toISOString(),
         } as any
       });
 
@@ -268,11 +275,33 @@ export default function NouveauPatientPage() {
           </CardContent>
         </Card>
 
+        <Card>
+          <CardContent className="pt-4">
+            <div className="flex items-start gap-3">
+              <input
+                type="checkbox"
+                id="consentement_rgpd"
+                checked={consentementRgpd}
+                onChange={e => setConsentementRgpd(e.target.checked)}
+                className="mt-0.5 h-4 w-4 accent-primary"
+              />
+              <label htmlFor="consentement_rgpd" className="text-sm text-muted-foreground leading-relaxed cursor-pointer">
+                <span className="text-destructive font-medium">* </span>
+                J'accepte que les données de l'animal et du propriétaire soient traitées conformément à la{" "}
+                <a href="/confidentialite" target="_blank" className="text-primary underline hover:no-underline">
+                  politique de confidentialité
+                </a>{" "}
+                de la clinique, conformément au RGPD (Règlement Général sur la Protection des Données).
+              </label>
+            </div>
+          </CardContent>
+        </Card>
+
         <div className="flex gap-3">
           <Link href="/patients">
             <Button type="button" variant="outline">Annuler</Button>
           </Link>
-          <Button type="submit" disabled={createPatient.isPending || createOwner.isPending}>
+          <Button type="submit" disabled={createPatient.isPending || createOwner.isPending || !consentementRgpd}>
             <Plus className="mr-2 h-4 w-4" />
             {createPatient.isPending ? "Création..." : "Créer le patient"}
           </Button>

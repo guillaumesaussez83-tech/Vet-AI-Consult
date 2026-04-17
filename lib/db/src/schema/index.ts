@@ -21,4 +21,5 @@ export * from "./mouvements-stock";
 export * from "./lignes-commande";
 export * from "./alertes-stock";
 export * from "./ordonnances";
+export * from "./ia-audit-log";
 export * from "./parametres-clinique";

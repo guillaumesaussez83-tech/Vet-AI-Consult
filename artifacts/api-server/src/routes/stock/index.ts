@@ -524,4 +524,45 @@ router.post("/commandes/:id/exporter-centravet", async (req, res) => {
   } catch (err) { req.log.error(err); return res.status(500).json({ error: "Erreur interne" }); }
 });
 
+router.get("/stupefiants/registre", async (req, res) => {
+  try {
+    const stupefiants = await db
+      .select({ id: stockMedicamentsTable.id, nom: stockMedicamentsTable.nom, quantiteStock: stockMedicamentsTable.quantiteStock })
+      .from(stockMedicamentsTable)
+      .where(eq(stockMedicamentsTable.estStupefiant, true));
+
+    if (stupefiants.length === 0) return res.json([]);
+
+    const ids = stupefiants.map(s => s.id);
+    const { inArray } = await import("drizzle-orm");
+
+    const mouvements = await db
+      .select()
+      .from(mouvementsStockTable)
+      .where(inArray(mouvementsStockTable.medicamentId, ids))
+      .orderBy(asc(mouvementsStockTable.createdAt));
+
+    const nomById: Record<number, string> = {};
+    for (const s of stupefiants) nomById[s.id] = s.nom;
+
+    const balances: Record<number, number> = {};
+    const result = mouvements.map(m => {
+      const medId = m.medicamentId;
+      if (medId === null) return null;
+      balances[medId] = (balances[medId] ?? 0) + m.quantite;
+      return {
+        ...m,
+        nomProduit: nomById[medId] ?? "Inconnu",
+        soldeCumule: balances[medId],
+        createdAt: m.createdAt.toISOString(),
+      };
+    }).filter(Boolean);
+
+    return res.json(result);
+  } catch (err) {
+    req.log.error(err);
+    return res.status(500).json({ error: "Erreur interne" });
+  }
+});
+
 export default router;

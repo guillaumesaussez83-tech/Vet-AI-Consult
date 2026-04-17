@@ -42,10 +42,10 @@ const PRODUITS: Produit[] = [
   { nom: "Furosémide 40mg cp",                          categorie: "medicament", quantiteStock: 50, quantiteMinimum: 20, quantiteMax: 80,  prixAchatHT: 0.12,  unite: "comprime", expiryMonths: 24, ref: 9  },
   { nom: "Oméprazole 20mg gélule",                      categorie: "medicament", quantiteStock: 35, quantiteMinimum: 15, quantiteMax: 60,  prixAchatHT: 0.28,  unite: "comprime", expiryMonths: 24, ref: 10 },
   { nom: "Tramadol 50mg cp",                            categorie: "medicament", quantiteStock: 40, quantiteMinimum: 20, quantiteMax: 70,  prixAchatHT: 0.22,  unite: "comprime", expiryMonths: 24, ref: 11 },
-  { nom: "Kétamine 500mg/10ml inj",                     categorie: "medicament", quantiteStock: 1,  quantiteMinimum: 2,  quantiteMax: 8,   prixAchatHT: 28.50, unite: "flacon",   expiryMonths: 12, ref: 12 },
+  { nom: "Kétamine 500mg/10ml inj",                     categorie: "medicament", quantiteStock: 1,  quantiteMinimum: 2,  quantiteMax: 8,   prixAchatHT: 28.50, unite: "flacon",   expiryMonths: 12, ref: 12, estStupefiant: true },
   { nom: "Propofol 200mg/20ml inj",                     categorie: "medicament", quantiteStock: 2,  quantiteMinimum: 3,  quantiteMax: 10,  prixAchatHT: 14.80, unite: "flacon",   expiryMonths: 6,  ref: 13 },
   { nom: "Médétomidine 1mg/ml inj",                     categorie: "medicament", quantiteStock: 4,  quantiteMinimum: 2,  quantiteMax: 6,   prixAchatHT: 32.00, unite: "flacon",   expiryMonths: 12, ref: 14 },
-  { nom: "Butorphanol 10mg/ml inj",                     categorie: "medicament", quantiteStock: 3,  quantiteMinimum: 2,  quantiteMax: 5,   prixAchatHT: 38.00, unite: "flacon",   expiryMonths: 12, ref: 15 },
+  { nom: "Butorphanol 10mg/ml inj",                     categorie: "medicament", quantiteStock: 3,  quantiteMinimum: 2,  quantiteMax: 5,   prixAchatHT: 38.00, unite: "flacon",   expiryMonths: 12, ref: 15, estStupefiant: true },
 
   // ── VACCINS ───────────────────────────────────────────────────────
   { nom: "Eurican DHPPI2-L",          categorie: "vaccin", quantiteStock: 12, quantiteMinimum: 5, quantiteMax: 20, prixAchatHT: 8.20,  unite: "flacon", expiryMonths: 12, ref: 16 },
@@ -126,6 +126,7 @@ export async function runStockSeeder(force = false): Promise<{ inserted: number;
       delaiLivraisonJours: 1,
       datePeremptionLot: expiryDate,
       unite: p.unite,
+      estStupefiant: (p as any).estStupefiant ?? false,
       actif: true,
     }).returning({ id: stockMedicamentsTable.id });
 

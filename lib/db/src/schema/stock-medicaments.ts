@@ -27,6 +27,7 @@ export const stockMedicamentsTable = pgTable("stock_medicaments", {
   datePeremptionLot: text("date_peremption_lot"),
   emplacement: text("emplacement"),
   unite: text("unite").default("unité"),
+  estStupefiant: boolean("est_stupefiant").default(false),
   actif: boolean("actif").default(true),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),

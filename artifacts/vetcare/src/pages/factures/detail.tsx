@@ -6,9 +6,18 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, Check, Printer } from "lucide-react";
+import { ArrowLeft, Check, Printer, CreditCard, Smartphone, PawPrint, FileText, Building2, Banknote } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
+const MODES_PAIEMENT = [
+  { value: "carte_bancaire", label: "Carte bancaire (puce)", icon: CreditCard },
+  { value: "carte_sans_contact", label: "Carte sans contact (NFC)", icon: Smartphone },
+  { value: "payvet", label: "PayVet (réseau vétérinaire)", icon: PawPrint },
+  { value: "cheque", label: "Chèque", icon: FileText },
+  { value: "virement", label: "Virement bancaire", icon: Building2 },
+  { value: "especes", label: "Espèces", icon: Banknote },
+];
 
 export default function FactureDetailPage() {
   const [, params] = useRoute("/factures/:id");
@@ -21,14 +30,22 @@ export default function FactureDetailPage() {
   });
   const updateStatut = useUpdateFactureStatut();
   const [newStatut, setNewStatut] = useState("");
+  const [modePaiement, setModePaiement] = useState("");
 
   const handleStatutChange = async () => {
     if (!newStatut) return;
+    if (newStatut === "payee" && !modePaiement) {
+      toast({ title: "Veuillez sélectionner un mode de paiement", variant: "destructive" });
+      return;
+    }
     try {
-      await updateStatut.mutateAsync({ id, data: { statut: newStatut } });
+      await updateStatut.mutateAsync({
+        id,
+        data: { statut: newStatut, ...(modePaiement ? { modePaiement } : {}) } as any
+      });
       queryClient.invalidateQueries({ queryKey: getGetFactureQueryKey(id) });
       queryClient.invalidateQueries({ queryKey: getListFacturesQueryKey() });
-      toast({ title: "Statut mis à jour" });
+      toast({ title: "Facture mise à jour" });
     } catch {
       toast({ title: "Erreur lors de la mise à jour", variant: "destructive" });
     }
@@ -39,6 +56,20 @@ export default function FactureDetailPage() {
 
   const statutLabels: Record<string, string> = { en_attente: "En attente", payee: "Payée", annulee: "Annulée" };
   const patient = facture.consultation?.patient;
+  const facAny = facture as any;
+  const lignes: any[] = facAny.lignes ?? [];
+
+  const totalHT = lignes.length > 0
+    ? lignes.reduce((s: number, l: any) => s + Number(l.montantHT), 0)
+    : (facture.montantHT ?? 0);
+  const totalTVA = facAny.montantTVA != null
+    ? facAny.montantTVA
+    : totalHT * 0.2;
+  const totalTTC = facAny.montantTTC != null
+    ? facAny.montantTTC
+    : totalHT + totalTVA;
+
+  const modePaiementLabel = MODES_PAIEMENT.find(m => m.value === facture.modePaiement)?.label;
 
   return (
     <div className="space-y-6 max-w-2xl">
@@ -82,6 +113,10 @@ export default function FactureDetailPage() {
               <span>{facture.consultation?.veterinaire}</span>
               <span className="text-muted-foreground">Date consultation</span>
               <span>{facture.consultation?.date}</span>
+              {modePaiementLabel && <>
+                <span className="text-muted-foreground">Mode de paiement</span>
+                <span className="font-medium">{modePaiementLabel}</span>
+              </>}
             </div>
           </div>
         </CardContent>
@@ -96,48 +131,77 @@ export default function FactureDetailPage() {
               <span className="text-right">Qté × Prix</span>
               <span className="text-right">Total HT</span>
             </div>
-            {((facture as unknown as Record<string, unknown>).lignes as Array<Record<string, unknown>> | undefined)?.map((ligne, idx) => (
-              <div key={idx} className="grid grid-cols-4 gap-3 text-sm py-1">
-                <span className="col-span-2">{String(ligne.description ?? "")}</span>
-                <span className="text-right text-muted-foreground">{Number(ligne.quantite)} × {(Number(ligne.prixUnitaire)).toFixed(2)} €</span>
-                <span className="text-right font-medium">{(Number(ligne.montantHT)).toFixed(2)} €</span>
-              </div>
-            ))}
+            {lignes.length === 0 ? (
+              <p className="text-sm text-muted-foreground py-4 text-center">Aucune ligne de facturation enregistrée</p>
+            ) : (
+              lignes.map((ligne: any, idx: number) => (
+                <div key={idx} className="grid grid-cols-4 gap-3 text-sm py-1">
+                  <span className="col-span-2">{String(ligne.description || ligne.acte?.nom || "—")}</span>
+                  <span className="text-right text-muted-foreground">{Number(ligne.quantite)} × {(Number(ligne.prixUnitaire)).toFixed(2)} €</span>
+                  <span className="text-right font-medium">{(Number(ligne.montantHT)).toFixed(2)} €</span>
+                </div>
+              ))
+            )}
           </div>
           <div className="border-t mt-3 pt-3 space-y-1 text-sm">
             <div className="flex justify-between text-muted-foreground">
               <span>Total HT</span>
-              <span>{facture.montantHT?.toFixed(2)} €</span>
+              <span>{totalHT.toFixed(2)} €</span>
             </div>
             <div className="flex justify-between text-muted-foreground">
-              <span>TVA</span>
-              <span>{facture.tva?.toFixed(2)} €</span>
+              <span>TVA (20 %)</span>
+              <span>{totalTVA.toFixed(2)} €</span>
             </div>
             <div className="flex justify-between font-bold text-lg border-t pt-1">
               <span>Total TTC</span>
-              <span>{facture.montantTTC?.toFixed(2)} €</span>
+              <span>{totalTTC.toFixed(2)} €</span>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {facture.statut !== "payee" && (
+      {facture.statut !== "payee" && facture.statut !== "annulee" && (
         <Card>
-          <CardHeader><CardTitle>Mettre à jour le statut</CardTitle></CardHeader>
-          <CardContent className="flex gap-3">
-            <Select value={newStatut} onValueChange={setNewStatut}>
-              <SelectTrigger className="flex-1">
-                <SelectValue placeholder="Choisir un statut..." />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="payee">Payée</SelectItem>
-                <SelectItem value="annulee">Annulée</SelectItem>
-              </SelectContent>
-            </Select>
-            <Button onClick={handleStatutChange} disabled={!newStatut || updateStatut.isPending}>
-              <Check className="mr-2 h-4 w-4" />
-              Mettre à jour
-            </Button>
+          <CardHeader><CardTitle>Encaissement</CardTitle></CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Mode de paiement {newStatut === "payee" && <span className="text-destructive">*</span>}</label>
+              <div className="grid grid-cols-2 gap-2">
+                {MODES_PAIEMENT.map(({ value, label, icon: Icon }) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => setModePaiement(value)}
+                    className={`flex items-center gap-2 px-3 py-2 rounded-md border text-sm transition-colors ${
+                      modePaiement === value
+                        ? "border-primary bg-primary/10 text-primary font-medium"
+                        : "border-border hover:border-primary/50 hover:bg-muted"
+                    }`}
+                  >
+                    <Icon className="h-4 w-4 flex-shrink-0" />
+                    <span>{label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <Select value={newStatut} onValueChange={setNewStatut}>
+                <SelectTrigger className="flex-1">
+                  <SelectValue placeholder="Choisir un statut..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="payee">Payée</SelectItem>
+                  <SelectItem value="annulee">Annulée</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button onClick={handleStatutChange} disabled={!newStatut || updateStatut.isPending}>
+                <Check className="mr-2 h-4 w-4" />
+                Valider
+              </Button>
+            </div>
+            {newStatut === "payee" && !modePaiement && (
+              <p className="text-xs text-destructive">Le mode de paiement est requis pour valider l'encaissement.</p>
+            )}
           </CardContent>
         </Card>
       )}

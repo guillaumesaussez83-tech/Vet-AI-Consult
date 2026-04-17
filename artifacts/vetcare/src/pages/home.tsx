@@ -12,7 +12,7 @@ export default function Home() {
           <div className="bg-primary/10 p-2 rounded-xl text-primary">
             <StethoscopeIcon className="h-6 w-6" />
           </div>
-          <span className="font-bold text-xl tracking-tight text-foreground">VetCare Pro</span>
+          <span className="font-bold text-xl tracking-tight text-foreground">VétoAI</span>
         </div>
         <div className="flex items-center gap-4">
           <Link href={`${basePath}/sign-in`}>
@@ -68,7 +68,7 @@ export default function Home() {
       </main>
 
       <footer className="py-8 text-center text-muted-foreground text-sm border-t">
-        © {new Date().getFullYear()} VetCare Pro. Tous droits réservés.
+        © {new Date().getFullYear()} VétoAI. Tous droits réservés.
       </footer>
     </div>
   );

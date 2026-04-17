@@ -21,6 +21,8 @@ export const patientsTable = pgTable("patients", {
   assurance: boolean("assurance").notNull().default(false),
   assuranceNom: text("assurance_nom"),
   agressif: boolean("agressif").notNull().default(false),
+  consentementRgpd: boolean("consentement_rgpd").notNull().default(false),
+  dateConsentement: timestamp("date_consentement", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 }, (table) => ({

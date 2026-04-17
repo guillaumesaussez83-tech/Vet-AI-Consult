@@ -83,7 +83,7 @@ export default function PortailPage() {
             <Stethoscope className="h-6 w-6 text-primary" />
           </div>
           <div>
-            <h1 className="font-bold text-lg text-gray-900">VetCare Pro — Portail client</h1>
+            <h1 className="font-bold text-lg text-gray-900">VétoAI — Portail client</h1>
             <p className="text-sm text-muted-foreground">Espace personnel de {data.owner.prenom} {data.owner.nom}</p>
           </div>
         </div>
@@ -189,7 +189,7 @@ export default function PortailPage() {
         </div>
 
         <footer className="text-center text-xs text-muted-foreground pt-4 border-t">
-          <p>Portail patient VetCare Pro — Informations confidentielles</p>
+          <p>Portail patient VétoAI — Informations confidentielles</p>
           <p>Ne partagez pas ce lien avec des tiers</p>
         </footer>
       </main>

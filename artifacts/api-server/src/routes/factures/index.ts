@@ -167,15 +167,30 @@ router.get("/:id", async (req, res) => {
       .leftJoin(actesTable, eq(actesConsultationsTable.acteId, actesTable.id))
       .where(eq(actesConsultationsTable.consultationId, facture.consultationId));
 
+    const lignesMapped = lignes.map(l => ({
+      ...l,
+      description: l.description ?? l.acte?.nom ?? "",
+      montantHT: parseFloat((l.prixUnitaire * l.quantite).toFixed(2)),
+      montantTVA: parseFloat((l.prixUnitaire * l.quantite * 0.2).toFixed(2)),
+      montantTTC: parseFloat((l.prixUnitaire * l.quantite * 1.2).toFixed(2)),
+      tvaRate: 20,
+    }));
+
+    const totalHT = parseFloat(lignesMapped.reduce((s, l) => s + l.montantHT, 0).toFixed(2));
+    const totalTVA = parseFloat((totalHT * 0.2).toFixed(2));
+    const totalTTC = parseFloat((totalHT + totalTVA).toFixed(2));
+
+    if (lignesMapped.length > 0 && (Math.abs(facture.montantHT - totalHT) > 0.005 || Math.abs(facture.montantTTC - totalTTC) > 0.005)) {
+      await db.update(facturesTable).set({ montantHT: totalHT, montantTTC: totalTTC }).where(eq(facturesTable.id, facture.id));
+    }
+
     return res.json({
       ...facture,
+      montantHT: totalHT,
+      montantTVA: totalTVA,
+      montantTTC: totalTTC,
       createdAt: facture.createdAt.toISOString(),
-      lignes: lignes.map(l => ({
-        ...l,
-        montantHT: l.prixUnitaire * l.quantite,
-        montantTTC: l.prixUnitaire * l.quantite * 1.2,
-        tvaRate: 20,
-      })),
+      lignes: lignesMapped,
       consultation: consultation ? {
         ...consultation,
         createdAt: consultation.createdAt.toISOString(),
@@ -228,6 +243,17 @@ router.patch("/:id", async (req, res) => {
 
     const [factureBefore] = await db.select().from(facturesTable).where(eq(facturesTable.id, params.data.id));
     if (!factureBefore) return res.status(404).json({ error: "Facture non trouvée" });
+
+    const actesPourTotal = await db
+      .select({ prixUnitaire: actesConsultationsTable.prixUnitaire, quantite: actesConsultationsTable.quantite })
+      .from(actesConsultationsTable)
+      .where(eq(actesConsultationsTable.consultationId, factureBefore.consultationId));
+    const totalHT = parseFloat(actesPourTotal.reduce((s, a) => s + a.prixUnitaire * a.quantite, 0).toFixed(2));
+    const totalTTC = parseFloat((totalHT * 1.2).toFixed(2));
+    if (actesPourTotal.length > 0) {
+      updateData.montantHT = totalHT;
+      updateData.montantTTC = totalTTC;
+    }
 
     const [facture] = await db.update(facturesTable).set(updateData).where(eq(facturesTable.id, params.data.id)).returning();
     if (!facture) return res.status(404).json({ error: "Facture non trouvée" });

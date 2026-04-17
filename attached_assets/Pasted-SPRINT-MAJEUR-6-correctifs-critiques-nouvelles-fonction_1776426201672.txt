@@ -1,0 +1,193 @@
+SPRINT MAJEUR — 6 correctifs critiques + nouvelles fonctionnalités
+
+=== BUG CRITIQUE 1 : FACTURE À ZÉRO ===
+
+La facture s'affiche à 0€ après validation et le PDF est également à 0€.
+Le problème est que les champs montant_ht, montant_tva, montant_ttc de la
+table factures ne sont pas recalculés/sauvegardés depuis les lignes.
+
+CORRECTION :
+1. Dans la route POST /api/factures et PUT /api/factures/:id/valider,
+   recalculer systématiquement les totaux depuis les lignes_facture :
+   montant_ht = SUM(lignes.prix_unitaire_ht * lignes.quantite)
+   montant_tva = SUM(lignes.montant_tva)
+   montant_ttc = montant_ht + montant_tva
+   Sauvegarder ces valeurs dans la table factures avant de retourner la réponse.
+
+2. Dans la génération du PDF de facture, recalculer les totaux depuis
+   les lignes_facture (ne jamais faire confiance aux champs agrégés seuls).
+   Afficher chaque ligne avec : désignation, quantité, prix unitaire HT,
+   taux TVA, montant TTC.
+
+3. Vérifier que quand une consultation crée des actes et génère une facture,
+   les lignes_facture sont bien insérées avec les prix de la table actes
+   (et non des prix à 0 ou null).
+
+4. Dans useGetFacture et useListFactures, s'assurer que les lignes sont
+   toujours incluses dans la réponse (JOIN lignes_facture).
+
+=== FONCTIONNALITÉ 2 : MODES DE PAIEMENT ===
+
+Ajouter la sélection du mode de paiement lors de l'encaissement.
+
+1. Modifier la table factures : ajouter colonne
+   mode_paiement TEXT CHECK(mode_paiement IN (
+   'carte_bancaire', 'carte_sans_contact', 'payvet',
+   'cheque', 'virement', 'especes')) DEFAULT NULL
+
+2. Dans le formulaire d'encaissement (page Facturation ou modal de validation),
+   ajouter un sélecteur de mode de paiement avec ces 6 options affichées
+   avec des icônes :
+   - 💳 Carte bancaire (puce)
+   - 📱 Carte sans contact (NFC)
+   - 🐾 PayVet (réseau vétérinaire)
+   - 📝 Chèque
+   - 🏦 Virement bancaire
+   - 💶 Espèces
+
+3. Le mode_paiement doit être obligatoire pour valider une facture (statut payée).
+   Afficher le mode de paiement sur le PDF de facture et dans le tableau
+   de bord encaissements.
+
+=== FONCTIONNALITÉ 3 : DICTÉE D'ORDONNANCE → FACTURE → STOCK ===
+
+Dans la page de consultation, ajouter un bouton "🎤 Dicter l'ordonnance"
+distinct de la dictée de consultation.
+
+FLUX COMPLET :
+
+1. DICTÉE : Le vétérinaire dicte par exemple :
+   "Je prescris Amoxicilline 200mg suspension injectable, 1ml par kilo
+   en sous-cutané, une injection aujourd'hui. Et Méloxicam 0,5mg/kg
+   per os pendant 5 jours, 2 comprimés par jour."
+
+2. PARSING IA : Envoyer la transcription à Claude avec ce prompt système :
+   "Tu es un assistant vétérinaire. Extrait de ce texte les prescriptions
+   médicamenteuses sous forme JSON structuré :
+   [{
+     nom_medicament: string,
+     dose: string,
+     voie_administration: string,
+     frequence: string,
+     duree: string,
+     quantite_a_delivrer: number,
+     unite: string
+   }]
+   Réponds UNIQUEMENT avec le JSON, sans texte supplémentaire."
+
+3. MATCHING STOCK : Pour chaque médicament extrait, faire un fuzzy match
+   avec la table stock_medicaments sur le champ nom_commercial et
+   denomination. Utiliser une comparaison ILIKE '%terme%' sur les mots
+   clés du nom. Retourner le produit le plus proche avec son prix_vente_ttc.
+
+4. CRÉATION AUTOMATIQUE :
+   a) Créer l'ordonnance dans la table ordonnances liée à la consultation,
+      avec numéro séquentiel ORD-YYYY-NNNNN (ex: ORD-2026-00001)
+   b) Ajouter les lignes médicaments à la facture existante de la
+      consultation (lignes_facture) avec les prix de la table
+      stock_medicaments.prix_vente_ttc
+   c) Déduire du stock : créer un mouvement_stock de type 'sortie'
+      pour chaque médicament avec la quantite_a_delivrer,
+      référence = ordonnance_id, diminuer stock_actuel dans
+      stock_medicaments
+
+5. UI : Afficher un récapitulatif "Ordonnance générée" avec la liste
+   des médicaments parsés, leurs prix, le total ajouté à la facture,
+   et un bouton "Confirmer" avant de finaliser (permettre correction manuelle).
+
+=== CORRECTIF 4 : RGPD — CONFORMITÉ DE BASE ===
+
+A) CONSENTEMENT PATIENT :
+   Dans le formulaire de création de patient (NouveauPatient.tsx),
+   ajouter en bas avant le bouton Enregistrer :
+   - Checkbox obligatoire : "J'accepte que les données de l'animal et
+     du propriétaire soient traitées conformément à la politique de
+     confidentialité de la clinique, conformément au RGPD."
+   - Lien vers /confidentialite
+   - Stocker dans la table patients : consentement_rgpd BOOLEAN DEFAULT FALSE,
+     date_consentement TIMESTAMP
+   - Bloquer la création si non cochée
+
+B) DISCLAIMER IA :
+   À la première connexion de chaque vétérinaire (stocker en localStorage
+   avec clé 'ia_disclaimer_accepted_{userId}'), afficher une modal :
+   Titre : "Aide à la décision clinique — Information importante"
+   Texte : "Les suggestions diagnostiques et les ordonnances générées par
+   l'intelligence artificielle sont des outils d'aide à la décision.
+   Elles ne remplacent en aucun cas le jugement clinique du vétérinaire
+   et doivent être systématiquement vérifiées et validées par un
+   professionnel qualifié. En continuant, vous acceptez d'assumer
+   la responsabilité professionnelle de toute décision clinique."
+   Bouton : "Je comprends et j'accepte" (obligatoire pour continuer)
+
+C) AUDIT TRAIL DIAGNOSTICS IA :
+   Ajouter une table ia_audit_log :
+   CREATE TABLE ia_audit_log (
+     id SERIAL PRIMARY KEY,
+     clinic_id TEXT NOT NULL,
+     consultation_id INTEGER,
+     veterinaire_id INTEGER,
+     type_action TEXT, -- 'diagnostic', 'ordonnance', 'prescription'
+     prompt_envoye TEXT,
+     reponse_ia TEXT,
+     valide_par TEXT, -- nom du vétérinaire
+     created_at TIMESTAMP DEFAULT NOW()
+   );
+   Logger chaque appel IA (diagnostic, ordonnance) dans cette table.
+
+D) PAGE POLITIQUE DE CONFIDENTIALITÉ :
+   Créer une route /confidentialite avec une page simple affichant :
+   - Responsable du traitement : Clinique Vétérinaire MonVeto Cogolin
+   - Données collectées : nom/prénom propriétaire, coordonnées, données animal
+   - Finalité : gestion vétérinaire, facturation, rappels vaccinaux
+   - Base légale : intérêt légitime + consentement
+   - Durée de conservation : 10 ans (obligations légales)
+   - Droits : accès, rectification, effacement sur demande à
+     contact@monveto-cogolin.fr
+   - Hébergeur : OVHcloud (France)
+
+=== CORRECTIF 5 : REGISTRE STUPÉFIANTS ===
+
+A) Dans la table stock_medicaments, ajouter :
+   est_stupefiant BOOLEAN DEFAULT FALSE
+   Marquer automatiquement comme stupéfiant tout produit dont le nom
+   contient 'kétamine' ou 'ketamine' (ILIKE).
+
+B) Dans l'interface Produits du stock, afficher un badge rouge "STUPÉFIANT"
+   sur les produits concernés.
+
+C) Quand une sortie de stock est créée pour un stupéfiant (via ordonnance
+   ou mouvement manuel), forcer la saisie de :
+   - Numéro de lot obligatoire
+   - Nom de l'animal traité obligatoire
+   - Nom du vétérinaire obligatoire
+   Bloquer la sortie si ces champs sont vides.
+
+D) Ajouter un onglet "Registre stupéfiants" dans la page Stock qui affiche :
+   - Tableau chronologique de toutes les entrées/sorties de stupéfiants
+   - Colonnes : date, produit, lot, quantité, animal, vétérinaire, solde cumulé
+   - Bouton "Exporter PDF" pour le bilan mensuel réglementaire
+   - Le solde doit s'équilibrer automatiquement (entrées - sorties)
+
+=== CORRECTIF 6 : NUMÉROTATION ORDONNANCES + BRANDING ===
+
+A) NUMÉROTATION SÉQUENTIELLE ORDONNANCES (obligation légale depuis sept. 2024) :
+   Ajouter colonne numero_ordonnance TEXT dans la table ordonnances.
+   Format : ORD-YYYY-NNNNN (ex: ORD-2026-00001)
+   Générer automatiquement à la création via une séquence par clinic_id.
+   Afficher ce numéro en haut du PDF d'ordonnance.
+
+B) BRANDING :
+   Remplacer TOUTES les occurrences de "VetCare Pro" par "VétoAI" dans :
+   - Le titre de la page HTML (index.html)
+   - La sidebar (logo et nom)
+   - Le pied de page si existant
+   - Les emails/notifications si existants
+   - Les PDF générés (ordonnances, factures, certificats)
+
+=== CONTRAINTES GÉNÉRALES ===
+- Ne jamais casser les fonctionnalités existantes
+- Tester chaque correctif après implémentation
+- Pour le bug facture à zéro, c'est la priorité absolue — corriger en premier
+- Utiliser les types TypeScript existants, ne pas casser le schéma Drizzle
+- Commiter fréquemment avec des messages clairs
