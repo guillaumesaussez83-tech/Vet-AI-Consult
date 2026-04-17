@@ -14,11 +14,12 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Brain, FileText, Sparkles, Check, ChevronRight, Plus, Trash2, Receipt, Loader2, Printer, ExternalLink } from "lucide-react";
+import { ArrowLeft, Brain, FileText, Sparkles, Check, ChevronRight, Plus, Trash2, Receipt, Loader2, Printer, ExternalLink, Mic } from "lucide-react";
 import { AnesthesieSection } from "@/components/AnesthesieSection";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PatientBarre } from "@/components/PatientBarre";
 import { VoiceRecorder } from "@/components/VoiceRecorder";
+import DicteeOrdonnanceDialog, { PrescriptionConfirmee } from "@/components/DicteeOrdonnanceDialog";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
@@ -472,6 +473,32 @@ function EtapeOrdonnanceActes({
   const queryClient = useQueryClient();
   const [creatingOrdonnanceIA, setCreatingOrdonnanceIA] = useState(false);
   const [ordonnanceIAId, setOrdonnanceIAId] = useState<number | null>(null);
+  const [dicteeOpen, setDicteeOpen] = useState(false);
+
+  const handleDicteeConfirmed = async (prescriptions: PrescriptionConfirmee[], ordonnanceTexte: string) => {
+    try {
+      const res = await fetch("/api/ai/confirmer-dictee-ordonnance", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          consultationId: consultation.id,
+          patientId: consultation.patientId,
+          veterinaire: consultation.veterinaire,
+          prescriptions,
+        }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      const data = await res.json();
+      if (data.ordonnance?.id) setOrdonnanceIAId(data.ordonnance.id);
+      queryClient.invalidateQueries({ queryKey: ["consultation", consultation.id] });
+      toast({
+        title: `Ordonnance créée`,
+        description: `${prescriptions.length} médicament${prescriptions.length > 1 ? "s" : ""} — mouvements de stock enregistrés`,
+      });
+    } catch (e) {
+      toast({ title: "Erreur lors de la confirmation", description: String(e), variant: "destructive" });
+    }
+  };
 
   async function handleCreateOrdonnanceIA() {
     setCreatingOrdonnanceIA(true);
@@ -636,10 +663,21 @@ function EtapeOrdonnanceActes({
 
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FileText className="h-5 w-5" />
-            Ordonnance
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              Ordonnance
+            </CardTitle>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setDicteeOpen(true)}
+              className="gap-2 border-primary/30 text-primary hover:bg-primary/10"
+            >
+              <Mic className="h-4 w-4" />
+              Dictée ordonnance IA
+            </Button>
+          </div>
         </CardHeader>
         <CardContent className="space-y-4">
           {consultation.ordonnance ? (
@@ -649,8 +687,8 @@ function EtapeOrdonnanceActes({
           ) : (
             <p className="text-muted-foreground text-sm">Aucune ordonnance générée</p>
           )}
-          <div className="flex gap-2">
-            <Button onClick={onGenerateOrdonnance} disabled={isGeneratingOrdonnance} className="flex-1">
+          <div className="flex gap-2 flex-wrap">
+            <Button onClick={onGenerateOrdonnance} disabled={isGeneratingOrdonnance} className="flex-1 min-w-[160px]">
               <Sparkles className="mr-2 h-4 w-4" />
               {isGeneratingOrdonnance ? "Génération en cours..." : "Générer avec Claude"}
             </Button>
@@ -677,6 +715,12 @@ function EtapeOrdonnanceActes({
           </div>
         </CardContent>
       </Card>
+
+      <DicteeOrdonnanceDialog
+        open={dicteeOpen}
+        onClose={() => setDicteeOpen(false)}
+        onConfirmed={handleDicteeConfirmed}
+      />
 
       <Card>
         <CardHeader>

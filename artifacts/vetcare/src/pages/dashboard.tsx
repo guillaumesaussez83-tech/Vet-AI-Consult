@@ -56,7 +56,7 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <div className={`text-2xl font-bold transition-opacity ${isStatsLoading ? "opacity-30" : ""}`}>
-              {isStatsLoading ? "—" : stats?.chiffreAffaireMois ? `${stats.chiffreAffaireMois.toFixed(2)} €` : "—"}
+              {isStatsLoading ? "—" : stats?.chiffreAffaireMois != null ? `${stats.chiffreAffaireMois.toFixed(2)} €` : "—"}
             </div>
             <p className="text-xs text-muted-foreground mt-1">Total généré ce mois</p>
           </CardContent>

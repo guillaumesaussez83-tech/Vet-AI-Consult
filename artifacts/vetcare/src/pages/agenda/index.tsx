@@ -416,7 +416,7 @@ function WeekGrid({ weekDates, vets, rdvByDate, onSlotClick, onRdvClick }: {
                     title={`${rdv.animalNom ?? rdv.patient?.nom ?? ""} — ${rdv.proprietaireNom ?? ""}`}
                   >
                     <div className="text-[10px] font-semibold leading-tight truncate">
-                      {rdv.animalNom ?? rdv.patient?.nom ?? "Sans nom"}
+                      {rdv.animalNom ?? rdv.patient?.nom ?? rdv.motif ?? "RDV libre"}
                     </div>
                     {height >= 40 && (
                       <div className="text-[9px] opacity-80 truncate">

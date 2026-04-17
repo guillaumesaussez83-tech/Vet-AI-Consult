@@ -1,0 +1,148 @@
+# Audit visuel VétoAI — 17/04/2026
+*Basé sur navigation réelle dans l'app en production*
+
+---
+
+## CE QUI FONCTIONNE TRÈS BIEN ✅
+
+**Workflow consultation** — Le wizard en 5 étapes (Anamnèse → Examen clinique → Examens complémentaires → Diagnostic IA → Ordonnance & Actes) est fluide et logique. C'est le cœur du produit et il est solide.
+
+**Diagnostic IA** — Qualité bluffante. Sur le cas Zelda (boiterie + suintement) : analyse clinique complète, 3 diagnostics différentiels avec probabilités, prise en charge d'urgence, et détection de l'allergie Zoetis déclarée dans le dossier. C'est la vraie valeur différenciante du produit.
+
+**Module stock** — Dashboard avec 4 KPIs, alertes critiques/warning/info, onglet Stupéfiants, filtres par catégorie, recherche temps réel. Propre et fonctionnel.
+
+**Salle d'attente Kanban** — 5 colonnes (En attente → Arrivé → En consultation → À encaisser → Partis), heure d'entrée, nom du vétérinaire. Très utile en conditions réelles.
+
+**Agenda** — Vue semaine multi-vétérinaire avec codes couleur par praticien (T/S/G). Propre.
+
+**Design général** — Logo VétoAI cohérent, sidebar sombre professionnelle, palette bleu/vert bien appliquée. App qui ne fait pas "prototype".
+
+---
+
+## BUGS CRITIQUES 🔴
+
+### BUG 1 — Kétamine non flaggée stupéfiant
+**Constaté** : Kétamine 500mg/10ml inj → catégorie "Medicament", statut "Stock bas". Aucun flag stupéfiant.
+**Conséquence légale** : Elle n'apparaîtra JAMAIS dans le registre des stupéfiants. Si contrôle DDPP/ANMV → infraction réglementaire.
+**Fix** : Passer `est_stupefiant = true` manuellement sur ce produit EN BASE maintenant, et ajouter une détection automatique dans le seeder/import qui flag kétamine, zoletil, morphine, buprenorphine.
+
+### BUG 2 — Timezone : salle d'attente affiche 428 min
+**Constaté** : AULIT en consultation depuis 08:50, chrono affiche "428 min" à 15:58.
+**Cause** : Les timestamps sont stockés en UTC (08:50 UTC = 10:50 Paris). Le calcul de durée compare l'heure UTC avec l'heure locale, soit +120 min d'écart × toutes les consultations de la journée.
+**Fix** : Forcer le stockage en UTC partout mais afficher avec `toLocaleTimeString('fr-FR', {timeZone: 'Europe/Paris'})`. OU stocker avec offset dès la création.
+
+### BUG 3 — CA "—" dans tableau de bord et statistiques
+**Constaté** : "Chiffre d'Affaires (Mois) — Total généré ce mois" et toutes les stats CA affichent "—".
+**Cause probable** : Les factures de test sont vides (0 lignes), donc aucune base de calcul. Mais même le "Taux d'encaissement" affiche "—" alors qu'il devrait afficher "0 %" (2 factures émises, 0 encaissées).
+**Fix** : Remplacer les `null` et `undefined` par `0` dans les calculs de stats. Afficher "0 €" au lieu de "—" quand la valeur est calculable mais nulle.
+
+### BUG 4 — RDV "Sans nom" dans l'agenda
+**Constaté** : Le jeudi 16 avril, un RDV s'affiche avec le titre "Sans nom" en orange.
+**Cause** : Le RDV a été créé sans associer de patient, ou l'association patient → RDV ne remonte pas dans l'affichage calendrier.
+**Fix** : Afficher "RDV libre" ou le motif de consultation à la place. Rendre le champ patient obligatoire à la création d'un RDV.
+
+---
+
+## BUGS MINEURS 🟡
+
+### BUG 5 — Format de date ISO dans les listes
+**Constaté** : Consultations affichent "2026-04-15" au lieu de "15 avril 2026". Même chose dans l'historique patient.
+**Fix** : Appliquer `new Date(date).toLocaleDateString('fr-FR', {day:'numeric', month:'long', year:'numeric'})` sur tous les affichages de date.
+
+### BUG 6 — Alertes stock "Traité" mais encore comptées dans le KPI
+**Constaté** : Les 4 alertes sont toutes marquées "Traité" mais le KPI "Alertes actives : 4" les compte quand même.
+**Fix** : Le filtre par défaut doit exclure les alertes traitées. Afficher uniquement les non-traitées. Le KPI ne doit compter que les alertes `statut != 'traite'`.
+
+---
+
+## MANQUES UX 🟠
+
+### MANQUE 1 — Page Ordonnances sans bouton "Nouvelle ordonnance"
+**Constaté** : Page /ordonnances vide avec "Aucune ordonnance" mais aucun bouton pour en créer une directement. Il faut passer par une consultation.
+**Impact** : Frein pour créer une ordonnance de renouvellement sans consultation.
+**Fix** : Ajouter un bouton "+ Nouvelle ordonnance" qui ouvre un formulaire avec sélection patient + vétérinaire, indépendant d'une consultation.
+
+### MANQUE 2 — Fiche patient sans onglets transversaux
+**Constaté** : La fiche patient montre les infos et l'historique des consultations, mais pas les ordonnances, factures, ou vaccinations associées à cet animal.
+**Impact** : Pour voir les factures de Zelda, il faut aller dans Facturation et chercher. Rupture du flux de travail.
+**Fix** : Ajouter des onglets sur la fiche patient : Consultations | Ordonnances | Factures | Vaccinations.
+
+### MANQUE 3 — Pas de bouton "Créer la facture" depuis la consultation terminée
+**Constaté** : Dans la consultation Zelda (Terminée), on voit l'étape "Ordonnance & Actes" mais pas de chemin direct vers la création de facture associée.
+**Impact** : Le vétérinaire termine la consultation mais la facturation reste déconnectée.
+**Fix** : À la fin du wizard consultation, afficher un bouton "Facturer cette consultation" qui pré-remplit une facture avec le patient, le vétérinaire, et les actes de l'ordonnance.
+
+### MANQUE 4 — Tableau de bord sans "To-do du jour"
+**Constaté** : Le tableau de bord montre des stats mais pas les actions urgentes du jour (consultations en cours, factures à encaisser, stocks critiques, rdv à venir).
+**Fix** : Ajouter une section "À faire aujourd'hui" avec 3-4 items prioritaires cliquables.
+
+---
+
+## PROMPT REPLIT — Correctifs prioritaires
+
+```
+Corrige ces bugs identifiés par audit réel de l'app en production. Par ordre de priorité :
+
+### BUG CRITIQUE 1 — Kétamine stupéfiant
+Dans la base de données, pour le produit "Kétamine 500mg/10ml inj" (ref CV00012),
+mettre à jour est_stupefiant = true.
+Également dans le code de création/import de produit, ajouter une détection automatique :
+si le nom contient 'kétamine', 'ketamine', 'zoletil', 'morphine', 'buprenorphine', 'bupredine',
+'fentanyl', 'methadone' → forcer est_stupefiant = true avec un warning à l'utilisateur.
+
+### BUG CRITIQUE 2 — Timezone salle d'attente (428 min affiché)
+Dans TOUS les composants qui calculent une durée depuis un timestamp de début :
+- Utiliser dayjs avec le plugin timezone, OU
+- Utiliser cette fonction pour calculer la durée :
+  ```
+  function getDurationMinutes(startTime: string): number {
+    const start = new Date(startTime); // UTC
+    const now = new Date(); // UTC
+    return Math.floor((now.getTime() - start.getTime()) / 60000);
+  }
+  ```
+  (les deux dates étant en UTC, la soustraction est correcte)
+- Pour l'AFFICHAGE de l'heure (ex: "08:50"), convertir en heure française :
+  ```
+  new Date(timestamp).toLocaleTimeString('fr-FR', {
+    timeZone: 'Europe/Paris',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
+  ```
+
+### BUG 3 — CA "—" remplacer par "0 €"
+Dans tous les composants qui affichent des valeurs numériques de CA ou statistiques :
+- Remplacer les conditions `if (!value) return '—'` par `if (value === null || value === undefined) return '—'`
+- Quand value = 0, afficher "0 €" pas "—"
+- Pour le taux d'encaissement : si 0 factures payées sur N émises → afficher "0 %" pas "—"
+
+### BUG 4 — RDV "Sans nom" agenda
+Dans le composant d'affichage des RDV dans le calendrier :
+- Si le nom du patient est null/undefined/vide → afficher le motif de consultation
+- Si motif aussi vide → afficher "RDV libre"
+- Rendre le champ "Patient" obligatoire dans le formulaire de création de RDV
+
+### BUG 5 — Dates ISO → format français
+Créer une fonction utilitaire partagée :
+```
+export function formatDate(dateStr: string): string {
+  return new Date(dateStr).toLocaleDateString('fr-FR', {
+    day: 'numeric', month: 'long', year: 'numeric'
+  });
+}
+```
+Appliquer à TOUS les affichages de date dans les listes (consultations, factures, historique patient, agenda).
+
+### BUG 6 — Alertes stock "Traité" comptées comme actives
+Dans la requête qui calcule le KPI "Alertes actives" :
+- WHERE statut != 'traite' (ne compter que les non-traitées)
+Dans la liste des alertes, le filtre par défaut doit afficher uniquement les non-traitées.
+Ajouter un toggle "Afficher les traitées" pour voir l'historique.
+
+### AMÉLIORATION UX — Bouton "Facturer" à la fin d'une consultation
+Dans l'étape "Ordonnance & Actes" (dernière étape du wizard consultation) :
+Ajouter en bas de page un bouton "Créer la facture" qui :
+1. Crée une nouvelle facture liée à cet animal et ce vétérinaire
+2. Redirige vers /factures/[id] pour compléter les lignes
+```

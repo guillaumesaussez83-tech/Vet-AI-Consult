@@ -239,7 +239,7 @@ router.patch("/:id", async (req, res) => {
     }
     const modePaiement = (req.body as any).modePaiement;
     const montantEspecesRecu = (req.body as any).montantEspecesRecu ? parseFloat((req.body as any).montantEspecesRecu) : null;
-    const validModes = ["carte_bancaire", "carte_sans_contact", "payvet", "cheque", "virement", "especes"];
+    const validModes = ["carte_bancaire", "carte_sans_contact", "payvet", "cheque", "virement", "especes", "autre"];
     if (modePaiement) {
       if (!validModes.includes(modePaiement)) {
         return res.status(400).json({ error: "Mode de paiement invalide" });

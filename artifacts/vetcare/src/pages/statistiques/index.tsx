@@ -80,7 +80,7 @@ export default function StatistiquesPage() {
 
   const hasData = monthly.some((m: any) => (m.ca ?? 0) > 0) || (kpis.caThisMonth ?? 0) > 0;
   function kpiVal(val: number | null | undefined, suffix = ""): string {
-    if (!data || val == null || val === 0) return "—";
+    if (!data || val == null) return "—";
     return `${val.toLocaleString("fr-FR", { minimumFractionDigits: suffix === " €" ? 2 : 0 })}${suffix}`;
   }
 

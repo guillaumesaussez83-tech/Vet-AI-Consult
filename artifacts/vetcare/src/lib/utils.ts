@@ -11,3 +11,15 @@ export function formatDateFR(date: string | Date | null | undefined): string {
   if (isNaN(d.getTime())) return String(date);
   return d.toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric" });
 }
+
+export function formatDateLong(date: string | Date | null | undefined): string {
+  if (!date) return "—";
+  const d = typeof date === "string" ? new Date(date.includes("T") ? date : date + "T12:00:00") : date;
+  if (isNaN(d.getTime())) return String(date);
+  return d.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
+}
+
+export function formatMontant(value: number | null | undefined, suffix = " €"): string {
+  if (value == null) return "—";
+  return `${value.toLocaleString("fr-FR", { minimumFractionDigits: 2 })}${suffix}`;
+}

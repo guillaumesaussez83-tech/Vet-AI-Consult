@@ -8,11 +8,19 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { FileText, ArrowRight, Euro, AlertCircle, CheckCircle, Clock, CreditCard } from "lucide-react";
+import { FileText, ArrowRight, Euro, AlertCircle, CheckCircle, Clock, CreditCard, Smartphone, Banknote, Building2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
+import { formatDateFR } from "@/lib/utils";
 
-const MODES_PAIEMENT = ["Carte bancaire", "Espèces", "Chèque", "Virement", "Autre"];
+const MODES_PAIEMENT = [
+  { value: "carte_bancaire", label: "Carte bancaire", icon: CreditCard },
+  { value: "carte_sans_contact", label: "Sans contact (NFC)", icon: Smartphone },
+  { value: "especes", label: "Espèces", icon: Banknote },
+  { value: "cheque", label: "Chèque", icon: FileText },
+  { value: "virement", label: "Virement", icon: Building2 },
+  { value: "autre", label: "Autre", icon: Euro },
+];
 
 function SkeletonList() {
   return (
@@ -51,7 +59,7 @@ function FactureCard({ f }: { f: any }) {
               <div>
                 <div className="font-semibold">{f.numero}</div>
                 <div className="text-sm text-muted-foreground">
-                  {f.dateEmission}
+                  {formatDateFR(f.dateEmission)}
                   {f.consultation?.patient && ` — ${f.consultation.patient.nom}`}
                   {f.consultation?.patient?.owner && ` (${f.consultation.patient.owner.prenom} ${f.consultation.patient.owner.nom})`}
                 </div>
@@ -88,7 +96,7 @@ function ConsultationSansFactureCard({ c }: { c: any }) {
               <div>
                 <div className="font-semibold">{c.patient?.nom ?? "Patient"}</div>
                 <div className="text-sm text-muted-foreground">
-                  {c.date} — {c.motif || "Consultation"}
+                  {formatDateFR(c.date)} — {c.motif || "Consultation"}
                   {c.patient?.owner && ` (${c.patient.owner.prenom} ${c.patient.owner.nom})`}
                 </div>
               </div>
@@ -108,15 +116,28 @@ function ConsultationSansFactureCard({ c }: { c: any }) {
 
 function EncaisserDialog({ facture, open, onClose }: { facture: any; open: boolean; onClose: () => void }) {
   const [mode, setMode] = useState("");
+  const [montantRecu, setMontantRecu] = useState("");
   const { mutate: patchFacture, isPending } = useUpdateFactureStatut();
   const { toast } = useToast();
   const qc = useQueryClient();
 
+  const isEspeces = mode === "especes";
+  const montantTTC = facture?.montantTTC ?? 0;
+  const renduMonnaie = isEspeces && montantRecu ? Math.max(0, parseFloat(montantRecu) - montantTTC) : null;
+
   function handleEncaisser() {
-    if (!mode) return;
-    patchFacture({ id: facture.id, data: { statut: "payee", datePaiement: new Date().toISOString().slice(0, 10), modePaiement: mode } as any }, {
+    if (!mode) { toast({ title: "Sélectionnez un mode de paiement", variant: "destructive" }); return; }
+    if (isEspeces && (!montantRecu || parseFloat(montantRecu) < montantTTC)) {
+      toast({ title: "Montant reçu insuffisant", variant: "destructive" });
+      return;
+    }
+    const payload: any = { statut: "payee", datePaiement: new Date().toISOString().slice(0, 10), modePaiement: mode };
+    if (isEspeces && montantRecu) payload.montantEspecesRecu = parseFloat(montantRecu);
+    patchFacture({ id: facture.id, data: payload }, {
       onSuccess: () => {
-        toast({ title: "Facture encaissée", description: `Paiement enregistré par ${mode}.` });
+        const modeLabel = MODES_PAIEMENT.find(m => m.value === mode)?.label ?? mode;
+        const renduStr = renduMonnaie != null && renduMonnaie > 0 ? ` — Rendu : ${renduMonnaie.toFixed(2)} €` : "";
+        toast({ title: "Facture encaissée", description: `${modeLabel}${renduStr}` });
         qc.invalidateQueries({ queryKey: ["factures"] });
         onClose();
       },
@@ -131,27 +152,57 @@ function EncaisserDialog({ facture, open, onClose }: { facture: any; open: boole
           <DialogTitle>Encaisser la facture {facture?.numero}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 py-2">
-          <div>
-            <p className="text-sm text-muted-foreground mb-1">Montant TTC</p>
-            <p className="text-2xl font-bold">{facture?.montantTTC?.toFixed(2)} €</p>
+          <div className="bg-muted/30 rounded-lg p-4 text-center">
+            <p className="text-sm text-muted-foreground mb-1">Montant TTC à encaisser</p>
+            <p className="text-3xl font-bold text-primary">{montantTTC.toFixed(2)} €</p>
           </div>
           <div className="space-y-2">
             <label className="text-sm font-medium">Mode de paiement</label>
-            <Select value={mode} onValueChange={setMode}>
-              <SelectTrigger>
-                <SelectValue placeholder="Choisir un mode de paiement" />
-              </SelectTrigger>
-              <SelectContent>
-                {MODES_PAIEMENT.map(m => (
-                  <SelectItem key={m} value={m}>{m}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="grid grid-cols-2 gap-2">
+              {MODES_PAIEMENT.map(m => {
+                const Icon = m.icon;
+                return (
+                  <button
+                    key={m.value}
+                    type="button"
+                    onClick={() => setMode(m.value)}
+                    className={`flex items-center gap-2 p-3 rounded-lg border text-sm font-medium transition-all ${
+                      mode === m.value
+                        ? "border-primary bg-primary/10 text-primary"
+                        : "border-border hover:border-primary/40 hover:bg-muted/50"
+                    }`}
+                  >
+                    <Icon className="h-4 w-4 shrink-0" />
+                    <span className="truncate">{m.label}</span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
+          {isEspeces && (
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Montant reçu (€)</label>
+              <input
+                type="number"
+                step="0.01"
+                min={montantTTC}
+                value={montantRecu}
+                onChange={e => setMontantRecu(e.target.value)}
+                placeholder={`Min. ${montantTTC.toFixed(2)}`}
+                className="w-full border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+              {renduMonnaie != null && renduMonnaie >= 0 && montantRecu && (
+                <div className={`flex items-center justify-between rounded-lg p-3 font-semibold ${renduMonnaie === 0 ? "bg-green-50 text-green-700" : "bg-amber-50 text-amber-700"}`}>
+                  <span>Rendu monnaie</span>
+                  <span>{renduMonnaie.toFixed(2)} €</span>
+                </div>
+              )}
+            </div>
+          )}
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Annuler</Button>
-          <Button onClick={handleEncaisser} disabled={!mode || isPending}>
+          <Button onClick={handleEncaisser} disabled={!mode || isPending} className="min-w-[140px]">
             <CheckCircle className="h-4 w-4 mr-2" />
             {isPending ? "Enregistrement..." : "Valider l'encaissement"}
           </Button>

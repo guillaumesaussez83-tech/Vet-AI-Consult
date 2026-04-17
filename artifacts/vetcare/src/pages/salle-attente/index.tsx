@@ -51,7 +51,17 @@ function elapsed(dateHeure: string): number {
 }
 
 function formatTime(dateHeure: string): string {
-  return new Date(dateHeure).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+  const normalized = dateHeure && !dateHeure.endsWith("Z") && !dateHeure.includes("+") ? dateHeure + "Z" : dateHeure;
+  return new Date(normalized).toLocaleTimeString("fr-FR", {
+    timeZone: "Europe/Paris",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function elapsedMinutes(dateHeure: string): number {
+  const normalized = dateHeure && !dateHeure.endsWith("Z") && !dateHeure.includes("+") ? dateHeure + "Z" : dateHeure;
+  return Math.floor((Date.now() - new Date(normalized).getTime()) / 60000);
 }
 
 function formatDate(d: Date): string {
@@ -59,9 +69,9 @@ function formatDate(d: Date): string {
 }
 
 function ElapsedBadge({ rdv }: { rdv: RDV }) {
-  const [mins, setMins] = useState(() => elapsed(rdv.dateHeure));
+  const [mins, setMins] = useState(() => elapsedMinutes(rdv.dateHeure));
   useEffect(() => {
-    const t = setInterval(() => setMins(elapsed(rdv.dateHeure)), 30000);
+    const t = setInterval(() => setMins(elapsedMinutes(rdv.dateHeure)), 30000);
     return () => clearInterval(t);
   }, [rdv.dateHeure]);
 

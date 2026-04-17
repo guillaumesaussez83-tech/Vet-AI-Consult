@@ -291,18 +291,26 @@ router.post("/:id/facture", async (req, res) => {
     if (!params.success) return res.status(400).json({ error: "ID invalide" });
 
     const [existingFacture] = await db.select().from(facturesTable).where(eq(facturesTable.consultationId, params.data.id));
-    if (existingFacture) {
-      return res.json({ ...existingFacture, createdAt: existingFacture.createdAt.toISOString() });
-    }
 
     const actes = await db
       .select()
       .from(actesConsultationsTable)
       .where(eq(actesConsultationsTable.consultationId, params.data.id));
 
-    const montantHT = actes.reduce((acc, a) => acc + a.prixUnitaire * a.quantite, 0);
+    const montantHT = parseFloat(actes.reduce((acc, a) => acc + a.prixUnitaire * a.quantite, 0).toFixed(2));
     const tva = 20;
-    const montantTTC = montantHT * (1 + tva / 100);
+    const montantTTC = parseFloat((montantHT * (1 + tva / 100)).toFixed(2));
+
+    if (existingFacture) {
+      if (actes.length > 0) {
+        const [updated] = await db.update(facturesTable)
+          .set({ montantHT, tva, montantTTC })
+          .where(eq(facturesTable.id, existingFacture.id))
+          .returning();
+        return res.json({ ...updated, createdAt: updated.createdAt.toISOString() });
+      }
+      return res.json({ ...existingFacture, createdAt: existingFacture.createdAt.toISOString() });
+    }
 
     const year = new Date().getFullYear();
     const [lastFacture] = await db.select().from(facturesTable).orderBy(sql`${facturesTable.id} DESC`).limit(1);

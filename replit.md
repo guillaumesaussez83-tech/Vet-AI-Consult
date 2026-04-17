@@ -197,3 +197,27 @@ See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and pa
 - `lib/db/src/schema/rotations-weekend.ts` — rotations gardes weekend
 - `artifacts/vetcare/src/pages/certificats/index.tsx` — générateur certificats IA
 - `artifacts/vetcare/src/pages/portail/index.tsx` — portail public propriétaire (sans auth)
+- `artifacts/vetcare/src/components/DicteeOrdonnanceDialog.tsx` — dialog dictée vocale + IA parsing + récapitulatif stock
+- `artifacts/vetcare/src/components/IaDisclaimerModal.tsx` — modal disclaimer IA (localStorage par user Clerk)
+- `artifacts/vetcare/src/pages/confidentialite.tsx` — page RGPD complète
+- `artifacts/vetcare/src/pages/stupefiants/index.tsx` — registre stupéfiants officiel
+
+## Sprint T001-T008 Status (Avril 2026)
+
+- **T001** Facture à zéro — FIXED: POST /:id/facture recalcule depuis actes si facture existante + arrondi .toFixed(2)
+- **T002** DB Schema — COMPLETE: tous les champs existent (estStupefiant, numeroOrdonnance, consentementRgpd, ia_audit_log)
+- **T003** Mode paiement UI — COMPLETE: 6 modes avec icônes (carte/NFC/espèces/chèque/virement/autre) + rendu monnaie live
+- **T004** Branding VétoAI — COMPLETE: aucune trace VetCare Pro
+- **T005** Ordonnance numérotation — COMPLETE: ORD-YYYY-NNNNN affiché sur PDF + backend séquentiel
+- **T006** RGPD — COMPLETE: IaDisclaimerModal localStorage + /confidentialite page + consentementRgpd checkbox
+- **T007** Stupéfiants — COMPLETE: badge STUPÉFIANT rouge dans table produits + auto-détection POST+PATCH + registre onglet
+- **T008** Dictée ordonnance → stock — COMPLETE: DicteeOrdonnanceDialog câblé dans Step5 + /confirmer-dictee-ordonnance + mouvements stock
+
+## Bugs Fixed
+
+- Kétamine/Butorphanol: estStupefiant=true en DB + detectStupefiants() auto-detection POST/PATCH stock
+- Salle d'attente timezone: formatTime + elapsedMinutes avec Z-normalization Europe/Paris
+- Dashboard CA "—": valeurs null traitées correctement
+- Statistiques KPI: 0 != null (traité comme valeur valide)
+- Agenda "Sans nom": affiche motif ou "RDV libre"
+- ISO dates: formatDateFR appliqué consultations + factures

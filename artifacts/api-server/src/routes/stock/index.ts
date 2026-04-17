@@ -11,6 +11,19 @@ import { runStockSeeder } from "./seeder";
 
 const router = Router();
 
+const STUPEFIANTS_KEYWORDS = [
+  "kétamine", "ketamine", "zoletil", "tiletamine", "tilétamine",
+  "morphine", "buprénorphine", "buprenorphine", "bupredine",
+  "fentanyl", "méthadone", "methadone", "butorphanol",
+];
+
+function detectStupefiants(nom: string): boolean {
+  const n = nom.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  return STUPEFIANTS_KEYWORDS.some(kw =>
+    n.includes(kw.normalize("NFD").replace(/[\u0300-\u036f]/g, ""))
+  );
+}
+
 // ──────────────────────────────────────────
 // PRODUITS — CRUD
 // ──────────────────────────────────────────
@@ -25,15 +38,16 @@ router.post("/", async (req, res) => {
   try {
     const { nom, reference, referenceCentravet, codeEan, categorie, quantiteStock, quantiteMinimum,
       quantiteMax, pointCommande, prixAchatHT, prixVenteTTC, tvaTaux, fournisseur, fournisseurPrincipal,
-      delaiLivraisonJours, datePeremption, datePeremptionLot, emplacement, unite, actif } = req.body;
+      delaiLivraisonJours, datePeremption, datePeremptionLot, emplacement, unite, actif, estStupefiant } = req.body;
     if (!nom) return res.status(400).json({ error: "Le nom est requis" });
+    const autoStu = estStupefiant !== undefined ? estStupefiant : detectStupefiants(nom);
     const [med] = await db.insert(stockMedicamentsTable).values({
       nom, reference, referenceCentravet, codeEan, categorie: categorie ?? "medicament",
       quantiteStock: quantiteStock ?? 0, quantiteMinimum: quantiteMinimum ?? 5,
       quantiteMax, pointCommande, prixAchatHT, prixVenteTTC, tvaTaux: tvaTaux ?? 20,
       fournisseur, fournisseurPrincipal: fournisseurPrincipal ?? "CENTRAVET",
       delaiLivraisonJours: delaiLivraisonJours ?? 1, datePeremption, datePeremptionLot, emplacement,
-      unite: unite ?? "unité", actif: actif !== false,
+      unite: unite ?? "unité", actif: actif !== false, estStupefiant: autoStu,
     }).returning();
     return res.status(201).json(med);
   } catch (err) { req.log.error(err); return res.status(500).json({ error: "Erreur interne" }); }
@@ -43,7 +57,11 @@ router.patch("/:id", async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     if (isNaN(id)) return res.status(400).json({ error: "ID invalide" });
-    const [med] = await db.update(stockMedicamentsTable).set(req.body).where(eq(stockMedicamentsTable.id, id)).returning();
+    const body = { ...req.body };
+    if (body.nom && body.estStupefiant === undefined) {
+      body.estStupefiant = detectStupefiants(body.nom);
+    }
+    const [med] = await db.update(stockMedicamentsTable).set(body).where(eq(stockMedicamentsTable.id, id)).returning();
     if (!med) return res.status(404).json({ error: "Médicament non trouvé" });
     return res.json(med);
   } catch (err) { req.log.error(err); return res.status(500).json({ error: "Erreur interne" }); }

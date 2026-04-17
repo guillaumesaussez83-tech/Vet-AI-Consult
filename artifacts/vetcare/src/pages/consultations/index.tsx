@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Stethoscope, Dog, Cat, Rabbit, Bird, ArrowRight } from "lucide-react";
+import { formatDateFR } from "@/lib/utils";
 
 const especeIcon: Record<string, React.ElementType> = {
   chien: Dog, chat: Cat, lapin: Rabbit, oiseau: Bird,
@@ -78,7 +79,7 @@ export default function ConsultationsPage() {
                             {patient?.nom ?? "Patient inconnu"}
                           </div>
                           <div className="text-sm text-muted-foreground">
-                            Dr. {c.veterinaire} • {c.date}
+                            Dr. {c.veterinaire} • {formatDateFR(c.date)}
                             {patient?.owner && ` • ${patient.owner.prenom} ${patient.owner.nom}`}
                           </div>
                           {c.motif && <div className="text-sm text-muted-foreground mt-0.5">{c.motif}</div>}
