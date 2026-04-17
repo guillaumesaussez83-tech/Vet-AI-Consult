@@ -7,8 +7,6 @@ import {
   FileText, 
   Settings, 
   LogOut,
-  Stethoscope,
-  StethoscopeIcon,
   Syringe,
   Menu,
   Euro,
@@ -19,7 +17,10 @@ import {
   Award,
   ClipboardList,
   LayoutDashboard,
+  Stethoscope,
+  FlaskConical,
 } from "lucide-react";
+import { Logo } from "@/components/Logo";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 
@@ -41,6 +42,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
     { name: "Ordonnances", href: "/ordonnances", icon: ClipboardList },
     { name: "Rappels", href: "/rappels", icon: Bell },
     { name: "Stock", href: "/stock", icon: Package },
+    { name: "Stupéfiants", href: "/stupefiants", icon: FlaskConical },
     { name: "Actes & Produits", href: "/actes", icon: Syringe },
     { name: "Paramètres", href: "/parametres", icon: Settings },
   ];
@@ -74,11 +76,8 @@ export function AppLayout({ children }: { children: ReactNode }) {
     <div className="min-h-screen bg-background flex w-full">
       {/* Desktop Sidebar */}
       <aside className="hidden md:flex flex-col w-64 border-r bg-sidebar border-sidebar-border h-screen sticky top-0 shrink-0">
-        <div className="p-6 flex items-center gap-3">
-          <div className="bg-primary/20 p-2 rounded-xl text-primary-foreground">
-            <StethoscopeIcon className="h-6 w-6 text-primary-foreground" />
-          </div>
-          <span className="font-bold text-xl tracking-tight text-sidebar-foreground">VétoAI</span>
+        <div className="p-5 flex items-center">
+          <Logo size={28} />
         </div>
         
         <div className="flex-1 overflow-y-auto px-3">
@@ -110,11 +109,8 @@ export function AppLayout({ children }: { children: ReactNode }) {
       <main className="flex-1 flex flex-col min-w-0 max-w-full">
         {/* Mobile Header */}
         <header className="md:hidden flex items-center justify-between p-4 border-b bg-card">
-          <div className="flex items-center gap-2">
-            <div className="bg-primary/20 p-1.5 rounded-lg text-primary-foreground">
-              <StethoscopeIcon className="h-5 w-5 text-primary" />
-            </div>
-            <span className="font-bold text-lg text-card-foreground">VétoAI</span>
+          <div className="flex items-center">
+            <Logo size={22} />
           </div>
           
           <Sheet>
@@ -124,11 +120,8 @@ export function AppLayout({ children }: { children: ReactNode }) {
               </Button>
             </SheetTrigger>
             <SheetContent side="left" className="w-72 bg-sidebar p-0 border-sidebar-border">
-              <div className="p-6 flex items-center gap-3">
-                <div className="bg-primary/20 p-2 rounded-xl text-primary-foreground">
-                  <StethoscopeIcon className="h-6 w-6 text-primary-foreground" />
-                </div>
-                <span className="font-bold text-xl text-sidebar-foreground">VétoAI</span>
+              <div className="p-5 flex items-center">
+                <Logo size={28} />
               </div>
               <div className="px-3">
                 <NavLinks />

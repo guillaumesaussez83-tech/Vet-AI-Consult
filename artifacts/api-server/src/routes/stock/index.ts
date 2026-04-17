@@ -3,8 +3,9 @@ import { db } from "@workspace/db";
 import {
   stockMedicamentsTable, commandesCentravetTable, lignesCommandeTable,
   bonsLivraisonTable, mouvementsStockTable, alertesStockTable, stockLotsTable,
+  registreStupefiantsTable, patientsTable,
 } from "@workspace/db";
-import { eq, asc, desc, and, ne } from "drizzle-orm";
+import { eq, asc, desc, and, ne, sql as drizzleSql } from "drizzle-orm";
 import { analyserConsommationTous, genererCommandeSuggereIA, genererAlertes, detecterAnomalies, decrementerConsultationFEFO } from "./ia-engine";
 import { runStockSeeder } from "./seeder";
 
@@ -524,41 +525,173 @@ router.post("/commandes/:id/exporter-centravet", async (req, res) => {
   } catch (err) { req.log.error(err); return res.status(500).json({ error: "Erreur interne" }); }
 });
 
+router.post("/stupefiants/entree", async (req, res) => {
+  try {
+    const { stockMedicamentId, quantite, numeroLot, dateExpirationLot, veterinaire, motif } = req.body;
+    if (!stockMedicamentId || !quantite || !numeroLot || !veterinaire) {
+      return res.status(400).json({ error: "stockMedicamentId, quantite, numeroLot et veterinaire sont requis" });
+    }
+    const [med] = await db.select({ id: stockMedicamentsTable.id, nom: stockMedicamentsTable.nom, quantiteStock: stockMedicamentsTable.quantiteStock, estStupefiant: stockMedicamentsTable.estStupefiant, unite: stockMedicamentsTable.unite })
+      .from(stockMedicamentsTable).where(eq(stockMedicamentsTable.id, Number(stockMedicamentId)));
+    if (!med) return res.status(404).json({ error: "Médicament non trouvé" });
+    if (!med.estStupefiant) return res.status(400).json({ error: "Ce médicament n'est pas classé stupéfiant" });
+
+    const [lastEntry] = await db.select({ solde: registreStupefiantsTable.soldeApres })
+      .from(registreStupefiantsTable)
+      .where(eq(registreStupefiantsTable.stockMedicamentId, Number(stockMedicamentId)))
+      .orderBy(desc(registreStupefiantsTable.createdAt)).limit(1);
+    const soldeActuel = lastEntry?.solde ?? 0;
+    const soldeApres = parseFloat((soldeActuel + Number(quantite)).toFixed(3));
+
+    const [entry] = await db.insert(registreStupefiantsTable).values({
+      stockMedicamentId: Number(stockMedicamentId),
+      typeMouvement: "entree",
+      quantite: Number(quantite),
+      unite: med.unite ?? "unité",
+      numeroLot,
+      dateExpirationLot: dateExpirationLot ?? null,
+      veterinaire,
+      motif: motif ?? "Entrée stock",
+      soldeApres,
+    }).returning();
+
+    await db.update(stockMedicamentsTable)
+      .set({ quantiteStock: drizzleSql`quantite_stock + ${Number(quantite)}` })
+      .where(eq(stockMedicamentsTable.id, Number(stockMedicamentId)));
+
+    return res.status(201).json({ ...entry, soldeApres });
+  } catch (err) {
+    req.log.error(err);
+    return res.status(500).json({ error: "Erreur interne" });
+  }
+});
+
+router.post("/stupefiants/sortie", async (req, res) => {
+  try {
+    const { stockMedicamentId, quantite, numeroLot, animalId, veterinaire, motif, ordonnanceId } = req.body;
+    if (!stockMedicamentId || !quantite || !numeroLot || !animalId || !veterinaire) {
+      return res.status(400).json({ error: "stockMedicamentId, quantite, numeroLot, animalId et veterinaire sont obligatoires pour les stupéfiants" });
+    }
+    const [med] = await db.select({ id: stockMedicamentsTable.id, nom: stockMedicamentsTable.nom, quantiteStock: stockMedicamentsTable.quantiteStock, estStupefiant: stockMedicamentsTable.estStupefiant, unite: stockMedicamentsTable.unite })
+      .from(stockMedicamentsTable).where(eq(stockMedicamentsTable.id, Number(stockMedicamentId)));
+    if (!med) return res.status(404).json({ error: "Médicament non trouvé" });
+    if (!med.estStupefiant) return res.status(400).json({ error: "Ce médicament n'est pas classé stupéfiant" });
+    if ((med.quantiteStock ?? 0) < Number(quantite)) return res.status(400).json({ error: "Stock insuffisant" });
+
+    const [lastEntry] = await db.select({ solde: registreStupefiantsTable.soldeApres })
+      .from(registreStupefiantsTable)
+      .where(eq(registreStupefiantsTable.stockMedicamentId, Number(stockMedicamentId)))
+      .orderBy(desc(registreStupefiantsTable.createdAt)).limit(1);
+    const soldeActuel = lastEntry?.solde ?? (med.quantiteStock ?? 0);
+    const soldeApres = parseFloat((soldeActuel - Number(quantite)).toFixed(3));
+
+    const [entry] = await db.insert(registreStupefiantsTable).values({
+      stockMedicamentId: Number(stockMedicamentId),
+      typeMouvement: "sortie",
+      quantite: Number(quantite),
+      unite: med.unite ?? "unité",
+      numeroLot,
+      animalId: Number(animalId),
+      veterinaire,
+      motif: motif ?? "Utilisation clinique",
+      soldeApres,
+      ordonnanceId: ordonnanceId ? Number(ordonnanceId) : null,
+    }).returning();
+
+    await db.update(stockMedicamentsTable)
+      .set({ quantiteStock: drizzleSql`quantite_stock - ${Number(quantite)}` })
+      .where(eq(stockMedicamentsTable.id, Number(stockMedicamentId)));
+
+    return res.status(201).json({ ...entry, soldeApres });
+  } catch (err) {
+    req.log.error(err);
+    return res.status(500).json({ error: "Erreur interne" });
+  }
+});
+
 router.get("/stupefiants/registre", async (req, res) => {
   try {
+    const { produitId } = req.query;
     const stupefiants = await db
-      .select({ id: stockMedicamentsTable.id, nom: stockMedicamentsTable.nom, quantiteStock: stockMedicamentsTable.quantiteStock })
+      .select({ id: stockMedicamentsTable.id, nom: stockMedicamentsTable.nom, quantiteStock: stockMedicamentsTable.quantiteStock, unite: stockMedicamentsTable.unite })
       .from(stockMedicamentsTable)
       .where(eq(stockMedicamentsTable.estStupefiant, true));
 
-    if (stupefiants.length === 0) return res.json([]);
+    if (stupefiants.length === 0) return res.json({ stupefiants: [], lignes: [] });
 
-    const ids = stupefiants.map(s => s.id);
+    let query = db
+      .select({
+        id: registreStupefiantsTable.id,
+        stockMedicamentId: registreStupefiantsTable.stockMedicamentId,
+        dateMouvement: registreStupefiantsTable.dateMouvement,
+        typeMouvement: registreStupefiantsTable.typeMouvement,
+        quantite: registreStupefiantsTable.quantite,
+        unite: registreStupefiantsTable.unite,
+        numeroLot: registreStupefiantsTable.numeroLot,
+        animalId: registreStupefiantsTable.animalId,
+        veterinaire: registreStupefiantsTable.veterinaire,
+        motif: registreStupefiantsTable.motif,
+        soldeApres: registreStupefiantsTable.soldeApres,
+        nomAnimal: patientsTable.nom,
+        espece: patientsTable.espece,
+      })
+      .from(registreStupefiantsTable)
+      .leftJoin(patientsTable, eq(registreStupefiantsTable.animalId, patientsTable.id))
+      .orderBy(asc(registreStupefiantsTable.dateMouvement));
+
     const { inArray } = await import("drizzle-orm");
-
-    const mouvements = await db
-      .select()
-      .from(mouvementsStockTable)
-      .where(inArray(mouvementsStockTable.medicamentId, ids))
-      .orderBy(asc(mouvementsStockTable.createdAt));
+    const ids = produitId ? [Number(produitId)] : stupefiants.map(s => s.id);
+    const lignes = await (produitId
+      ? db.select({
+          id: registreStupefiantsTable.id,
+          stockMedicamentId: registreStupefiantsTable.stockMedicamentId,
+          dateMouvement: registreStupefiantsTable.dateMouvement,
+          typeMouvement: registreStupefiantsTable.typeMouvement,
+          quantite: registreStupefiantsTable.quantite,
+          unite: registreStupefiantsTable.unite,
+          numeroLot: registreStupefiantsTable.numeroLot,
+          animalId: registreStupefiantsTable.animalId,
+          veterinaire: registreStupefiantsTable.veterinaire,
+          motif: registreStupefiantsTable.motif,
+          soldeApres: registreStupefiantsTable.soldeApres,
+          nomAnimal: patientsTable.nom,
+          espece: patientsTable.espece,
+        })
+        .from(registreStupefiantsTable)
+        .leftJoin(patientsTable, eq(registreStupefiantsTable.animalId, patientsTable.id))
+        .where(eq(registreStupefiantsTable.stockMedicamentId, Number(produitId)))
+        .orderBy(asc(registreStupefiantsTable.dateMouvement))
+      : db.select({
+          id: registreStupefiantsTable.id,
+          stockMedicamentId: registreStupefiantsTable.stockMedicamentId,
+          dateMouvement: registreStupefiantsTable.dateMouvement,
+          typeMouvement: registreStupefiantsTable.typeMouvement,
+          quantite: registreStupefiantsTable.quantite,
+          unite: registreStupefiantsTable.unite,
+          numeroLot: registreStupefiantsTable.numeroLot,
+          animalId: registreStupefiantsTable.animalId,
+          veterinaire: registreStupefiantsTable.veterinaire,
+          motif: registreStupefiantsTable.motif,
+          soldeApres: registreStupefiantsTable.soldeApres,
+          nomAnimal: patientsTable.nom,
+          espece: patientsTable.espece,
+        })
+        .from(registreStupefiantsTable)
+        .leftJoin(patientsTable, eq(registreStupefiantsTable.animalId, patientsTable.id))
+        .where(inArray(registreStupefiantsTable.stockMedicamentId, ids))
+        .orderBy(asc(registreStupefiantsTable.dateMouvement))
+    );
 
     const nomById: Record<number, string> = {};
     for (const s of stupefiants) nomById[s.id] = s.nom;
 
-    const balances: Record<number, number> = {};
-    const result = mouvements.map(m => {
-      const medId = m.medicamentId;
-      if (medId === null) return null;
-      balances[medId] = (balances[medId] ?? 0) + m.quantite;
-      return {
-        ...m,
-        nomProduit: nomById[medId] ?? "Inconnu",
-        soldeCumule: balances[medId],
-        createdAt: m.createdAt.toISOString(),
-      };
-    }).filter(Boolean);
+    const lignesWithNom = lignes.map(l => ({
+      ...l,
+      nomProduit: nomById[l.stockMedicamentId] ?? "Inconnu",
+      dateMouvement: l.dateMouvement.toISOString(),
+    }));
 
-    return res.json(result);
+    return res.json({ stupefiants, lignes: lignesWithNom });
   } catch (err) {
     req.log.error(err);
     return res.status(500).json({ error: "Erreur interne" });

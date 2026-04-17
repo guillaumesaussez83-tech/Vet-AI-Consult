@@ -1,0 +1,470 @@
+# MEGA SPRINT VétoAI — 6 blocs critiques
+
+Tu travailles sur VétoAI, un SaaS de gestion de clinique vétérinaire.
+Stack : React + TypeScript + Vite (frontend), Express + TypeScript (backend), Drizzle ORM, PostgreSQL, Clerk auth (multi-tenant via `clinic_id`).
+
+Implémente les 6 blocs suivants dans l'ordre. Ne t'arrête pas entre les blocs.
+
+---
+
+## BLOC 1 — BUG CRITIQUE : Factures à zéro
+
+### Problème
+Les factures sont créées avec `montant_ht`, `montant_tva`, `montant_ttc` à 0 malgré des lignes de facture renseignées.
+
+### Fix à appliquer
+Dans TOUS les endpoints qui créent ou valident une facture :
+- `POST /api/factures`
+- `PUT /api/factures/:id/valider`
+- `GET /api/factures/:id/pdf` (si recalcul nécessaire)
+
+**Recalcul obligatoire depuis `lignes_facture` AVANT toute écriture en base :**
+
+```typescript
+// Récupérer les lignes de la facture
+const lignes = await db.select()
+  .from(lignesFacture)
+  .where(eq(lignesFacture.factureId, factureId));
+
+// Recalcul des totaux
+const montantHt = lignes.reduce((sum, l) => sum + (l.quantite * l.prixUnitaireHt), 0);
+const montantTva = lignes.reduce((sum, l) => sum + (l.quantite * l.prixUnitaireHt * l.tauxTva / 100), 0);
+const montantTtc = montantHt + montantTva;
+
+// Mettre à jour la facture avec les vrais montants
+await db.update(factures).set({
+  montantHt: montantHt.toFixed(2),
+  montantTva: montantTva.toFixed(2),
+  montantTtc: montantTtc.toFixed(2),
+  updatedAt: new Date()
+}).where(eq(factures.id, factureId));
+```
+
+Ne jamais faire confiance aux montants envoyés par le frontend — toujours recalculer côté serveur depuis les lignes.
+
+---
+
+## BLOC 2 — MODES DE PAIEMENT
+
+### Objectif
+Ajouter le champ mode de paiement sur les factures et permettre le paiement en espèces avec rendu de monnaie.
+
+### 2.1 — Migration base de données
+Ajouter à la table `factures` :
+```sql
+mode_paiement VARCHAR(30) DEFAULT 'carte_bancaire'
+  CHECK (mode_paiement IN ('carte_bancaire','carte_sans_contact','payvet','cheque','virement','especes'))
+montant_especes_recu DECIMAL(10,2) NULL  -- pour calculer le rendu monnaie
+```
+
+### 2.2 — Backend
+Dans `PUT /api/factures/:id/valider` ou `POST /api/factures/:id/payer` :
+```typescript
+const { modePaiement, montantEspecesRecu } = req.body;
+
+// Validation
+const validModes = ['carte_bancaire','carte_sans_contact','payvet','cheque','virement','especes'];
+if (!validModes.includes(modePaiement)) {
+  return res.status(400).json({ error: 'Mode de paiement invalide' });
+}
+
+// Si espèces : vérifier que le montant reçu >= montant TTC
+if (modePaiement === 'especes' && montantEspecesRecu < montantTtc) {
+  return res.status(400).json({ error: 'Montant espèces insuffisant' });
+}
+
+const renduMonnaie = modePaiement === 'especes' 
+  ? (montantEspecesRecu - montantTtc).toFixed(2) 
+  : '0.00';
+
+await db.update(factures).set({
+  modePaiement,
+  montantEspecesRecu: modePaiement === 'especes' ? montantEspecesRecu : null,
+  statut: 'payee',
+  datePaiement: new Date(),
+  updatedAt: new Date()
+}).where(eq(factures.id, factureId));
+
+return res.json({ 
+  success: true, 
+  renduMonnaie: parseFloat(renduMonnaie),
+  message: modePaiement === 'especes' ? `Rendu : ${renduMonnaie} €` : 'Paiement enregistré'
+});
+```
+
+### 2.3 — Frontend : Composant PaiementModal
+Créer `client/src/components/PaiementModal.tsx` :
+- Liste de boutons pour chaque mode de paiement avec icônes (carte, sans contact, chèque, virement, espèces, PayVet)
+- Si espèces sélectionné : afficher un champ "Montant reçu" et calculer le rendu monnaie en temps réel
+- Afficher le rendu monnaie en grand en vert quand espèces > montant TTC
+- Bouton "Valider le paiement" qui appelle l'endpoint
+
+---
+
+## BLOC 3 — DICTÉE ORDONNANCE → STOCK → FACTURE
+
+### Objectif
+Permettre au vétérinaire de dicter oralement une ordonnance. Le système parse automatiquement la dictée, crée l'ordonnance, déduit du stock, et propose une ligne de facturation.
+
+### 3.1 — Backend : POST /api/ordonnances/dictee
+```typescript
+router.post('/dictee', requireAuth, async (req, res) => {
+  const { transcription, animalId, veterinaireId } = req.body;
+  const clinicId = req.auth.sessionClaims?.clinic_id as string;
+  
+  // Étape 1 : Claude parse la transcription
+  const claudeResponse = await anthropic.messages.create({
+    model: 'claude-opus-4-5',
+    max_tokens: 1024,
+    messages: [{
+      role: 'user',
+      content: `Tu es un assistant vétérinaire expert. Parse cette dictée d'ordonnance et retourne un JSON strict.
+      
+Dictée : "${transcription}"
+
+Retourne UNIQUEMENT ce JSON (pas d'explication) :
+{
+  "medicaments": [
+    {
+      "nom": "nom du médicament tel que dit",
+      "dose": "posologie complète",
+      "duree_jours": nombre_de_jours,
+      "quantite": nombre_unites_a_delivrer,
+      "voie": "orale|injectable|topique|autre",
+      "frequence": "description fréquence"
+    }
+  ],
+  "diagnostic_associe": "diagnostic si mentionné ou null",
+  "recommandations": "autres recommandations si mentionnées ou null"
+}`
+    }]
+  });
+  
+  let parsed: any;
+  try {
+    const content = claudeResponse.content[0];
+    if (content.type !== 'text') throw new Error('Réponse Claude invalide');
+    parsed = JSON.parse(content.text);
+  } catch (e) {
+    return res.status(422).json({ error: 'Impossible de parser la dictée', transcription });
+  }
+  
+  // Étape 2 : Pour chaque médicament, chercher dans stock_medicaments (fuzzy ILIKE)
+  const lignesOrdonnance = [];
+  const lignesFacture = [];
+  const mouvementsStock = [];
+  const alertesStock = [];
+  
+  for (const med of parsed.medicaments) {
+    // Recherche fuzzy dans le stock de la clinique
+    const searchTerm = `%${med.nom.split(' ')[0]}%`; // Premier mot du nom
+    const stockMatch = await db.select()
+      .from(stockMedicaments)
+      .where(and(
+        eq(stockMedicaments.clinicId, clinicId),
+        sql`LOWER(nom_commercial) ILIKE LOWER(${searchTerm})`
+      ))
+      .limit(1);
+    
+    const medicamentStock = stockMatch[0] || null;
+    
+    lignesOrdonnance.push({
+      nomMedicament: medicamentStock?.nomCommercial || med.nom,
+      dose: med.dose,
+      frequence: med.frequence,
+      dureeJours: med.duree_jours,
+      quantite: med.quantite,
+      voie: med.voie,
+      stockMedicamentId: medicamentStock?.id || null,
+    });
+    
+    if (medicamentStock) {
+      // Préparer mouvement stock (sortie)
+      mouvementsStock.push({
+        stockMedicamentId: medicamentStock.id,
+        clinicId,
+        type: 'sortie',
+        quantite: med.quantite,
+        motif: 'ordonnance',
+        animalId,
+        veterinaireId,
+      });
+      
+      // Alerte si stock bas après sortie
+      const stockApres = medicamentStock.stockActuel - med.quantite;
+      if (stockApres <= medicamentStock.stockMinimum) {
+        alertesStock.push({
+          medicament: medicamentStock.nomCommercial,
+          stockActuel: stockApres,
+          stockMinimum: medicamentStock.stockMinimum,
+        });
+      }
+      
+      // Ligne de facture proposée
+      lignesFacture.push({
+        description: `${medicamentStock.nomCommercial} — ${med.dose} × ${med.duree_jours}j`,
+        quantite: med.quantite,
+        prixUnitaireHt: parseFloat(medicamentStock.prixVenteTtc) / 1.2, // TTC → HT (TVA 20%)
+        tauxTva: 20,
+      });
+    }
+  }
+  
+  // Étape 3 : Générer numéro ordonnance ORD-YYYY-NNNNN
+  const year = new Date().getFullYear();
+  const lastOrd = await db.select({ num: sql`MAX(numero_ordonnance)` })
+    .from(ordonnances)
+    .where(and(
+      eq(ordonnances.clinicId, clinicId),
+      sql`EXTRACT(YEAR FROM created_at) = ${year}`
+    ));
+  
+  const lastNum = lastOrd[0]?.num 
+    ? parseInt(String(lastOrd[0].num).split('-')[2] || '0') 
+    : 0;
+  const numeroOrdonnance = `ORD-${year}-${String(lastNum + 1).padStart(5, '0')}`;
+  
+  // Étape 4 : Créer l'ordonnance
+  const [ordonnance] = await db.insert(ordonnances).values({
+    clinicId,
+    animalId,
+    veterinaireId,
+    numeroOrdonnance,
+    dateOrdonnance: new Date(),
+    diagnostic: parsed.diagnostic_associe,
+    transcriptionDictee: transcription,
+    statut: 'brouillon',
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  }).returning();
+  
+  // Étape 5 : Créer les lignes d'ordonnance
+  for (const ligne of lignesOrdonnance) {
+    await db.insert(lignesOrdonnance).values({
+      ...ligne,
+      ordonnanceId: ordonnance.id,
+      createdAt: new Date(),
+    });
+  }
+  
+  // Étape 6 : Appliquer les mouvements de stock
+  for (const mvt of mouvementsStock) {
+    await db.insert(mouvementsStock).values({ ...mvt, createdAt: new Date() });
+    // Décrémenter stock actuel
+    await db.update(stockMedicaments)
+      .set({ stockActuel: sql`stock_actuel - ${mvt.quantite}`, updatedAt: new Date() })
+      .where(eq(stockMedicaments.id, mvt.stockMedicamentId));
+  }
+  
+  // Logger l'utilisation IA
+  await db.insert(iaAuditLog).values({
+    clinicId,
+    userId: req.auth.userId,
+    action: 'ordonnance_dictee',
+    input: transcription,
+    output: JSON.stringify(parsed),
+    animalId,
+    createdAt: new Date(),
+  });
+  
+  res.json({
+    success: true,
+    ordonnance: { ...ordonnance, lignes: lignesOrdonnance },
+    lignesFactureProposees: lignesFacture,
+    alertesStock,
+    medicamentsNonTrouves: lignesOrdonnance.filter(l => !l.stockMedicamentId).map(l => l.nomMedicament),
+  });
+});
+```
+
+### 3.2 — Frontend : Interface dictée dans la page Ordonnances
+Dans le formulaire de création d'ordonnance, ajouter un bouton microphone :
+- Utiliser Web Speech API (fr-FR) : `new SpeechRecognition()` avec `lang = 'fr-FR'`
+- Afficher la transcription en temps réel dans un textarea
+- Bouton "Parser avec IA" → appelle `POST /api/ordonnances/dictee`
+- Afficher les médicaments parsés dans des cards modifiables
+- Si médicaments non trouvés dans le stock : afficher en orange avec message "produit non trouvé en stock"
+- Bouton "Ajouter à la facture" qui prend les `lignesFactureProposees` et les injecte dans la facture en cours
+
+---
+
+## BLOC 4 — RGPD
+
+### 4.1 — Page /confidentialite
+Créer une page statique accessible sans authentification à `/confidentialite` qui contient :
+- Responsable de traitement : clinique (non défini par défaut, configurable dans Paramètres)
+- Données collectées : nom, prénom, adresse propriétaire / nom animal, espèce, historique médical
+- Base légale : contrat de soins vétérinaires + intérêt légitime
+- Durée conservation : 10 ans (obligation légale vétérinaire)
+- Droits : accès, rectification, suppression sur demande écrite
+- DPO contact : email de la clinique
+- Hébergeur : OVHcloud SAS (HDS certifié)
+- IA : les données peuvent être traitées par l'API Anthropic Claude pour assistance au diagnostic (anonymisées avant envoi)
+
+### 4.2 — Consentement patient
+Dans le formulaire de création/édition d'un animal/propriétaire, ajouter :
+```typescript
+// Dans le schema de la table patients/proprietaires
+consentement_rgpd: boolean DEFAULT false
+date_consentement: timestamp NULL
+```
+
+Dans le formulaire frontend :
+```tsx
+<Checkbox 
+  id="consentement"
+  checked={form.consentementRgpd}
+  onCheckedChange={(v) => {
+    form.setValue('consentementRgpd', v);
+    if (v) form.setValue('dateConsentement', new Date().toISOString());
+  }}
+/>
+<label htmlFor="consentement" className="text-sm">
+  Le propriétaire consent au traitement de ses données personnelles 
+  conformément à notre{' '}
+  <a href="/confidentialite" target="_blank" className="underline text-blue-600">
+    politique de confidentialité
+  </a>
+</label>
+```
+
+### 4.3 — Mention IA obligatoire
+Dans chaque résultat d'analyse IA (diagnostic, dictée ordonnance), afficher en bas :
+```tsx
+<p className="text-xs text-gray-400 mt-2">
+  ⚠ Analyse générée par intelligence artificielle (Claude API, Anthropic). 
+  Doit être validée par un vétérinaire qualifié. 
+  Les données sont transmises de manière sécurisée et non conservées par Anthropic.
+</p>
+```
+
+---
+
+## BLOC 5 — REGISTRE STUPÉFIANTS
+
+### Contexte légal
+La kétamine (ex: Zoletil qui contient tiletamine+zolazepam, Kétamine 1000 mg/ml) est un stupéfiant vétérinaire classé. Chaque utilisation doit être tracée dans un registre avec : date, animal, vétérinaire, quantité entrée/sortie, lot, solde running.
+
+### 5.1 — Table registre_stupefiants
+```sql
+CREATE TABLE IF NOT EXISTS registre_stupefiants (
+  id SERIAL PRIMARY KEY,
+  clinic_id VARCHAR NOT NULL,
+  stock_medicament_id INTEGER REFERENCES stock_medicaments(id),
+  date_mouvement TIMESTAMP NOT NULL DEFAULT NOW(),
+  type_mouvement VARCHAR(10) NOT NULL CHECK (type_mouvement IN ('entree', 'sortie')),
+  quantite DECIMAL(10,3) NOT NULL,
+  unite VARCHAR(20) NOT NULL DEFAULT 'ml',
+  numero_lot VARCHAR(50),
+  date_expiration_lot DATE,
+  animal_id INTEGER REFERENCES animaux(id),
+  veterinaire_id INTEGER REFERENCES veterinaires(id),
+  motif VARCHAR(200),
+  solde_apres DECIMAL(10,3) NOT NULL,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+```
+
+### 5.2 — Entrée stupéfiant (à la livraison)
+`POST /api/stupefiants/entree` :
+```typescript
+// Champs obligatoires : stock_medicament_id, quantite, numero_lot, date_expiration_lot, veterinaire_id
+// Calculer solde_apres = dernier solde + quantite
+// Créer entrée dans registre_stupefiants
+// Incrémenter stock_medicaments.stock_actuel
+```
+
+### 5.3 — Sortie stupéfiant (à l'utilisation, liée à une ordonnance)
+Quand un stupéfiant est utilisé via ordonnance dictée (BLOC 3) ou manuellement :
+- Rendre OBLIGATOIRES : `numero_lot`, `animal_id`, `veterinaire_id`
+- Refuser si ces champs manquent (400 error)
+- Enregistrer dans `registre_stupefiants`
+
+### 5.4 — Page Registre Stupéfiants
+Créer une page `/stupefiants` accessible aux vétérinaires :
+- Tableau chronologique : Date | Produit | Entrée | Sortie | N° Lot | Animal | Vétérinaire | Solde
+- Filtre par produit (uniquement les produits avec `est_stupefiant = true`)
+- Bouton "Entrée de stock" (livraison)
+- Bouton "Export PDF mensuel" → génère un PDF du registre du mois sélectionné (format tableau propre, signé par le responsable)
+- Conservation obligatoire 10 ans (mention légale affichée)
+
+### 5.5 — Endpoint export PDF registre mensuel
+`GET /api/stupefiants/export-pdf?mois=2025-01&produit_id=X`
+- Utiliser PDFKit ou jsPDF côté serveur
+- Tableau : toutes les lignes du mois pour ce produit
+- En-tête : Clinique, Produit, Période, Date d'export
+- Pied de page : "Registre légalement obligatoire - Conservation 10 ans minimum"
+- Retourner le PDF en binary
+
+---
+
+## BLOC 6 — BRANDING VétoAI
+
+### 6.1 — Palette couleurs officielle
+Dans `client/src/index.css` ou `tailwind.config.js`, définir :
+```css
+:root {
+  --color-primary: #2D6A9F;      /* Bleu médical profond */
+  --color-primary-light: #4A90D9; /* Bleu clair */
+  --color-secondary: #27AE60;     /* Vert santé */
+  --color-accent: #E8F4FD;        /* Bleu très clair fond */
+  --color-warning: #F39C12;       /* Orange alerte stock */
+  --color-danger: #E74C3C;        /* Rouge urgence */
+  --color-text: #2C3E50;          /* Gris anthracite */
+  --color-bg: #F8FBFE;            /* Fond légèrement bleuté */
+}
+```
+
+### 6.2 — Logo VétoAI
+Dans `client/src/components/Logo.tsx`, créer un logo SVG inline :
+```tsx
+export function Logo({ size = 32 }: { size?: number }) {
+  return (
+    <svg width={size * 3.5} height={size} viewBox="0 0 140 40" fill="none">
+      {/* Croix vétérinaire stylisée */}
+      <rect x="2" y="14" width="12" height="12" rx="2" fill="#2D6A9F"/>
+      <rect x="8" y="8" width="12" height="12" rx="2" fill="#2D6A9F" opacity="0.7"/>
+      <rect x="8" y="20" width="12" height="12" rx="2" fill="#27AE60"/>
+      {/* Texte VétoAI */}
+      <text x="28" y="28" fontFamily="system-ui, sans-serif" fontSize="20" fontWeight="700" fill="#2D6A9F">
+        Véto
+      </text>
+      <text x="78" y="28" fontFamily="system-ui, sans-serif" fontSize="20" fontWeight="700" fill="#27AE60">
+        AI
+      </text>
+    </svg>
+  );
+}
+```
+
+### 6.3 — Appliquer le branding
+- Remplacer tous les titres "VetoAI" ou "Veto AI" par le composant `<Logo />`
+- Dans la sidebar/navbar : `<Logo size={28} />`
+- Dans la page de login/onboarding : `<Logo size={40} />`
+- Appliquer `--color-primary` à tous les boutons primaires (remplacer les classes Tailwind `bg-blue-600` par `bg-[#2D6A9F]`)
+- Appliquer `--color-secondary` aux indicateurs de succès et états "en stock"
+- Fond de la sidebar : `bg-[#1A3F5F]` (bleu profond)
+- Texte sidebar : blanc
+
+### 6.4 — Favicon
+Dans `client/public/`, créer/remplacer `favicon.svg` :
+```svg
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <rect x="2" y="12" width="10" height="10" rx="2" fill="#2D6A9F"/>
+  <rect x="7" y="7" width="10" height="10" rx="2" fill="#2D6A9F" opacity="0.7"/>
+  <rect x="7" y="17" width="10" height="10" rx="2" fill="#27AE60"/>
+  <text x="19" y="26" font-family="sans-serif" font-size="11" font-weight="bold" fill="#27AE60">AI</text>
+</svg>
+```
+
+---
+
+## VÉRIFICATION FINALE (à faire après tous les blocs)
+
+1. Créer une facture avec des lignes → vérifier que les montants sont bien calculés (non zéro)
+2. Payer en espèces 50€ une facture de 43,20€ → vérifier rendu monnaie = 6,80€
+3. Dicter "Amoxicilline 20mg/kg deux fois par jour pendant 7 jours pour Rex" → vérifier ordonnance créée avec numéro ORD-YYYY-NNNNN et mouvement stock
+4. Vérifier que la page /confidentialite est accessible sans connexion
+5. Vérifier que les stupéfiants (Zoletil, Bupredine) ne peuvent pas être sortis sans lot + animal + vétérinaire
+6. Vérifier que le logo VétoAI s'affiche dans la navbar et la page login

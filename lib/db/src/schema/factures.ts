@@ -14,6 +14,7 @@ export const facturesTable = pgTable("factures", {
   dateEmission: text("date_emission").notNull(),
   datePaiement: text("date_paiement"),
   modePaiement: text("mode_paiement"),
+  montantEspecesRecu: real("montant_especes_recu"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 }, (table) => ({

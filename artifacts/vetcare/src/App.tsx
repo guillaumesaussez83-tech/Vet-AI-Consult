@@ -25,6 +25,7 @@ import EncaissementsPage from "./pages/encaissements/index";
 import RappelsPage from "./pages/rappels/index";
 import StatistiquesPage from "./pages/statistiques/index";
 import StockPage from "./pages/stock/index";
+import StupefiantsPage from "./pages/stupefiants/index";
 import OrdonnancesPage from "./pages/ordonnances/index";
 import OrdonnanceImprimerPage from "./pages/ordonnances/imprimer";
 import AgendaPage from "./pages/agenda/index";
@@ -134,6 +135,7 @@ function Router() {
       <Route path="/parametres" component={() => <ProtectedRoute component={ParametresPage} />} />
       <Route path="/statistiques" component={() => <ProtectedRoute component={StatistiquesPage} />} />
       <Route path="/stock" component={() => <ProtectedRoute component={StockPage} />} />
+      <Route path="/stupefiants" component={() => <ProtectedRoute component={StupefiantsPage} />} />
       <Route path="/ordonnances/:id/imprimer" component={() => (
         <>
           <Show when="signed-in"><OrdonnanceImprimerPage /></Show>

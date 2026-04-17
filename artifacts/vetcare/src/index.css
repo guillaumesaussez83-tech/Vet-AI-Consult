@@ -87,25 +87,25 @@
   --card-border: 195 20% 90%;
 
   /* Sidebar: Deep professional medical blue-green */
-  --sidebar: 195 50% 20%;
+  --sidebar: 210 57% 23%;
   --sidebar-foreground: 0 0% 100%;
-  --sidebar-border: 195 50% 15%;
-  --sidebar-primary: 175 60% 45%;
+  --sidebar-border: 210 57% 17%;
+  --sidebar-primary: 145 63% 41%;
   --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 195 40% 30%;
+  --sidebar-accent: 210 50% 33%;
   --sidebar-accent-foreground: 0 0% 100%;
-  --sidebar-ring: 175 60% 45%;
+  --sidebar-ring: 145 63% 41%;
 
   --popover: 0 0% 100%;
   --popover-foreground: 195 40% 15%;
   --popover-border: 195 20% 90%;
 
   /* Primary: Vibrant Medical Teal */
-  --primary: 175 60% 40%;
+  --primary: 210 55% 40%;
   --primary-foreground: 0 0% 100%;
 
-  --secondary: 195 30% 92%;
-  --secondary-foreground: 195 50% 25%;
+  --secondary: 145 63% 94%;
+  --secondary-foreground: 145 63% 25%;
 
   --muted: 195 20% 94%;
   --muted-foreground: 195 20% 45%;

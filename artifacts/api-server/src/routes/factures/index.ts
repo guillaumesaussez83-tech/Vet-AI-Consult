@@ -237,8 +237,17 @@ router.patch("/:id", async (req, res) => {
     if (body.data.datePaiement) {
       updateData.datePaiement = body.data.datePaiement;
     }
-    if ((req.body as any).modePaiement) {
-      updateData.modePaiement = (req.body as any).modePaiement;
+    const modePaiement = (req.body as any).modePaiement;
+    const montantEspecesRecu = (req.body as any).montantEspecesRecu ? parseFloat((req.body as any).montantEspecesRecu) : null;
+    const validModes = ["carte_bancaire", "carte_sans_contact", "payvet", "cheque", "virement", "especes"];
+    if (modePaiement) {
+      if (!validModes.includes(modePaiement)) {
+        return res.status(400).json({ error: "Mode de paiement invalide" });
+      }
+      updateData.modePaiement = modePaiement;
+    }
+    if (modePaiement === "especes" && montantEspecesRecu !== null) {
+      updateData.montantEspecesRecu = montantEspecesRecu;
     }
 
     const [factureBefore] = await db.select().from(facturesTable).where(eq(facturesTable.id, params.data.id));
@@ -289,7 +298,15 @@ router.patch("/:id", async (req, res) => {
       }
     }
 
-    return res.json({ ...facture, createdAt: facture.createdAt.toISOString() });
+    const renduMonnaie = modePaiement === "especes" && montantEspecesRecu !== null
+      ? parseFloat((montantEspecesRecu - (facture.montantTTC ?? 0)).toFixed(2))
+      : null;
+
+    return res.json({
+      ...facture,
+      createdAt: facture.createdAt.toISOString(),
+      renduMonnaie,
+    });
   } catch (err) {
     req.log.error(err);
     return res.status(500).json({ error: "Erreur interne du serveur" });

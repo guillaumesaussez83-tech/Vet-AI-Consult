@@ -2,7 +2,7 @@
 
 ## Overview
 
-pnpm workspace monorepo using TypeScript — VetCare Pro, logiciel vétérinaire complet en français.
+pnpm workspace monorepo using TypeScript — **VétoAI**, logiciel vétérinaire SaaS complet en français.
 
 ## Stack
 
@@ -55,6 +55,39 @@ See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and pa
 10. **Intégration FEFO→Facture** — décrément automatique du stock (FEFO par lot) quand une facture est marquée comme payée (hook dans `PATCH /api/factures/:id`)
 11. **DB tables** — vaccinations, stock_medicaments, rendez_vous, anesthesie_protocoles, portail_tokens + stock phase 2 (commandes_centravet, bons_livraison, stock_lots, mouvements_stock, lignes_commande, alertes_stock) + ordonnances + parametres_clinique (21 tables total)
 12. **Salle d'attente** (`/salle-attente`) — tableau kanban plein écran avec 5 colonnes (en_attente_arrivee→arrive→en_consultation→a_encaisser→termine), drag & drop natif HTML5, boutons flèches, badge temps d'attente amber/rouge (>15min/>30min), auto-refresh 30s, horloge live, résumé en-tête, colonne `statut_salle` dans `rendez_vous`, route API GET `/salle-attente` + PATCH `/:id/statut-salle`, optimistic updates
+
+## Mega Sprint (Bloc 1-6) — completé
+
+### Bloc 2 — Modes de paiement + Rendu monnaie espèces
+- `montantEspecesRecu` ajouté à la table `factures` (DB + schéma)
+- PATCH factures : validation mode paiement, calcul + retour `renduMonnaie` côté serveur
+- Frontend detail.tsx : champ "Montant reçu" si mode espèces, affichage rendu en temps réel + confirmé
+
+### Bloc 3 — Dictée ordonnance IA (T008)
+- `POST /api/ai/dictee-ordonnance` : Claude extrait prescriptions depuis transcript (JSON), stock matching ILIKE
+- `POST /api/ai/confirmer-dictee-ordonnance` : crée ordonnance ORD-YYYY-NNNNN, décrémente stock
+- Wizard consultation step 5 : bouton "Dicter l'ordonnance", dialog 3 phases (dictée→analyse→récap)
+- Flux différé : prescriptions stockées en state, créées en DB au submit consultation
+
+### Bloc 4 — RGPD (T006)
+- Page `/confidentialite` statique (sans auth)
+- Checkbox consentement RGPD dans formulaire patient
+- Modal disclaimer IA (localStorage), mentions obligatoires sur résultats IA
+
+### Bloc 5 — Stupéfiants (T007 + table officielle)
+- Table `registre_stupefiants` (entree/sortie, N° lot, solde courant)
+- `POST /api/stock/stupefiants/entree` — avec validation stupéfiant, calcul solde courant
+- `POST /api/stock/stupefiants/sortie` — obligatoire : numeroLot + animalId + veterinaire (400 sinon)
+- `GET /api/stock/stupefiants/registre?produitId=` — tableau avec join patient
+- Page `/stupefiants` dédiée avec tableau chronologique, filtre par produit, dialogs entrée/sortie
+
+### Bloc 6 — Branding VétoAI
+- Composant `Logo.tsx` SVG inline (croix vétérinaire bleue + "AI" vert)
+- Palette couleurs officielle : `--primary: 210 55% 40%` (bleu médical), `--secondary: 145 63%` (vert santé)
+- Sidebar : fond `210 57% 23%` (bleu nuit professionnel), texte blanc
+- Logo affiché dans sidebar desktop + mobile header + sheet mobile
+- Favicon SVG mis à jour (croix bleue + AI vert)
+- Lien "Stupéfiants" ajouté au menu navigation
 
 ## AI Endpoints (POST /api/ai/...)
 
