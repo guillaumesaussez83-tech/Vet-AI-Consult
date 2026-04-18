@@ -1,0 +1,160 @@
+Sprint 4 VétoAI — Conformité réglementaire, statistiques réelles, polish final
+
+---
+
+### BLOC A : Statistiques — calcul CA réel
+
+Suite à la correction des factures (Sprint 2+3), les statistiques devraient fonctionner.
+Vérifier et si nécessaire corriger les requêtes :
+
+**A1 — CA aujourd'hui**
+```sql
+SELECT COALESCE(SUM(montant_ttc), 0) as ca_today
+FROM factures 
+WHERE statut = 'payee' 
+AND DATE(updated_at AT TIME ZONE 'Europe/Paris') = CURRENT_DATE AT TIME ZONE 'Europe/Paris'
+AND clinic_id = $1
+```
+
+**A2 — Taux d'encaissement**
+```sql
+SELECT 
+  COUNT(*) FILTER (WHERE statut = 'payee') * 100.0 / NULLIF(COUNT(*), 0) as taux
+FROM factures
+WHERE clinic_id = $1 AND EXTRACT(MONTH FROM created_at) = EXTRACT(MONTH FROM NOW())
+```
+
+**A3 — Top actes & produits** 
+```sql
+SELECT lf.description, COUNT(*) as nb, SUM(lf.total) as ca
+FROM lignes_facture lf
+JOIN factures f ON f.id = lf.facture_id
+WHERE f.statut = 'payee' AND f.clinic_id = $1
+GROUP BY lf.description
+ORDER BY ca DESC LIMIT 10
+```
+
+---
+
+### BLOC B : Timezone UTC → Europe/Paris (global)
+
+Problème : les timestamps sont stockés en UTC mais affichés sans conversion.
+
+**B1 — Helper formatDateTime déjà créé dans Sprint 1, vérifier qu'il est appliqué partout**
+```typescript
+export const formatDateTime = (dateStr: string) =>
+  new Date(dateStr).toLocaleString('fr-FR', {
+    timeZone: 'Europe/Paris',
+    day: 'numeric', month: 'long', year: 'numeric',
+    hour: '2-digit', minute: '2-digit'
+  })
+```
+
+**B2 — Audit des composants qui affichent des dates/heures**
+Chercher tous les usages de `consultation.createdAt`, `facture.createdAt`, `rdv.heure` et appliquer `formatDateTime`.
+
+Spécifiquement :
+- Dashboard : "Consultations récentes" → colonnes horodatage
+- Salle d'attente : heure d'arrivée des patients
+- Encaissements : date de paiement
+- Stock Alertes : "17/04/2026 16:56:40" → format lisible
+
+---
+
+### BLOC C : Export PDF réglementaire
+
+**C1 — Ordonnance en PDF téléchargeable**
+La page `/ordonnances/[id]/imprimer` utilise `window.print()`. 
+Améliorer pour générer un vrai PDF :
+```typescript
+// Option recommandée : utiliser @react-pdf/renderer ou html2pdf.js
+import html2pdf from 'html2pdf.js'
+
+const downloadPDF = () => {
+  const element = document.getElementById('ordonnance-content')
+  html2pdf().set({
+    margin: 10,
+    filename: `ORD-${ordonnance.numero}.pdf`,
+    html2canvas: { scale: 2 },
+    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+  }).from(element).save()
+}
+```
+
+**C2 — Facture en PDF**
+Même pattern pour la facture :
+- Bouton "Télécharger PDF" sur `/factures/[id]`
+- Fichier nommé `FACT-2026-XXXX.pdf`
+- Contenu : en-tête clinique, données patient, tableau actes, total TTC, mentions légales
+
+---
+
+### BLOC D : Actes & Catalogue produits
+
+Le module "Actes & Produits" n'a pas de route dédiée dans le nav. 
+Deux options :
+1. Intégrer dans Paramètres → onglet "Catalogue actes"
+2. Ou vérifier si `/actes` existe déjà
+
+**D1 — Vérifier si la route /actes existe, sinon créer un catalogue simple :**
+```tsx
+// Page catalogue des actes (pour pré-remplir le modal AjouterActeModal)
+// Permet au vet de définir ses actes standards avec prix HT
+// Ex: "Consultation" 35€HT, "Vaccination" 28€HT, "Radio" 65€HT
+```
+
+**D2 — Dans AjouterActeModal, ajouter un autocomplete depuis le catalogue :**
+```tsx
+<Command>
+  <CommandInput placeholder="Rechercher un acte..." />
+  <CommandList>
+    {catalogue.map(acte => (
+      <CommandItem key={acte.id} onSelect={() => fillFromCatalogue(acte)}>
+        {acte.description} — {acte.prixHt}€ HT
+      </CommandItem>
+    ))}
+  </CommandList>
+</Command>
+```
+
+---
+
+### BLOC E : Sécurité — validations serveur manquantes
+
+**E1 — Toutes les routes API doivent vérifier `clinic_id`**
+Pattern à appliquer partout :
+```typescript
+// Middleware à ajouter sur toutes les routes GET/POST/PATCH/DELETE
+const ensureClinicId = (req, res, next) => {
+  if (!req.auth?.orgId && !req.auth?.userId) {
+    return res.status(401).json({ error: 'Non authentifié' })
+  }
+  req.clinicId = req.auth.orgId ?? req.auth.userId
+  next()
+}
+```
+
+**E2 — Rate limiting sur les routes IA (coût Anthropic)**
+```typescript
+import rateLimit from 'express-rate-limit'
+const aiLimiter = rateLimit({ windowMs: 60000, max: 10, message: 'Trop de requêtes IA' })
+app.use('/api/diagnostic', aiLimiter)
+app.use('/api/certificats/generate', aiLimiter)
+app.use('/api/ordonnances/generate', aiLimiter)
+```
+
+---
+
+### Score cible après Sprint 4 :
+| Module | Avant | Après |
+|---|---|---|
+| Diagnostic IA | 9/10 | 9/10 |
+| Wizard consultation | 8/10 | 9/10 |
+| Facturation | 4/10 | 9/10 |
+| Certificats | 4/10 | 8/10 |
+| Ordonnances | 5/10 | 9/10 |
+| Agenda | 5/10 | 8/10 |
+| Statistiques | 3/10 | 8/10 |
+| Rappels | 5/10 | 7/10 |
+| Stock | 7/10 | 8/10 |
+| **GLOBAL** | **6.1/10** | **≥ 8.5/10** |
