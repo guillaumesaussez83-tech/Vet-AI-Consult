@@ -301,22 +301,19 @@ router.post("/:id/facture", async (req, res) => {
     const tva = 20;
     const montantTTC = parseFloat((montantHT * (1 + tva / 100)).toFixed(2));
 
-    if (existingFacture) {
-      if (actes.length > 0) {
-        const [updated] = await db.update(facturesTable)
-          .set({ montantHT, tva, montantTTC })
-          .where(eq(facturesTable.id, existingFacture.id))
-          .returning();
-        return res.json({ ...updated, createdAt: updated.createdAt.toISOString() });
-      }
-      return res.json({ ...existingFacture, createdAt: existingFacture.createdAt.toISOString() });
-    }
-
     if (actes.length === 0) {
       return res.status(400).json({ error: "Aucun acte saisi — veuillez ajouter et enregistrer vos actes avant de générer la facture." });
     }
     if (montantHT === 0) {
       return res.status(400).json({ error: "Le total des actes est 0 € — saisissez des prix corrects avant de générer la facture." });
+    }
+
+    if (existingFacture) {
+      const [updated] = await db.update(facturesTable)
+        .set({ montantHT, tva, montantTTC })
+        .where(eq(facturesTable.id, existingFacture.id))
+        .returning();
+      return res.json({ ...updated, createdAt: updated.createdAt.toISOString() });
     }
 
     const year = new Date().getFullYear();

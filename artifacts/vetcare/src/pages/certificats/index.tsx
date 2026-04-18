@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { useToast } from "@/hooks/use-toast";
 import { Award, Loader2, Printer, CheckCircle, FileText, Heart, Shield, ClipboardList, Pill } from "lucide-react";
 import ReactMarkdown from "react-markdown";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useListPatients } from "@workspace/api-client-react";
 
 const API_BASE = "/api";
@@ -39,7 +40,7 @@ export default function CertificatsPage() {
   const [certificatText, setCertificatText] = useState("");
   const [previewOpen, setPreviewOpen] = useState(false);
 
-  const { data: patients = [] } = useListPatients();
+  const { data: patients = [], isLoading: patientsLoading } = useListPatients();
 
   const { data: parametresClinique } = useQuery({
     queryKey: ["parametres-clinique"],
@@ -112,6 +113,31 @@ export default function CertificatsPage() {
   };
 
   const imprimer = () => window.print();
+
+  if (patientsLoading) {
+    return (
+      <div className="space-y-6 p-1">
+        <div className="flex items-center gap-3">
+          <Skeleton className="h-6 w-6 rounded-full" />
+          <div className="space-y-1">
+            <Skeleton className="h-7 w-64" />
+            <Skeleton className="h-4 w-48" />
+          </div>
+        </div>
+        <div className="grid md:grid-cols-2 gap-6">
+          <div className="space-y-3">
+            {[1, 2, 3, 4, 5].map(i => <Skeleton key={i} className="h-16 w-full" />)}
+          </div>
+          <div className="space-y-3">
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-32 w-full" />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

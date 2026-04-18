@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { rappelsModelesTable, consultationsTable, patientsTable, ownersTable } from "@workspace/db";
+import { rappelsModelesTable, rappelsTable, consultationsTable, patientsTable, ownersTable } from "@workspace/db";
 import { eq, desc } from "drizzle-orm";
 
 const router = Router();
@@ -120,6 +120,91 @@ router.get("/dus", async (req, res) => {
   } catch (err) {
     req.log.error(err);
     return res.status(500).json({ error: "Erreur interne du serveur" });
+  }
+});
+
+// ─── Rappels liés à une consultation ─────────────────────────────────────────
+
+router.get("/", async (req, res) => {
+  try {
+    const { consultationId, patientId, statut } = req.query as Record<string, string>;
+    let rows;
+    if (consultationId) {
+      rows = await db.select().from(rappelsTable)
+        .where(eq(rappelsTable.consultationId, parseInt(consultationId)))
+        .orderBy(desc(rappelsTable.createdAt));
+    } else if (patientId) {
+      rows = await db.select().from(rappelsTable)
+        .where(eq(rappelsTable.patientId, parseInt(patientId)))
+        .orderBy(desc(rappelsTable.createdAt));
+    } else {
+      rows = await db.select().from(rappelsTable)
+        .orderBy(desc(rappelsTable.createdAt));
+    }
+    if (statut) rows = rows.filter(r => r.statut === statut);
+    return res.json(rows.map(r => ({ ...r, createdAt: r.createdAt.toISOString() })));
+  } catch (err) {
+    req.log.error(err);
+    return res.status(500).json({ error: "Erreur interne" });
+  }
+});
+
+router.post("/", async (req, res) => {
+  try {
+    const { consultationId, patientId, label, joursDelai, notes } = req.body;
+    if (!label) return res.status(400).json({ error: "label requis" });
+
+    let dateEcheance: string | undefined;
+    if (joursDelai != null) {
+      const d = new Date();
+      d.setDate(d.getDate() + parseInt(joursDelai));
+      dateEcheance = d.toISOString().split("T")[0];
+    }
+
+    const [rappel] = await db.insert(rappelsTable).values({
+      consultationId: consultationId ? parseInt(consultationId) : null,
+      patientId: patientId ? parseInt(patientId) : null,
+      label,
+      joursDelai: joursDelai != null ? parseInt(joursDelai) : null,
+      dateEcheance: dateEcheance ?? null,
+      statut: "actif",
+      notes: notes ?? null,
+    }).returning();
+
+    return res.status(201).json({ ...rappel, createdAt: rappel.createdAt.toISOString() });
+  } catch (err) {
+    req.log.error(err);
+    return res.status(500).json({ error: "Erreur interne" });
+  }
+});
+
+router.patch("/:id", async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ error: "ID invalide" });
+    const { statut, notes } = req.body;
+    const update: Record<string, unknown> = {};
+    if (statut) update.statut = statut;
+    if (notes !== undefined) update.notes = notes;
+    const [rappel] = await db.update(rappelsTable).set(update).where(eq(rappelsTable.id, id)).returning();
+    if (!rappel) return res.status(404).json({ error: "Rappel non trouvé" });
+    return res.json({ ...rappel, createdAt: rappel.createdAt.toISOString() });
+  } catch (err) {
+    req.log.error(err);
+    return res.status(500).json({ error: "Erreur interne" });
+  }
+});
+
+router.delete("/:id", async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ error: "ID invalide" });
+    const [deleted] = await db.delete(rappelsTable).where(eq(rappelsTable.id, id)).returning();
+    if (!deleted) return res.status(404).json({ error: "Rappel non trouvé" });
+    return res.json({ success: true });
+  } catch (err) {
+    req.log.error(err);
+    return res.status(500).json({ error: "Erreur interne" });
   }
 });
 

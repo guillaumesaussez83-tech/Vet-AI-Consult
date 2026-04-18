@@ -181,9 +181,55 @@ export default function OrdonnanceImprimerPage() {
           {/* Prescription content */}
           <div className="px-8 py-6">
             <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide mb-3">Prescription</p>
-            <div className="whitespace-pre-wrap text-sm leading-relaxed text-foreground border rounded-lg p-4 bg-gray-50">
-              {ordonnance.contenu}
-            </div>
+            {(() => {
+              const lignes = ordonnance.contenu.split("\n").filter(Boolean).map(line => {
+                const parts = line.split(" — ");
+                const get = (prefix: string) => {
+                  const p = parts.find(s => s.startsWith(prefix));
+                  return p ? p.slice(prefix.length).trim() : null;
+                };
+                return {
+                  nom: parts[0]?.trim() ?? line,
+                  dose: get("Dose :"),
+                  voie: get("Voie :"),
+                  frequence: get("Fréquence :"),
+                  duree: get("Durée :"),
+                  qte: get("Qté :"),
+                };
+              });
+              const isStructured = lignes.some(l => l.dose || l.qte);
+              if (isStructured) {
+                return (
+                  <table className="w-full border-collapse text-sm">
+                    <thead>
+                      <tr className="border-b-2 border-gray-300 text-left">
+                        <th className="py-2 pr-3 font-semibold">Médicament</th>
+                        <th className="py-2 pr-3 font-semibold">Posologie</th>
+                        <th className="py-2 pr-3 font-semibold">Voie</th>
+                        <th className="py-2 pr-3 font-semibold">Durée</th>
+                        <th className="py-2 text-right font-semibold">Qté</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {lignes.map((l, i) => (
+                        <tr key={i} className="border-b border-gray-100">
+                          <td className="py-2.5 pr-3 font-semibold">{l.nom}</td>
+                          <td className="py-2.5 pr-3 text-muted-foreground">{l.dose ?? "—"}</td>
+                          <td className="py-2.5 pr-3 text-muted-foreground">{l.voie ?? "—"}</td>
+                          <td className="py-2.5 pr-3 text-muted-foreground">{l.duree ?? "—"}</td>
+                          <td className="py-2.5 text-right text-muted-foreground">{l.qte ?? "—"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                );
+              }
+              return (
+                <div className="whitespace-pre-wrap text-sm leading-relaxed text-foreground border rounded-lg p-4 bg-gray-50">
+                  {ordonnance.contenu}
+                </div>
+              );
+            })()}
           </div>
 
           {/* Instructions client */}

@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -146,29 +147,39 @@ export default function AgendaPage() {
         </div>
       </div>
 
-      <Tabs value={tab} onValueChange={v => setTab(v as typeof tab)}>
-        <TabsList className="grid w-full grid-cols-3 max-w-md">
-          <TabsTrigger value="agenda" className="flex items-center gap-2">
-            <Calendar className="h-4 w-4" /> Agenda
-          </TabsTrigger>
-          <TabsTrigger value="planning" className="flex items-center gap-2">
-            <ClipboardList className="h-4 w-4" /> Planning
-          </TabsTrigger>
-          <TabsTrigger value="config" className="flex items-center gap-2">
-            <Settings className="h-4 w-4" /> Configuration
-          </TabsTrigger>
-        </TabsList>
+      {vetsLoading && (
+        <div className="space-y-3">
+          <Skeleton className="h-10 w-64" />
+          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-[480px] w-full" />
+        </div>
+      )}
 
-        <TabsContent value="agenda" className="mt-4">
-          <AgendaTab vets={vets} vetsLoading={vetsLoading} toast={toast} qc={qc} />
-        </TabsContent>
-        <TabsContent value="planning" className="mt-4">
-          <PlanningTab vets={vets} toast={toast} qc={qc} />
-        </TabsContent>
-        <TabsContent value="config" className="mt-4">
-          <ConfigTab vets={vets} toast={toast} qc={qc} />
-        </TabsContent>
-      </Tabs>
+      {!vetsLoading && (
+        <Tabs value={tab} onValueChange={v => setTab(v as typeof tab)}>
+          <TabsList className="grid w-full grid-cols-3 max-w-md">
+            <TabsTrigger value="agenda" className="flex items-center gap-2">
+              <Calendar className="h-4 w-4" /> Agenda
+            </TabsTrigger>
+            <TabsTrigger value="planning" className="flex items-center gap-2">
+              <ClipboardList className="h-4 w-4" /> Planning
+            </TabsTrigger>
+            <TabsTrigger value="config" className="flex items-center gap-2">
+              <Settings className="h-4 w-4" /> Configuration
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="agenda" className="mt-4">
+            <AgendaTab vets={vets} vetsLoading={vetsLoading} toast={toast} qc={qc} />
+          </TabsContent>
+          <TabsContent value="planning" className="mt-4">
+            <PlanningTab vets={vets} toast={toast} qc={qc} />
+          </TabsContent>
+          <TabsContent value="config" className="mt-4">
+            <ConfigTab vets={vets} toast={toast} qc={qc} />
+          </TabsContent>
+        </Tabs>
+      )}
     </div>
   );
 }

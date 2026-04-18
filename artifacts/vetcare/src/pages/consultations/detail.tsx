@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { useRoute, Link } from "wouter";
+import { useRoute, Link, useLocation } from "wouter";
 import {
   useGetConsultation, useUpdateConsultation, useGetDiagnosticIA,
   useGenerateOrdonnance, useGenerateFacture, useListActes,
@@ -47,6 +47,7 @@ export default function ConsultationDetailPage() {
   const id = parseInt(params?.id ?? "0");
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const [, navigate] = useLocation();
 
   const [etapeActive, setEtapeActive] = useState(1);
   const [iaSaving, setIaSaving] = useState(false);
@@ -142,11 +143,12 @@ export default function ConsultationDetailPage() {
   const handleGenerateFacture = async () => {
     try {
       await handleSaveActes();
-      await generateFacture.mutateAsync({ id });
+      const facture = await generateFacture.mutateAsync({ id });
       queryClient.invalidateQueries({ queryKey: getGetConsultationQueryKey(id) });
       queryClient.invalidateQueries({ queryKey: getListFacturesQueryKey() });
       queryClient.invalidateQueries({ queryKey: ["facture-by-consultation", id] });
-      toast({ title: "Facture générée" });
+      toast({ title: "Facture créée", description: "Redirection vers la facture…" });
+      if (facture?.id) navigate(`/factures/${facture.id}`);
     } catch {
       toast({ title: "Erreur lors de la génération de la facture", variant: "destructive" });
     }
@@ -166,11 +168,12 @@ export default function ConsultationDetailPage() {
         } as any
       });
       queryClient.invalidateQueries({ queryKey: getGetConsultationQueryKey(id) });
-      await generateFacture.mutateAsync({ id });
+      const facture = await generateFacture.mutateAsync({ id });
       queryClient.invalidateQueries({ queryKey: getGetConsultationQueryKey(id) });
       queryClient.invalidateQueries({ queryKey: getListFacturesQueryKey() });
       queryClient.invalidateQueries({ queryKey: ["facture-by-consultation", id] });
-      toast({ title: "Facture générée" });
+      toast({ title: "Facture créée", description: "Redirection vers la facture…" });
+      if (facture?.id) navigate(`/factures/${facture.id}`);
     } catch {
       toast({ title: "Erreur lors de la génération de la facture", variant: "destructive" });
     }
@@ -819,6 +822,9 @@ function EtapeOrdonnanceActes({
         onConfirmed={handleDicteeConfirmed}
       />
 
+      {/* C1 — Rappels post-consultation */}
+      <RappelsPostConsultation consultationId={consultation.id} patientId={consultation.patientId ?? null} />
+
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -931,9 +937,11 @@ function EtapeOrdonnanceActes({
               )}
 
               {!voixPreview && actes.length > 0 && (
-                <Button onClick={onGenerateFacture} disabled={isGeneratingFacture} variant="outline" className="w-full">
-                  <Receipt className="mr-2 h-4 w-4" />
-                  {isGeneratingFacture ? "Génération en cours..." : `Générer la facture (${actes.length} acte${actes.length > 1 ? "s" : ""})`}
+                <Button onClick={onGenerateFacture} disabled={isGeneratingFacture} className="w-full bg-blue-600 hover:bg-blue-700 text-white">
+                  {isGeneratingFacture
+                    ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Création en cours…</>
+                    : <><Receipt className="mr-2 h-4 w-4" />Finaliser et facturer ({actes.length} acte{actes.length > 1 ? "s" : ""} — {totalTTC.toFixed(2)} € TTC)</>
+                  }
                 </Button>
               )}
               {!voixPreview && actes.length === 0 && (
@@ -1112,5 +1120,101 @@ function EtapeOrdonnanceActes({
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+// ─── C1 : Rappels post-consultation ──────────────────────────────────────────
+
+const RAPPELS_RAPIDES = [
+  { label: "J+7 Contrôle", joursDelai: 7 },
+  { label: "J+14 Suivi", joursDelai: 14 },
+  { label: "1 mois Bilan", joursDelai: 30 },
+  { label: "6 mois Check-up", joursDelai: 180 },
+  { label: "1 an Vaccin", joursDelai: 365 },
+];
+
+function RappelsPostConsultation({ consultationId, patientId }: { consultationId: number; patientId: number | null }) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [creating, setCreating] = useState<string | null>(null);
+
+  const { data: rappels = [], isLoading } = useQuery({
+    queryKey: ["rappels-consultation", consultationId],
+    queryFn: () => fetch(`/api/rappels?consultationId=${consultationId}`).then(r => r.json()),
+    enabled: !!consultationId,
+  });
+
+  const createRappel = async (label: string, joursDelai: number) => {
+    setCreating(label);
+    try {
+      const res = await fetch("/api/rappels", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ consultationId, patientId, label, joursDelai }),
+      });
+      if (!res.ok) throw new Error();
+      queryClient.invalidateQueries({ queryKey: ["rappels-consultation", consultationId] });
+      const d = new Date(); d.setDate(d.getDate() + joursDelai);
+      toast({ title: `Rappel créé`, description: `${label} — échéance le ${d.toLocaleDateString("fr-FR")}` });
+    } catch {
+      toast({ title: "Erreur lors de la création du rappel", variant: "destructive" });
+    } finally {
+      setCreating(null);
+    }
+  };
+
+  const deleteRappel = async (id: number) => {
+    await fetch(`/api/rappels/${id}`, { method: "DELETE" });
+    queryClient.invalidateQueries({ queryKey: ["rappels-consultation", consultationId] });
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-base">
+          <span>🔔</span> Rappels post-consultation
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <div className="flex gap-2 flex-wrap">
+          {RAPPELS_RAPIDES.map(r => (
+            <Button
+              key={r.label}
+              variant="outline"
+              size="sm"
+              disabled={creating === r.label}
+              onClick={() => createRappel(r.label, r.joursDelai)}
+              className="text-xs"
+            >
+              {creating === r.label ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <span className="mr-1">+</span>}
+              {r.label}
+            </Button>
+          ))}
+        </div>
+        {!isLoading && rappels.length > 0 && (
+          <div className="space-y-1.5 pt-1">
+            {rappels.map((r: any) => (
+              <div key={r.id} className="flex items-center justify-between text-sm bg-muted/40 rounded-lg px-3 py-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-base">🔔</span>
+                  <div>
+                    <span className="font-medium">{r.label}</span>
+                    {r.dateEcheance && (
+                      <span className="text-xs text-muted-foreground ml-2">
+                        — {new Date(r.dateEcheance + "T12:00:00").toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <button
+                  className="text-muted-foreground hover:text-destructive text-xs ml-3"
+                  onClick={() => deleteRappel(r.id)}
+                >✕</button>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
