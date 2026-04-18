@@ -233,6 +233,35 @@ router.patch("/:id", async (req, res) => {
   }
 });
 
+router.post("/:id/actes", async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ error: "ID invalide" });
+
+    const { description, quantite, prixUnitaire, acteId } = req.body;
+
+    if (!description?.trim()) {
+      return res.status(400).json({ error: "Description requise" });
+    }
+    if (prixUnitaire === undefined || prixUnitaire === null || isNaN(Number(prixUnitaire))) {
+      return res.status(400).json({ error: "Prix unitaire requis" });
+    }
+
+    const [acte] = await db.insert(actesConsultationsTable).values({
+      consultationId: id,
+      acteId: (acteId && Number(acteId) > 0) ? Number(acteId) : null,
+      quantite: Number(quantite) || 1,
+      prixUnitaire: Number(prixUnitaire),
+      description: String(description).trim(),
+    }).returning();
+
+    return res.status(201).json(acte);
+  } catch (err) {
+    req.log.error(err);
+    return res.status(500).json({ error: "Erreur interne du serveur" });
+  }
+});
+
 router.post("/:id/ordonnance", async (req, res) => {
   try {
     const params = GenerateOrdonnanceParams.safeParse({ id: Number(req.params.id) });

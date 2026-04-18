@@ -1,0 +1,126 @@
+Tu es senior dev sur VétoAI. Il reste 4 bugs précis à corriger.
+
+---
+
+### CORRECTIF 1 — CRITIQUE : Route POST /api/consultations/:id/actes manquante
+
+Le modal "Ajouter un acte" s'ouvre correctement mais au submit, AUCUN appel API n'est déclenché. La route backend n'existe pas.
+
+**Fix requis :**
+
+1. Côté serveur, ajouter la route :
+```typescript
+router.post('/api/consultations/:id/actes', requireAuth(), async (req, res) => {
+  const { id } = req.params;
+  const { description, quantite, prixUnitaireHt, tauxTva } = req.body;
+  
+  if (!description || !prixUnitaireHt) {
+    return res.status(400).json({ error: 'Description et prix requis' });
+  }
+  
+  const qte = Number(quantite) || 1;
+  const prixHt = Number(prixUnitaireHt);
+  const tva = Number(tauxTva) || 20;
+  const total = qte * prixHt * (1 + tva / 100);
+  
+  const [acte] = await db.insert(actesTable).values({
+    consultationId: Number(id),
+    description,
+    quantite: qte,
+    prixUnitaireHt: prixHt,
+    tauxTva: tva,
+    total,
+    clinicId: req.auth.orgId ?? req.auth.userId
+  }).returning();
+  
+  res.json(acte);
+});
+```
+
+2. Côté client, dans le composant AjouterActeModal (ou équivalent), vérifier que le `onSubmit` appelle bien :
+```typescript
+const mutation = useMutation({
+  mutationFn: (data) => fetch(`/api/consultations/${consultationId}/actes`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data)
+  }).then(r => r.json()),
+  onSuccess: () => {
+    queryClient.invalidateQueries(['consultation', consultationId]);
+    queryClient.invalidateQueries(['actes', consultationId]);
+    onClose();
+  }
+});
+```
+
+3. Tester : remplir Description="Consultation orthopédique", Prix=55, clic Ajouter → POST 201 → acte apparaît dans la liste.
+
+---
+
+### CORRECTIF 2 : "Qté: null comprimé" sur ordonnance AULIT
+
+Dans `/ordonnances/1/imprimer`, la ligne Ypozane affiche "Qté: null comprimé".
+
+**Fix requis** : dans le helper qui formate les lignes d'ordonnance, filtrer les valeurs nulles :
+```typescript
+const parts = [
+  ligne.nomMedicament,
+  ligne.dosage || null,
+  ligne.voieAdmin || null,
+  ligne.frequence || null,
+  ligne.duree ? `pendant ${ligne.duree}` : null,
+  ligne.quantite != null ? `Qté: ${ligne.quantite} ${ligne.unite ?? 'comprimé(s)'}` : null,
+].filter(Boolean);
+return parts.join(' — ');
+```
+
+---
+
+### CORRECTIF 3 : Mentions légales "Membre du réseau ." résiduel
+
+Sur l'ordonnance imprimée, le footer affiche :
+"Clinique Vétérinaire — Membre du réseau . Toute reproduction interdite."
+
+**Fix requis** : dans les paramètres par défaut ET dans la valeur stockée en BDD, remplacer par :
+```sql
+UPDATE clinics SET mentions_legales = 'Ordonnance valable 3 mois. Médicaments réservés à l''usage vétérinaire. Toute reproduction interdite.'
+WHERE mentions_legales LIKE '%Membre du réseau%';
+```
+Et dans le code, si `mentionsLegales` contient "Membre du réseau", utiliser la valeur corrigée.
+
+---
+
+### CORRECTIF 4 : Agenda — vet par défaut et date incorrects
+
+Le modal "Nouveau RDV" affiche :
+- Vétérinaire = "Dr. Thomas Durand" (doit être le vet connecté)
+- Date = "2026-04-13" (premier jour de semaine, doit être aujourd'hui)
+
+**Fix requis** dans le composant modal Nouveau RDV :
+```typescript
+const { user } = useUser();
+
+// Vet connecté par défaut
+const defaultVetId = vets.find(v => 
+  v.email === user?.primaryEmailAddress?.emailAddress ||
+  v.nom?.toLowerCase().includes(user?.lastName?.toLowerCase() ?? '')
+)?.id ?? vets[0]?.id;
+
+// Date = aujourd'hui
+const defaultDate = new Date().toISOString().split('T')[0]; // "2026-04-18"
+
+// Dans useForm defaultValues :
+defaultValues: {
+  veternaireId: defaultVetId,
+  date: defaultDate,
+  ...
+}
+```
+
+---
+
+### Vérifications après ces 4 correctifs :
+1. `/consultations/13` → Ajouter un acte → remplir → Enregistrer → acte visible dans liste ✓
+2. `/ordonnances/1/imprimer` → plus de "Qté: null" ni "Membre du réseau" ✓
+3. Agenda → Nouveau RDV → Guillaume Saussez pré-sélectionné + date = aujourd'hui ✓
+4. Après avoir ajouté un acte → "Finaliser et facturer" → facture avec montant réel ✓

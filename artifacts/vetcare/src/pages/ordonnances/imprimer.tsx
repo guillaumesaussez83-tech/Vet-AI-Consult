@@ -216,7 +216,10 @@ export default function OrdonnanceImprimerPage() {
                 const parts = line.split(" — ");
                 const get = (prefix: string) => {
                   const p = parts.find(s => s.startsWith(prefix));
-                  return p ? p.slice(prefix.length).trim() : null;
+                  if (!p) return null;
+                  const val = p.slice(prefix.length).trim();
+                  if (!val || val === "null" || val.startsWith("null ")) return null;
+                  return val;
                 };
                 return {
                   nom: parts[0]?.trim() ?? line,

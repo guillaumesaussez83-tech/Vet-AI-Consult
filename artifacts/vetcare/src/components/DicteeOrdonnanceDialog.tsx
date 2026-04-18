@@ -99,9 +99,16 @@ export default function DicteeOrdonnanceDialog({ open, onClose, onConfirmed }: P
   };
 
   const confirmer = () => {
-    const lignes = prescriptions.map(p =>
-      `${p.nom_medicament} ${p.dose} — ${p.voie_administration}, ${p.frequence} pendant ${p.duree} (Qté : ${p.quantite_a_delivrer} ${p.unite})`
-    ).join("\n");
+    const lignes = prescriptions.map(p => {
+      const parts = [
+        `${p.nom_medicament} ${p.dose}`,
+        `${p.voie_administration}, ${p.frequence} pendant ${p.duree}`,
+        (p.quantite_a_delivrer != null && p.quantite_a_delivrer > 0)
+          ? `Qté : ${p.quantite_a_delivrer} ${p.unite}`
+          : null,
+      ].filter(Boolean);
+      return parts.join(" — ");
+    }).join("\n");
     onConfirmed(prescriptions, lignes);
     handleClose();
   };

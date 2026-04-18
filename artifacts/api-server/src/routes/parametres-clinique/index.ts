@@ -27,9 +27,11 @@ router.get("/", async (req, res) => {
       });
     }
     const row = rows[0];
+    const rawMentions = row.mentionsLegales ?? "";
+    const mentionsLegales = rawMentions.includes("Membre du réseau") ? DEFAULT_MENTIONS : (rawMentions || DEFAULT_MENTIONS);
     return res.json({
       ...row,
-      mentionsLegales: row.mentionsLegales ?? DEFAULT_MENTIONS,
+      mentionsLegales,
       createdAt: row.createdAt.toISOString(),
       updatedAt: row.updatedAt.toISOString(),
     });

@@ -524,6 +524,7 @@ function EtapeOrdonnanceActes({
   const [dicteeOpen, setDicteeOpen] = useState(false);
   const [showAddActeDialog, setShowAddActeDialog] = useState(false);
   const [newActeForm, setNewActeForm] = useState({ description: "", quantite: 1, prixHT: "", tva: "20", acteId: "" });
+  const [savingActe, setSavingActe] = useState(false);
   const [catalogueOpen, setCatalogueOpen] = useState(false);
   const [decrementeStockOpen, setDecrementeStockOpen] = useState(false);
   const [decrementeStockResult, setDecrementeStockResult] = useState<any>(null);
@@ -1115,7 +1116,8 @@ function EtapeOrdonnanceActes({
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowAddActeDialog(false)}>Annuler</Button>
             <Button
-              onClick={() => {
+              disabled={savingActe}
+              onClick={async () => {
                 if (!newActeForm.description.trim()) {
                   toast({ title: "La description est obligatoire", variant: "destructive" });
                   return;
@@ -1124,18 +1126,31 @@ function EtapeOrdonnanceActes({
                   toast({ title: "Le prix HT est obligatoire", variant: "destructive" });
                   return;
                 }
-                const acteId = newActeForm.acteId ? parseInt(newActeForm.acteId) : 0;
-                onActesChange([...actes, {
-                  acteId,
-                  quantite: newActeForm.quantite,
-                  prixUnitaire: parseFloat(newActeForm.prixHT),
-                  description: newActeForm.description,
-                }]);
-                setShowAddActeDialog(false);
-                toast({ title: "Acte ajouté — cliquez sur « Enregistrer les actes »" });
+                setSavingActe(true);
+                try {
+                  const res = await fetch(`/api/consultations/${id}/actes`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      description: newActeForm.description.trim(),
+                      quantite: newActeForm.quantite,
+                      prixUnitaire: parseFloat(newActeForm.prixHT),
+                      acteId: newActeForm.acteId ? parseInt(newActeForm.acteId) : null,
+                    }),
+                  });
+                  if (!res.ok) throw new Error("Erreur serveur");
+                  await queryClient.invalidateQueries({ queryKey: getGetConsultationQueryKey(id) });
+                  setShowAddActeDialog(false);
+                  setNewActeForm({ description: "", quantite: 1, prixHT: "", tva: "20", acteId: "" });
+                  toast({ title: "Acte ajouté avec succès" });
+                } catch {
+                  toast({ title: "Erreur lors de l'ajout de l'acte", variant: "destructive" });
+                } finally {
+                  setSavingActe(false);
+                }
               }}
             >
-              Ajouter l'acte
+              {savingActe ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Enregistrement…</> : "Ajouter l'acte"}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { useUser } from "@clerk/react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -193,12 +194,25 @@ function AgendaTab({ vets, vetsLoading, toast, qc }: {
   toast: ReturnType<typeof useToast>["toast"];
   qc: ReturnType<typeof useQueryClient>;
 }) {
+  const { user } = useUser();
   const [weekOffset, setWeekOffset] = useState(0);
   const [showNewRdv, setShowNewRdv] = useState(false);
   const [selectedRdv, setSelectedRdv] = useState<RDV | null>(null);
   const [selectedDate, setSelectedDate] = useState<string>("");
   const [selectedSlot, setSelectedSlot] = useState<string>("");
   const [selectedVetId, setSelectedVetId] = useState<string>("");
+
+  const defaultVetId = useMemo(() => {
+    if (!vets.length) return "";
+    const email = user?.primaryEmailAddress?.emailAddress?.toLowerCase() ?? "";
+    const lastName = user?.lastName?.toLowerCase() ?? "";
+    const matched = vets.find(v =>
+      (email && v.nom?.toLowerCase() === email) ||
+      (email && `${v.prenom ?? ""} ${v.nom}`.toLowerCase().includes(email)) ||
+      (lastName && v.nom?.toLowerCase().includes(lastName))
+    );
+    return matched?.id ?? vets[0]?.id ?? "";
+  }, [vets, user]);
 
   const weekDates = useMemo(() => getWeekDates(weekOffset), [weekOffset]);
   const weekStart = weekDates[0];
@@ -223,9 +237,9 @@ function AgendaTab({ vets, vetsLoading, toast, qc }: {
   }, [rdvs, weekDates]);
 
   function openNewRdv(date?: string, heure?: string, vetId?: string) {
-    setSelectedDate(date ?? weekDates[0]);
+    setSelectedDate(date ?? new Date().toLocaleDateString("sv-SE", { timeZone: "Europe/Paris" }));
     setSelectedSlot(heure ?? "");
-    setSelectedVetId(vetId ?? (vets[0]?.id ?? ""));
+    setSelectedVetId(vetId ?? defaultVetId);
     setSelectedRdv(null);
     setShowNewRdv(true);
   }
