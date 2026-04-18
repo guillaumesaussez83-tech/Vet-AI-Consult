@@ -1,0 +1,164 @@
+### BUG-2 : Certificats — placeholders hardcodés au lieu des données clinique
+
+Dans la page `/certificats`, le formulaire a :
+- "Vétérinaire signataire" = "Dr. Dupont" (hardcodé)
+- "Nom de la clinique" = "Clinique Vétérinaire du Centre" (hardcodé)
+
+Et le prompt IA génère `[XXXX-XXXX]`, `[Adresse du cabinet]`, `[cabinet@veterinaire.fr]`.
+
+**Fix requis** :
+1. Dans le composant Certificats, appeler `GET /api/clinic-settings` au chargement
+2. Pré-remplir le champ "Vétérinaire signataire" avec le nom du vet connecté (via `useUser()` Clerk)
+3. Pré-remplir "Nom de la clinique" avec `clinicSettings.nom`
+4. Dans le prompt IA de génération certificat, injecter :
+Clinique : ${clinicSettings.nom}
+Adresse : ${clinicSettings.adresse}, ${clinicSettings.codePostal} ${clinicSettings.ville}
+Téléphone : ${clinicSettings.telephone}
+Email : ${clinicSettings.email}
+N° Ordre vétérinaire : ${clinicSettings.numeroOrdre}
+Vétérinaire : Dr. ${veterinaireNom}
+5. Remplacer tous les `[XXXX]` par ces variables dans le prompt
+
+---
+
+### BUG-3 : Certificats — Markdown brut affiché dans le modal résultat
+
+Le modal "Bonne santé — ROCKY" affiche le texte IA avec `#`, `##`, `**`, `|---|` visibles.
+
+**Fix requis** :
+1. Installer `react-markdown` si pas présent : `npm install react-markdown`
+2. Dans le composant modal résultat certificat, remplacer :
+```tsx
+// AVANT
+<div>{certificatContent}</div>
+// APRÈS
+import ReactMarkdown from 'react-markdown'
+<div className="prose prose-sm max-w-none">
+  <ReactMarkdown>{certificatContent}</ReactMarkdown>
+</div>
+```
+3. Appliquer la même chose au composant d'impression `/certificats/[id]/imprimer` si existe
+
+---
+
+### BUG-4 : Ordonnance — "Qté: null comprimé" affiché
+
+Dans `/ordonnances/1/imprimer` :
+"Ypozane 15 mg — 15 mg — — — pendant — Qté: null comprimé"
+
+**Fix requis** :
+1. Dans le composant qui formate les lignes d'ordonnance, remplacer :
+```tsx
+// AVANT
+`Qté: ${ligne.quantite} ${ligne.unite}`
+// APRÈS
+ligne.quantite ? `Qté: ${ligne.quantite} ${ligne.unite ?? 'comprimé'}` : ''
+```
+2. Aussi masquer les champs vides ("— — —" entre deux tirets consécutifs = champ null) :
+```tsx
+const formatLigneOrdonnance = (ligne) => {
+  const parts = [
+    ligne.nomMedicament,
+    ligne.dosage ? `${ligne.dosage} ${ligne.uniteDosage ?? ''}` : null,
+    ligne.voieAdmin,
+    ligne.frequence,
+    ligne.duree ? `pendant ${ligne.duree}` : null,
+    ligne.quantite ? `Qté: ${ligne.quantite} ${ligne.unite ?? 'comprimé(s)'}` : null,
+  ].filter(Boolean)
+  return parts.join(' — ')
+}
+```
+
+---
+
+### BUG-5 : Date ISO dans le header de la page consultation
+
+La page `/consultations/[id]` affiche :
+"Dr. Guillaume Saussez • **2026-04-18** • Sophie MARTIN"
+
+Doit afficher "**18 avril 2026**"
+
+**Fix requis** :
+Dans le composant header de la page consultation détail, remplacer :
+```tsx
+// AVANT
+{consultation.dateConsultation}
+// APRÈS
+{formatDate(consultation.dateConsultation)}
+```
+`formatDate` est le helper déjà créé dans le sprint précédent (formatters.ts).
+
+---
+
+### BUG-6 : Agenda — RDV non lié aux patients + vet par défaut incorrect
+
+Le modal "Nouveau RDV" utilise des champs texte libres au lieu du picker patient.
+
+**Fix requis** :
+1. Remplacer les champs "Nom de l'animal" + "Nom du propriétaire" + "Téléphone" par un composant `<PatientSearchSelect>` existant (le même que dans la salle d'attente ou consultations)
+2. Quand un patient est sélectionné, stocker `patientId` dans le RDV
+3. Pré-sélectionner le vétérinaire connecté par défaut :
+```tsx
+const { user } = useUser()
+const defaultVetId = vets.find(v => v.email === user.emailAddresses[0].emailAddress)?.id
+```
+4. Changer la date par défaut du modal à aujourd'hui :
+```tsx
+defaultValues: { date: new Date().toISOString().split('T')[0] }
+```
+5. Ajouter sur le popover de détail d'un RDV un bouton :
+```tsx
+<Button onClick={() => navigate(`/consultations/nouvelle?patientId=${rdv.patientId}&rdvId=${rdv.id}`)}>
+  Démarrer la consultation
+</Button>
+```
+
+---
+
+### BUG-7 : SQL — Nettoyage BDD et kétamine stupéfiant
+
+Exécuter ces requêtes SQL sur la base de données :
+
+```sql
+-- Nettoyer les factures fantômes 0€ (si pas encore fait)
+DELETE FROM lignes_facture WHERE facture_id IN (
+  SELECT id FROM factures WHERE montant_ttc = 0 AND statut = 'en_attente'
+);
+DELETE FROM factures WHERE montant_ttc = 0 AND statut = 'en_attente';
+
+-- Ajouter kétamine et butorphanol comme stupéfiants
+UPDATE stock SET est_stupefiant = true 
+WHERE LOWER(nom_commercial) LIKE '%ketamine%' 
+   OR LOWER(nom_commercial) LIKE '%kétamine%'
+   OR LOWER(nom_commercial) LIKE '%butorphanol%'
+   OR LOWER(nom_commercial) LIKE '%morphine%';
+
+-- Insérer kétamine si absente
+INSERT INTO stock (nom_commercial, categorie, est_stupefiant, stock_actuel, stock_min, stock_max, unite)
+SELECT 'Kétamine 100mg/ml inj', 'Médicament', true, 5, 2, 20, 'flacon'
+WHERE NOT EXISTS (SELECT 1 FROM stock WHERE LOWER(nom_commercial) LIKE '%ketamine%');
+```
+
+---
+
+### BUG-8 : Mentions légales — variable "réseau" vide
+
+Dans Paramètres, le champ "Mentions légales" contient :
+"Clinique Vétérinaire — Membre du réseau . Toute reproduction interdite."
+
+Le mot "réseau" est précédé d'un espace avant le point — c'est une variable template non remplacée.
+
+**Fix requis** :
+Dans le seed/migration ou dans le code qui initialise la valeur par défaut des mentions légales :
+Ordonnance valable 3 mois. Médicaments réservés à l'usage vétérinaire. Toute reproduction interdite.
+(Supprimer "Membre du réseau" qui était un template variable non utilisé)
+
+---
+
+### APRÈS ces 8 corrections, vérifier :
+1. Clic sur "+ Ajouter un acte" → modal s'ouvre ✓
+2. Certificat Bonne santé ROCKY → affiche le nom de la clinique réel ✓
+3. Certificat modal → Markdown rendu (pas de # visible) ✓
+4. Ordonnance AULIT → plus de "Qté: null" ✓
+5. Page consultation → date en "18 avril 2026" ✓
+6. Nouveau RDV → vet connecté pré-sélectionné ✓

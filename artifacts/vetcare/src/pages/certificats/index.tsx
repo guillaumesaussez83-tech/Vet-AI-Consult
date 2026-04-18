@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useUser } from "@clerk/react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -28,6 +29,7 @@ const TYPES: TypeCertificat[] = [
 
 export default function CertificatsPage() {
   const { toast } = useToast();
+  const { user } = useUser();
   const [selectedType, setSelectedType] = useState<TypeCertificat | null>(null);
   const [patientId, setPatientId] = useState("");
   const [veterinaire, setVeterinaire] = useState("");
@@ -37,6 +39,25 @@ export default function CertificatsPage() {
   const [previewOpen, setPreviewOpen] = useState(false);
 
   const { data: patients = [] } = useListPatients();
+
+  const { data: parametresClinique } = useQuery({
+    queryKey: ["parametres-clinique"],
+    queryFn: () => fetch(`${API_BASE}/parametres-clinique`).then(r => r.json()),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  useEffect(() => {
+    if (user && !veterinaire) {
+      const nom = user.fullName ?? [user.firstName, user.lastName].filter(Boolean).join(" ");
+      if (nom) setVeterinaire(`Dr. ${nom}`);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (parametresClinique?.nomClinique && !clinique) {
+      setClinique(parametresClinique.nomClinique);
+    }
+  }, [parametresClinique]);
 
   const selectedPatient = patients.find(p => p.id.toString() === patientId);
 
@@ -56,6 +77,16 @@ export default function CertificatsPage() {
     if (!selectedType || !selectedPatient) return;
     setGenerating(true);
     try {
+      const cliniqueInfo = {
+        nom: clinique || parametresClinique?.nomClinique || "",
+        adresse: parametresClinique?.adresse || "",
+        codePostal: parametresClinique?.codePostal || "",
+        ville: parametresClinique?.ville || "",
+        telephone: parametresClinique?.telephone || "",
+        email: parametresClinique?.email || "",
+        numeroOrdre: parametresClinique?.numeroOrdre || "",
+        siret: parametresClinique?.siret || "",
+      };
       const r = await fetch(`${API_BASE}/ai/certificat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -66,6 +97,7 @@ export default function CertificatsPage() {
           consultations: Array.isArray(consultations) ? consultations : (consultations as any)?.consultations ?? [],
           veterinaire,
           clinique,
+          cliniqueInfo,
         }),
       });
       const data = await r.json();

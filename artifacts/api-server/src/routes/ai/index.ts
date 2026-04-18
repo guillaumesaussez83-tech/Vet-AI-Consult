@@ -117,7 +117,7 @@ router.post("/generer-facture-voix", async (req, res) => {
 
 router.post("/certificat", async (req, res) => {
   try {
-    const { type, patient, owner, vaccinations, consultations, actes, veterinaire, clinique } = req.body;
+    const { type, patient, owner, vaccinations, consultations, actes, veterinaire, clinique, cliniqueInfo } = req.body;
     if (!type || !patient) return res.status(400).json({ error: "type et patient requis" });
 
     const templates: Record<string, string> = {
@@ -129,6 +129,8 @@ router.post("/certificat", async (req, res) => {
     };
 
     const templateDesc = templates[type] ?? type;
+    const ci = cliniqueInfo ?? {};
+    const adresseComplete = [ci.adresse, ci.codePostal && ci.ville ? `${ci.codePostal} ${ci.ville}` : (ci.ville || "")].filter(Boolean).join(", ");
     const prompt = `Tu es vétérinaire praticien en France. Génère un ${templateDesc} officiel et professionnel.
 
 DONNÉES PATIENT :
@@ -144,11 +146,20 @@ ${consultations?.length ? `CONSULTATIONS RÉCENTES :\n${JSON.stringify(consultat
 ${actes?.length ? `ACTES RÉALISÉS :\n${JSON.stringify(actes, null, 2)}` : ""}
 
 VÉTÉRINAIRE SIGNATAIRE : ${veterinaire || "Dr. Vétérinaire"}
-${clinique ? `CLINIQUE : ${clinique}` : ""}
+CLINIQUE : ${ci.nom || clinique || "Clinique vétérinaire"}
+${adresseComplete ? `ADRESSE : ${adresseComplete}` : ""}
+${ci.telephone ? `TÉLÉPHONE : ${ci.telephone}` : ""}
+${ci.email ? `EMAIL : ${ci.email}` : ""}
+${ci.numeroOrdre ? `N° ORDRE : ${ci.numeroOrdre}` : ""}
+${ci.siret ? `SIRET : ${ci.siret}` : ""}
 
 DATE : ${new Date().toLocaleDateString("fr-FR")}
 
-Génère le certificat complet, professionnel, conforme aux exigences légales françaises. Inclus toutes les mentions obligatoires. Utilise un format structuré avec en-tête, corps du document et signature.
+INSTRUCTIONS :
+- Génère le certificat complet, professionnel, conforme aux exigences légales françaises.
+- Utilise les coordonnées exactes fournies ci-dessus — n'utilise JAMAIS de placeholders comme [Adresse du cabinet], [XXXX], [email@example.com], etc.
+- Inclus toutes les mentions obligatoires.
+- Utilise un format structuré avec en-tête (coordonnées clinique + vétérinaire), corps du document et signature.
 Réponds UNIQUEMENT avec le texte du certificat, prêt à imprimer.`;
 
     const message = await (await import("@workspace/integrations-anthropic-ai")).anthropic.messages.create({

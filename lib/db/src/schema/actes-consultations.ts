@@ -6,7 +6,7 @@ import { consultationsTable } from "./consultations";
 
 export const actesConsultationsTable = pgTable("actes_consultations", {
   id: serial("id").primaryKey(),
-  acteId: integer("acte_id").notNull().references(() => actesTable.id),
+  acteId: integer("acte_id").references(() => actesTable.id),
   consultationId: integer("consultation_id").notNull().references(() => consultationsTable.id),
   quantite: integer("quantite").notNull().default(1),
   prixUnitaire: real("prix_unitaire").notNull(),

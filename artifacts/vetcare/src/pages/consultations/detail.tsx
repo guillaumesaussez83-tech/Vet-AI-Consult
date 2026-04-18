@@ -15,7 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Brain, FileText, Sparkles, Check, ChevronRight, Plus, Trash2, Receipt, Loader2, Printer, ExternalLink, Mic } from "lucide-react";
+import { ArrowLeft, Brain, FileText, Sparkles, Check, ChevronRight, Plus, Trash2, Receipt, Loader2, Printer, ExternalLink, Mic, Package, CheckCircle2, XCircle } from "lucide-react";
 import { AnesthesieSection } from "@/components/AnesthesieSection";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PatientBarre } from "@/components/PatientBarre";
@@ -25,6 +25,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 
 const ETAPES = [
   { id: 1, label: "Anamnèse", icon: "📋" },
@@ -507,7 +508,7 @@ function EtapeDiagnosticIA({ consultation, onSave, onGenerateIA, isGenerating, o
 }
 
 function EtapeOrdonnanceActes({
-  consultation, actes, actesList, onActesChange, onAddActe, onRemoveActe,
+  consultation, actes, actesList, onActesChange, onRemoveActe,
   onSaveActes, onGenerateOrdonnance, onGenerateFacture, onGenerateFactureFromActes, totalHT, totalTTC,
   isGeneratingOrdonnance, isGeneratingFacture
 }: any) {
@@ -516,6 +517,37 @@ function EtapeOrdonnanceActes({
   const [creatingOrdonnanceIA, setCreatingOrdonnanceIA] = useState(false);
   const [ordonnanceIAId, setOrdonnanceIAId] = useState<number | null>(null);
   const [dicteeOpen, setDicteeOpen] = useState(false);
+  const [showAddActeDialog, setShowAddActeDialog] = useState(false);
+  const [newActeForm, setNewActeForm] = useState({ description: "", quantite: 1, prixHT: "", tva: "20", acteId: "" });
+  const [decrementeStockOpen, setDecrementeStockOpen] = useState(false);
+  const [decrementeStockResult, setDecrementeStockResult] = useState<any>(null);
+  const [decrementeStockLoading, setDecrementeStockLoading] = useState(false);
+
+  const handleDecrementeOrdonnance = async () => {
+    const ordonnanceText = consultation?.ordonnance;
+    if (!ordonnanceText) {
+      toast({ title: "Aucune ordonnance à analyser", variant: "destructive" });
+      return;
+    }
+    setDecrementeStockLoading(true);
+    setDecrementeStockResult(null);
+    setDecrementeStockOpen(true);
+    try {
+      const res = await fetch("/api/stock/decremente-ordonnance", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ordonnanceText, consultationId: consultation.id }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Erreur");
+      setDecrementeStockResult(data);
+    } catch (e: any) {
+      toast({ title: e.message ?? "Erreur", variant: "destructive" });
+      setDecrementeStockOpen(false);
+    } finally {
+      setDecrementeStockLoading(false);
+    }
+  };
 
   const handleDicteeConfirmed = async (prescriptions: PrescriptionConfirmee[], ordonnanceTexte: string) => {
     try {
@@ -631,7 +663,10 @@ function EtapeOrdonnanceActes({
               <CardTitle>Étape 5 — Actes réalisés</CardTitle>
               <p className="text-sm text-muted-foreground mt-1">Saisissez les actes et médicaments de cette consultation</p>
             </div>
-            <Button onClick={onAddActe} variant="outline" size="sm">
+            <Button onClick={() => {
+              setNewActeForm({ description: "", quantite: 1, prixHT: "", tva: "20", acteId: "" });
+              setShowAddActeDialog(true);
+            }} variant="outline" size="sm">
               <Plus className="mr-2 h-4 w-4" />
               Ajouter un acte
             </Button>
@@ -646,19 +681,28 @@ function EtapeOrdonnanceActes({
             actes.map((acte: ActeLine, idx: number) => (
               <div key={idx} className="grid gap-3 p-3 bg-muted/30 rounded-lg" style={{ gridTemplateColumns: "3fr 1fr 1.5fr auto" }}>
                 <div>
-                  <Label className="text-xs">Acte</Label>
-                  <Select value={String(acte.acteId)} onValueChange={v => updateActe(idx, "acteId", parseInt(v))}>
-                    <SelectTrigger className="mt-1 h-8">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {actesList.map((a: any) => (
-                        <SelectItem key={a.id} value={String(a.id)}>
-                          {a.nom} ({a.categorie})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Label className="text-xs">Acte / Description</Label>
+                  {acte.acteId > 0 && actesList.length > 0 ? (
+                    <Select value={String(acte.acteId)} onValueChange={v => updateActe(idx, "acteId", parseInt(v))}>
+                      <SelectTrigger className="mt-1 h-8">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {actesList.map((a: any) => (
+                          <SelectItem key={a.id} value={String(a.id)}>
+                            {a.nom} ({a.categorie})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <Input
+                      className="mt-1 h-8"
+                      value={acte.description}
+                      onChange={e => updateActe(idx, "description", e.target.value)}
+                      placeholder="Description de l'acte..."
+                    />
+                  )}
                 </div>
                 <div>
                   <Label className="text-xs">Qté</Label>
@@ -752,6 +796,17 @@ function EtapeOrdonnanceActes({
                 ) : (
                   <><FileText className="mr-2 h-4 w-4" />Créer ordonnance</>
                 )}
+              </Button>
+            )}
+            {consultation?.ordonnance && (
+              <Button
+                variant="outline"
+                onClick={handleDecrementeOrdonnance}
+                disabled={decrementeStockLoading}
+                className="border-blue-200 text-blue-700 hover:bg-blue-50"
+              >
+                <Package className="mr-2 h-4 w-4" />
+                {decrementeStockLoading ? "Analyse..." : "→ Décrémenter stock"}
               </Button>
             )}
           </div>
@@ -891,6 +946,171 @@ function EtapeOrdonnanceActes({
           )}
         </CardContent>
       </Card>
+
+      {/* Dialog — Résultat décrémentation stock depuis ordonnance */}
+      <Dialog open={decrementeStockOpen} onOpenChange={setDecrementeStockOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Package className="h-5 w-5 text-blue-600" />
+              Décrémentation stock — Ordonnance
+            </DialogTitle>
+          </DialogHeader>
+          {decrementeStockLoading ? (
+            <div className="flex flex-col items-center gap-3 py-8">
+              <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+              <p className="text-sm text-muted-foreground">Analyse de l'ordonnance par IA...</p>
+            </div>
+          ) : decrementeStockResult ? (
+            <div className="space-y-4">
+              <p className="text-sm font-medium text-muted-foreground">{decrementeStockResult.message}</p>
+              {decrementeStockResult.parsedMedicaments?.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Médicaments détectés</p>
+                  {decrementeStockResult.resultats?.map((r: any, i: number) => (
+                    <div key={i} className={`flex items-center justify-between rounded-lg border px-3 py-2 text-sm ${r.notFound ? "border-red-200 bg-red-50" : "border-green-200 bg-green-50"}`}>
+                      <div className="flex items-center gap-2">
+                        {r.notFound ? <XCircle className="h-4 w-4 text-red-500" /> : <CheckCircle2 className="h-4 w-4 text-green-600" />}
+                        <span className="font-medium">{r.nom}</span>
+                      </div>
+                      <div className="text-right text-xs text-muted-foreground">
+                        {r.notFound ? "Non trouvé dans le stock" : `${r.qtePrise} unité(s) sorties`}
+                        {r.alerteCreee && <span className="ml-2 text-amber-600 font-semibold">⚠ Stock bas</span>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {decrementeStockResult.nonTrouvesDansStock?.length > 0 && (
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-800">
+                  <strong>Produits non trouvés dans le stock :</strong> {decrementeStockResult.nonTrouvesDansStock.join(", ")}. Vérifiez les noms dans votre catalogue stock.
+                </div>
+              )}
+            </div>
+          ) : null}
+          <DialogFooter>
+            <Button onClick={() => setDecrementeStockOpen(false)}>Fermer</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog — Ajouter un acte manuellement */}
+      <Dialog open={showAddActeDialog} onOpenChange={setShowAddActeDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Ajouter un acte / médicament</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            {actesList.length > 0 && (
+              <div className="space-y-1">
+                <Label className="text-sm">Choisir depuis le catalogue (optionnel)</Label>
+                <Select
+                  value={newActeForm.acteId}
+                  onValueChange={v => {
+                    const found = actesList.find((a: any) => String(a.id) === v);
+                    setNewActeForm(f => ({
+                      ...f,
+                      acteId: v,
+                      description: found?.nom ?? f.description,
+                      prixHT: found?.prixDefaut != null ? String(found.prixDefaut) : f.prixHT,
+                    }));
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Catalogue d'actes..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {actesList.map((a: any) => (
+                      <SelectItem key={a.id} value={String(a.id)}>
+                        {a.nom} — {a.prixDefaut?.toFixed(2)} € HT
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            <div className="space-y-1">
+              <Label className="text-sm">Description *</Label>
+              <Input
+                value={newActeForm.description}
+                onChange={e => setNewActeForm(f => ({ ...f, description: e.target.value }))}
+                placeholder="Ex: Consultation, Radiographie, Meloxicam 1mg/mL..."
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label className="text-sm">Quantité</Label>
+                <Input
+                  type="number" min="1"
+                  value={newActeForm.quantite}
+                  onChange={e => setNewActeForm(f => ({ ...f, quantite: parseInt(e.target.value) || 1 }))}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-sm">Prix unitaire HT (€) *</Label>
+                <Input
+                  type="number" step="0.01" min="0"
+                  value={newActeForm.prixHT}
+                  onChange={e => setNewActeForm(f => ({ ...f, prixHT: e.target.value }))}
+                  placeholder="Ex: 35.00"
+                />
+              </div>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-sm">TVA</Label>
+              <Select value={newActeForm.tva} onValueChange={v => setNewActeForm(f => ({ ...f, tva: v }))}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="20">20 % (standard)</SelectItem>
+                  <SelectItem value="10">10 % (réduit)</SelectItem>
+                  <SelectItem value="5.5">5,5 %</SelectItem>
+                  <SelectItem value="0">0 % (exonéré)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {newActeForm.prixHT && (
+              <div className="bg-muted/40 rounded-lg p-3 text-sm space-y-1">
+                <div className="flex justify-between text-muted-foreground">
+                  <span>HT ({newActeForm.quantite} × {parseFloat(newActeForm.prixHT || "0").toFixed(2)} €)</span>
+                  <span>{(newActeForm.quantite * parseFloat(newActeForm.prixHT || "0")).toFixed(2)} €</span>
+                </div>
+                <div className="flex justify-between font-semibold">
+                  <span>TTC</span>
+                  <span>{(newActeForm.quantite * parseFloat(newActeForm.prixHT || "0") * (1 + parseFloat(newActeForm.tva) / 100)).toFixed(2)} €</span>
+                </div>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAddActeDialog(false)}>Annuler</Button>
+            <Button
+              onClick={() => {
+                if (!newActeForm.description.trim()) {
+                  toast({ title: "La description est obligatoire", variant: "destructive" });
+                  return;
+                }
+                if (!newActeForm.prixHT || parseFloat(newActeForm.prixHT) < 0) {
+                  toast({ title: "Le prix HT est obligatoire", variant: "destructive" });
+                  return;
+                }
+                const acteId = newActeForm.acteId ? parseInt(newActeForm.acteId) : 0;
+                onActesChange([...actes, {
+                  acteId,
+                  quantite: newActeForm.quantite,
+                  prixUnitaire: parseFloat(newActeForm.prixHT),
+                  description: newActeForm.description,
+                }]);
+                setShowAddActeDialog(false);
+                toast({ title: "Acte ajouté — cliquez sur « Enregistrer les actes »" });
+              }}
+            >
+              Ajouter l'acte
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

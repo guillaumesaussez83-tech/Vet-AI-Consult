@@ -213,7 +213,7 @@ router.patch("/:id", async (req, res) => {
       if (actes.length > 0) {
         await db.insert(actesConsultationsTable).values(
           actes.map(a => ({
-            acteId: a.acteId,
+            acteId: (a.acteId && a.acteId > 0) ? a.acteId : null,
             consultationId: params.data.id,
             quantite: a.quantite,
             prixUnitaire: a.prixUnitaire,
@@ -314,6 +314,9 @@ router.post("/:id/facture", async (req, res) => {
 
     if (actes.length === 0) {
       return res.status(400).json({ error: "Aucun acte saisi — veuillez ajouter et enregistrer vos actes avant de générer la facture." });
+    }
+    if (montantHT === 0) {
+      return res.status(400).json({ error: "Le total des actes est 0 € — saisissez des prix corrects avant de générer la facture." });
     }
 
     const year = new Date().getFullYear();

@@ -474,6 +474,75 @@ router.post("/decrementer-consultation", async (req, res) => {
 });
 
 // ──────────────────────────────────────────
+// DÉCRÉMENTER STOCK DEPUIS ORDONNANCE (T008)
+// ──────────────────────────────────────────
+router.post("/decremente-ordonnance", async (req, res) => {
+  try {
+    const { ordonnanceText, consultationId } = req.body;
+    if (!ordonnanceText || !consultationId) {
+      return res.status(400).json({ error: "ordonnanceText et consultationId requis" });
+    }
+
+    // Step 1 — AI parsing: extract medications + quantities from free-text ordonnance
+    const { anthropic } = await import("@workspace/integrations-anthropic-ai");
+    const { AI_MODEL } = await import("../../lib/constants");
+
+    const parsePrompt = `Analyse cette ordonnance vétérinaire et extrais UNIQUEMENT la liste des médicaments/produits avec leurs quantités.
+
+ORDONNANCE :
+${ordonnanceText}
+
+Réponds UNIQUEMENT en JSON valide, sans texte autour, format exact :
+[
+  { "nom": "Meloxicam", "quantite": 14 },
+  { "nom": "Amoxicilline 500mg", "quantite": 30 }
+]
+
+Règles :
+- "nom" = DCI ou nom commercial exact du médicament
+- "quantite" = nombre d'unités (comprimés, flacons, ml, etc.) à délivrer
+- Si quantité non précisée, mettre 1
+- Ignorer les vitamines, suppléments, conseils de soins
+- Si aucun médicament trouvé, retourner []`;
+
+    const aiResp = await anthropic.messages.create({
+      model: AI_MODEL,
+      max_tokens: 512,
+      messages: [{ role: "user", content: parsePrompt }],
+    });
+
+    let parsed: Array<{ nom: string; quantite: number }> = [];
+    try {
+      const raw = aiResp.content[0].type === "text" ? aiResp.content[0].text.trim() : "[]";
+      const jsonMatch = raw.match(/\[[\s\S]*\]/);
+      parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : [];
+    } catch {
+      return res.status(422).json({ error: "Impossible de parser les médicaments de l'ordonnance", parsedText: aiResp.content[0].type === "text" ? aiResp.content[0].text : "" });
+    }
+
+    if (parsed.length === 0) {
+      return res.json({ resultats: [], message: "Aucun médicament détecté dans l'ordonnance.", parsedMedicaments: [] });
+    }
+
+    // Step 2 — FEFO decrement
+    const resultats = await decrementerConsultationFEFO(parseInt(consultationId), parsed);
+    const trouves = resultats.filter(r => !r.notFound);
+    const nonTrouves = resultats.filter(r => r.notFound).map(r => r.nom);
+
+    return res.json({
+      resultats,
+      parsedMedicaments: parsed,
+      trouves: trouves.length,
+      nonTrouvesDansStock: nonTrouves,
+      message: `${trouves.length} produit(s) décrémenté(s) depuis l'ordonnance (FEFO).${nonTrouves.length > 0 ? ` Non trouvés dans le stock : ${nonTrouves.join(", ")}.` : ""}`,
+    });
+  } catch (err) {
+    req.log.error(err);
+    return res.status(500).json({ error: "Erreur lors de la décrémentation depuis ordonnance" });
+  }
+});
+
+// ──────────────────────────────────────────
 // SEEDER DÉMO
 // ──────────────────────────────────────────
 router.post("/seeder/demo", async (req, res) => {
