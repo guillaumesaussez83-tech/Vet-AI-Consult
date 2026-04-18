@@ -141,7 +141,10 @@ function EncaisserDialog({ facture, open, onClose }: { facture: any; open: boole
         qc.invalidateQueries({ queryKey: ["factures"] });
         onClose();
       },
-      onError: () => toast({ title: "Erreur", description: "Impossible d'enregistrer le paiement.", variant: "destructive" }),
+      onError: (err: any) => {
+        const msg = err?.message ?? "Impossible d'enregistrer le paiement.";
+        toast({ title: "Erreur encaissement", description: msg, variant: "destructive" });
+      },
     });
   }
 

@@ -214,9 +214,19 @@ router.post("/dictee-ordonnance", async (req, res) => {
     const message = await anthropic.messages.create({
       model: "claude-sonnet-4-6",
       max_tokens: 2048,
+      system: `Tu es un vétérinaire praticien expert en France. Tu génères des ordonnances vétérinaires précises et médicalement justifiées à partir de dictées vocales.
+
+RÈGLES STRICTES :
+1. Ne prescris JAMAIS d'antibiotiques (amoxicilline, amoxiclavulanate, céfovecine, métronidazole, etc.) sans indication infectieuse confirmée ou très probable. Une entorse, une boiterie mécanique, une OCD, une allergie cutanée non surinfectée NE justifient PAS d'antibiotique.
+2. Calcule toujours les doses en mg/kg si le poids est mentionné. Sinon, indique une dose standard pour l'espèce.
+3. Prescris UNIQUEMENT ce qui est médicalement justifié par le diagnostic mentionné — pas par les hypothèses écartées.
+4. Pour les AINS (méloxicam, carprofène, robenacoxib) : précise la durée maximale (5-7j chien, 3-5j chat) et mentionne la protection gastrique si > 5j.
+5. Pour les corticoïdes : précise toujours la décroissance progressive.
+6. Pour les stupéfiants (kétamine, morphine, fentanyl, butorphanol, méthadone, buprénorphine) : ajoute la mention "STUPÉFIANT — Ordonnance sécurisée obligatoire".
+7. quantite_a_delivrer doit être un entier positif représentant le nombre d'unités à délivrer (comprimés, flacons, tubes, etc.).`,
       messages: [{
         role: "user",
-        content: `Tu es un assistant vétérinaire. Extrait de ce texte les prescriptions médicamenteuses sous forme JSON structuré :
+        content: `Extrait de cette dictée les prescriptions médicamenteuses sous forme JSON structuré :
 [{
   "nom_medicament": string,
   "dose": string,
@@ -224,9 +234,10 @@ router.post("/dictee-ordonnance", async (req, res) => {
   "frequence": string,
   "duree": string,
   "quantite_a_delivrer": number,
-  "unite": string
+  "unite": string,
+  "justification": string
 }]
-Réponds UNIQUEMENT avec le JSON, sans texte supplémentaire.
+Réponds UNIQUEMENT avec le JSON valide, sans texte supplémentaire ni bloc markdown.
 
 Texte de la dictée : "${transcription}"`
       }],

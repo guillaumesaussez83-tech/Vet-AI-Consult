@@ -94,6 +94,21 @@ router.get("/", async (req, res) => {
   }
 });
 
+router.get("/by-consultation/:consultationId", async (req, res) => {
+  try {
+    const consultationId = parseInt(req.params.consultationId);
+    if (isNaN(consultationId)) return res.status(400).json({ error: "ID invalide" });
+
+    const [facture] = await db.select().from(facturesTable).where(eq(facturesTable.consultationId, consultationId));
+    if (!facture) return res.status(404).json(null);
+
+    return res.json({ ...facture, createdAt: facture.createdAt.toISOString() });
+  } catch (err) {
+    req.log.error(err);
+    return res.status(500).json({ error: "Erreur interne" });
+  }
+});
+
 router.get("/:id", async (req, res) => {
   try {
     const params = GetFactureParams.safeParse({ id: Number(req.params.id) });
@@ -252,6 +267,10 @@ router.patch("/:id", async (req, res) => {
 
     const [factureBefore] = await db.select().from(facturesTable).where(eq(facturesTable.id, params.data.id));
     if (!factureBefore) return res.status(404).json({ error: "Facture non trouvée" });
+
+    if (body.data.statut === "payee" && Number(factureBefore.montantTTC ?? 0) === 0) {
+      return res.status(400).json({ error: "Impossible de marquer comme payée une facture à 0 €. Ajoutez des actes d'abord." });
+    }
 
     const actesPourTotal = await db
       .select({ prixUnitaire: actesConsultationsTable.prixUnitaire, quantite: actesConsultationsTable.quantite })

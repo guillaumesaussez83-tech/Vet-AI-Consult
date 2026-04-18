@@ -5,7 +5,8 @@ import {
   useGenerateOrdonnance, useGenerateFacture, useListActes,
   getGetConsultationQueryKey, getListFacturesQueryKey
 } from "@workspace/api-client-react";
-import { useQueryClient } from "@tanstack/react-query";
+import { formatDateFR } from "@/lib/utils";
+import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
@@ -53,6 +54,17 @@ export default function ConsultationDetailPage() {
     query: { enabled: !!id, queryKey: getGetConsultationQueryKey(id) }
   });
   const { data: actesList } = useListActes();
+
+  const { data: factureExistante } = useQuery({
+    queryKey: ["facture-by-consultation", id],
+    queryFn: async () => {
+      const res = await fetch(`/api/factures/by-consultation/${id}`);
+      if (!res.ok) return null;
+      return res.json();
+    },
+    enabled: !!id,
+    refetchInterval: false,
+  });
 
   const updateConsultation = useUpdateConsultation();
   const getDiagnosticIA = useGetDiagnosticIA();
@@ -132,6 +144,7 @@ export default function ConsultationDetailPage() {
       await generateFacture.mutateAsync({ id });
       queryClient.invalidateQueries({ queryKey: getGetConsultationQueryKey(id) });
       queryClient.invalidateQueries({ queryKey: getListFacturesQueryKey() });
+      queryClient.invalidateQueries({ queryKey: ["facture-by-consultation", id] });
       toast({ title: "Facture générée" });
     } catch {
       toast({ title: "Erreur lors de la génération de la facture", variant: "destructive" });
@@ -155,6 +168,7 @@ export default function ConsultationDetailPage() {
       await generateFacture.mutateAsync({ id });
       queryClient.invalidateQueries({ queryKey: getGetConsultationQueryKey(id) });
       queryClient.invalidateQueries({ queryKey: getListFacturesQueryKey() });
+      queryClient.invalidateQueries({ queryKey: ["facture-by-consultation", id] });
       toast({ title: "Facture générée" });
     } catch {
       toast({ title: "Erreur lors de la génération de la facture", variant: "destructive" });
@@ -178,14 +192,12 @@ export default function ConsultationDetailPage() {
 
   const addActe = () => {
     const firstActe = actesList?.[0];
-    if (firstActe) {
-      setActes(prev => [...prev, {
-        acteId: firstActe.id,
-        quantite: 1,
-        prixUnitaire: firstActe.prixDefaut,
-        description: "",
-      }]);
-    }
+    setActes(prev => [...prev, {
+      acteId: firstActe?.id ?? 0,
+      quantite: 1,
+      prixUnitaire: firstActe?.prixDefaut ?? 0,
+      description: "",
+    }]);
   };
 
   const removeActe = (idx: number) => setActes(prev => prev.filter((_, i) => i !== idx));
@@ -211,11 +223,20 @@ export default function ConsultationDetailPage() {
           <Button variant="ghost" size="icon"><ArrowLeft className="h-4 w-4" /></Button>
         </Link>
         <div className="flex-1">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
+            <Link href="/consultations" className="hover:text-foreground transition-colors">Consultations</Link>
+            <span>/</span>
+            {patient && (
+              <Link href={`/patients/${patient.id}`} className="hover:text-primary transition-colors font-medium">
+                ← {patient.nom}
+              </Link>
+            )}
+          </div>
           <h1 className="text-2xl font-bold tracking-tight">
             Consultation — {patient?.nom ?? "Patient"}
           </h1>
           <p className="text-muted-foreground text-sm">
-            Dr. {consultation.veterinaire} • {consultation.date}
+            Dr. {consultation.veterinaire} • {formatDateFR(consultation.date)}
             {patient?.owner && ` • ${patient.owner.prenom} ${patient.owner.nom}`}
           </p>
         </div>
@@ -223,6 +244,27 @@ export default function ConsultationDetailPage() {
           {consultation.statut === "en_attente" ? "En attente" : consultation.statut === "en_cours" ? "En cours" : "Terminée"}
         </Badge>
       </div>
+
+      {factureExistante && (
+        <div className="flex items-center justify-between bg-green-50 border border-green-200 rounded-lg px-4 py-3">
+          <div className="flex items-center gap-3">
+            <Receipt className="h-5 w-5 text-green-600" />
+            <div>
+              <span className="font-semibold text-green-800">{factureExistante.numero}</span>
+              <span className="text-sm text-green-600 ml-2">
+                {factureExistante.montantTTC?.toFixed(2)} € TTC
+                {factureExistante.statut === "payee" ? " — Payée" : " — En attente"}
+              </span>
+            </div>
+          </div>
+          <Link href={`/factures/${factureExistante.id}`}>
+            <Button variant="outline" size="sm" className="border-green-300 text-green-700 hover:bg-green-100">
+              <ExternalLink className="h-3 w-3 mr-1" />
+              Voir la facture
+            </Button>
+          </Link>
+        </div>
+      )}
 
       {patient && (
         <PatientBarre patient={patient as any} />

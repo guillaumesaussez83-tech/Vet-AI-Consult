@@ -1,0 +1,612 @@
+# Sprint Correctifs — Objectif 9/10 partout
+*VétoAI — 5 blocs à exécuter dans l'ordre — basé sur stress test réel 18/04/2026*
+
+---
+
+## CONTEXTE
+Stress test A→Z effectué sur la prod. 3 bugs critiques bloquent le flux financier complet. Ce sprint les corrige tous + ajoute les finitions pour passer de 6.4/10 à 9/10.
+
+---
+
+## BLOC 1 — NETTOYAGE BDD + GARDE-FOU FACTURES VIDES
+
+### 1A. Nettoyage immédiat des factures fantômes
+Exécuter ce SQL en base (Drizzle ORM via script ou console Replit) :
+
+```sql
+-- Supprimer les lignes orphelines
+DELETE FROM lignes_facture 
+WHERE facture_id IN (
+  SELECT id FROM factures 
+  WHERE montant_ttc = 0 
+  AND statut = 'en_attente'
+);
+
+-- Supprimer les factures vides
+DELETE FROM factures 
+WHERE montant_ttc = 0 
+AND statut = 'en_attente';
+
+-- Mettre à jour l'indicateur stupéfiant pour la kétamine
+UPDATE stock 
+SET est_stupefiant = true 
+WHERE LOWER(nom_commercial) LIKE '%ketamine%' 
+   OR LOWER(nom_commercial) LIKE '%kétamine%'
+   OR LOWER(denomination) LIKE '%ketamine%'
+   OR LOWER(denomination) LIKE '%kétamine%';
+```
+
+### 1B. Côté serveur — Bloquer la création de facture sans lignes
+Dans la route POST /api/factures (ou équivalent) :
+
+```typescript
+// server/routes/factures.ts (ou similaire)
+router.post('/factures', authenticate, async (req, res) => {
+  const { consultationId, lignes, ...rest } = req.body;
+  
+  // GARDE-FOU : ne jamais créer une facture sans lignes
+  if (!lignes || lignes.length === 0) {
+    return res.status(400).json({ 
+      error: 'Impossible de créer une facture sans actes. Ajoutez au moins un acte avant de facturer.' 
+    });
+  }
+  
+  // ... reste de la logique
+});
+```
+
+### 1C. Bloquer le paiement d'une facture à 0€
+Dans la route PATCH /api/factures/:id/payer (ou équivalent pour changer le statut) :
+
+```typescript
+router.patch('/factures/:id/statut', authenticate, async (req, res) => {
+  const facture = await db.select().from(factures).where(eq(factures.id, parseInt(req.params.id))).get();
+  
+  if (!facture) return res.status(404).json({ error: 'Facture introuvable' });
+  
+  // GARDE-FOU : bloquer paiement facture 0€
+  if (req.body.statut === 'payee' && Number(facture.montant_ttc) === 0) {
+    return res.status(400).json({ 
+      error: 'Impossible de marquer comme payée une facture à 0€. Ajoutez des actes d\'abord.' 
+    });
+  }
+  
+  // ... reste
+});
+```
+
+---
+
+## BLOC 2 — RÉPARER LE BOUTON "AJOUTER UN ACTE" (BUG PRINCIPAL)
+
+### Diagnostic
+Le bouton "+ Ajouter un acte" sur `/consultations/[id]` → onglet "Ordonnance & Actes" a un onClick qui set un state mais le modal ne se rend jamais. Le modal existe dans le wizard `/consultations/nouvelle` mais n'a pas été porté sur la page détail.
+
+### Fix complet
+
+**2A. Trouver le composant responsable**
+Chercher dans `client/src/pages/` ou `client/src/components/` le fichier qui gère la vue détail d'une consultation. Il s'appelle probablement `ConsultationDetail.tsx`, `ConsultationPage.tsx`, ou similaire.
+
+Chercher aussi le modal d'ajout d'acte — probablement `AjouterActeModal.tsx`, `ActeModal.tsx`, ou `AddActeDialog.tsx`.
+
+**2B. Dans le composant page consultation détail, corriger la section actes :**
+
+```typescript
+// Dans ConsultationDetail.tsx (ou équivalent)
+import { useState } from 'react';
+import { AjouterActeModal } from '@/components/AjouterActeModal'; // ajuster le chemin
+
+export function ConsultationDetail() {
+  const [showActeModal, setShowActeModal] = useState(false);
+  const [actes, setActes] = useState(consultation?.lignesFacture || []);
+  
+  const handleActeAdded = (nouvelActe) => {
+    setActes(prev => [...prev, nouvelActe]);
+    setShowActeModal(false);
+  };
+
+  return (
+    <>
+      {/* ... autres onglets ... */}
+      
+      {/* Section Actes */}
+      <div>
+        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+          <h3>Étape 5 — Actes réalisés</h3>
+          <button 
+            onClick={() => setShowActeModal(true)}
+            className="btn btn-primary"
+          >
+            + Ajouter un acte
+          </button>
+        </div>
+        
+        {actes.length === 0 ? (
+          <p>Aucun acte ajouté. Cliquez sur "Ajouter un acte" pour commencer.</p>
+        ) : (
+          <table>
+            {/* liste des actes */}
+          </table>
+        )}
+        
+        {actes.length > 0 && (
+          <button onClick={handleEnregistrerActes}>
+            ✓ Enregistrer les actes
+          </button>
+        )}
+      </div>
+      
+      {/* MODAL — s'assurer qu'il est rendu ici */}
+      {showActeModal && (
+        <AjouterActeModal
+          consultationId={consultation.id}
+          patientId={consultation.patientId}
+          onClose={() => setShowActeModal(false)}
+          onActeAdded={handleActeAdded}
+        />
+      )}
+    </>
+  );
+}
+```
+
+**2C. Si le modal AjouterActeModal n'existe pas — le créer :**
+
+```typescript
+// client/src/components/AjouterActeModal.tsx
+import { useState } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { apiRequest } from '@/lib/queryClient';
+import { useToast } from '@/hooks/use-toast';
+
+interface AjouterActeModalProps {
+  consultationId: number;
+  patientId: number;
+  onClose: () => void;
+  onActeAdded: (acte: any) => void;
+}
+
+export function AjouterActeModal({ consultationId, patientId, onClose, onActeAdded }: AjouterActeModalProps) {
+  const { toast } = useToast();
+  const [description, setDescription] = useState('');
+  const [quantite, setQuantite] = useState(1);
+  const [prixUnitaireHt, setPrixUnitaireHt] = useState('');
+  const [tvaRate, setTvaRate] = useState(20);
+
+  const mutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest('POST', `/api/consultations/${consultationId}/actes`, {
+        description,
+        quantite,
+        prixUnitaireHt: parseFloat(prixUnitaireHt),
+        tvaRate,
+      });
+      return res.json();
+    },
+    onSuccess: (data) => {
+      toast({ title: 'Acte ajouté avec succès' });
+      onActeAdded(data);
+    },
+    onError: () => {
+      toast({ title: 'Erreur lors de l\'ajout', variant: 'destructive' });
+    },
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!description.trim() || !prixUnitaireHt) {
+      toast({ title: 'Description et prix obligatoires', variant: 'destructive' });
+      return;
+    }
+    mutation.mutate();
+  };
+
+  return (
+    <Dialog open onOpenChange={onClose}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Ajouter un acte / médicament</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label>Description *</label>
+            <Input
+              value={description}
+              onChange={e => setDescription(e.target.value)}
+              placeholder="Ex: Consultation, Radiographie, Meloxicam 1mg/mL..."
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label>Quantité</label>
+              <Input
+                type="number"
+                min={1}
+                value={quantite}
+                onChange={e => setQuantite(Number(e.target.value))}
+              />
+            </div>
+            <div>
+              <label>Prix unitaire HT (€) *</label>
+              <Input
+                type="number"
+                step="0.01"
+                min="0"
+                value={prixUnitaireHt}
+                onChange={e => setPrixUnitaireHt(e.target.value)}
+                placeholder="Ex: 35.00"
+              />
+            </div>
+          </div>
+          <div>
+            <label>TVA (%)</label>
+            <select
+              value={tvaRate}
+              onChange={e => setTvaRate(Number(e.target.value))}
+              className="w-full border rounded p-2"
+            >
+              <option value={20}>20% (standard)</option>
+              <option value={10}>10% (réduit)</option>
+              <option value={5.5}>5.5%</option>
+              <option value={0}>0%</option>
+            </select>
+          </div>
+          <div className="flex gap-2 justify-end">
+            <Button type="button" variant="outline" onClick={onClose}>Annuler</Button>
+            <Button type="submit" disabled={mutation.isPending}>
+              {mutation.isPending ? 'Ajout...' : 'Ajouter l\'acte'}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+```
+
+**2D. Route serveur si elle n'existe pas :**
+
+```typescript
+// server/routes/consultations.ts
+// Ajouter un acte à une consultation existante
+router.post('/consultations/:id/actes', authenticate, async (req, res) => {
+  const consultationId = parseInt(req.params.id);
+  const { description, quantite, prixUnitaireHt, tvaRate } = req.body;
+  
+  if (!description || !prixUnitaireHt) {
+    return res.status(400).json({ error: 'Description et prix obligatoires' });
+  }
+  
+  const montantHt = quantite * parseFloat(prixUnitaireHt);
+  const montantTva = montantHt * (tvaRate / 100);
+  const montantTtc = montantHt + montantTva;
+  
+  const [acte] = await db.insert(lignesFacture).values({
+    consultationId,
+    description,
+    quantite,
+    prixUnitaireHt: prixUnitaireHt.toString(),
+    tvaRate: tvaRate.toString(),
+    totalHt: montantHt.toString(),
+  }).returning();
+  
+  // Recalculer le total de la facture associée
+  const facture = await db.select()
+    .from(factures)
+    .where(eq(factures.consultationId, consultationId))
+    .get();
+    
+  if (facture) {
+    const allLignes = await db.select()
+      .from(lignesFacture)
+      .where(eq(lignesFacture.consultationId, consultationId));
+    
+    const totalHt = allLignes.reduce((sum, l) => sum + parseFloat(l.totalHt || '0'), 0);
+    const totalTva = allLignes.reduce((sum, l) => 
+      sum + (parseFloat(l.totalHt || '0') * (parseFloat(l.tvaRate || '20') / 100)), 0);
+    const totalTtc = totalHt + totalTva;
+    
+    await db.update(factures)
+      .set({ montantHt: totalHt.toString(), montantTtc: totalTtc.toString() })
+      .where(eq(factures.id, facture.id));
+  }
+  
+  res.json(acte);
+});
+```
+
+---
+
+## BLOC 3 — BOUTON "CRÉER LA FACTURE" + FLUX CONSULTATION→FACTURATION
+
+### Problème
+Une consultation terminée n'a aucun chemin vers la facturation. Il faut un bouton "Créer la facture" sur la page consultation détail qui crée la facture et y ajoute les actes enregistrés.
+
+### Fix
+
+**3A. Dans la page consultation détail, après la liste des actes :**
+
+```typescript
+// Bouton "Créer la facture" — visible seulement si :
+// - la consultation a au moins 1 acte
+// - aucune facture n'est encore associée à cette consultation
+
+const { data: factureExistante } = useQuery({
+  queryKey: ['/api/factures/consultation', consultation.id],
+  queryFn: () => apiRequest('GET', `/api/factures/by-consultation/${consultation.id}`).then(r => r.ok ? r.json() : null),
+});
+
+const creerFacture = useMutation({
+  mutationFn: async () => {
+    const res = await apiRequest('POST', '/api/factures', {
+      consultationId: consultation.id,
+      patientId: consultation.patientId,
+    });
+    return res.json();
+  },
+  onSuccess: (data) => {
+    toast({ title: `Facture ${data.numero} créée` });
+    window.location.href = `/factures/${data.id}`;
+  },
+  onError: () => toast({ title: 'Erreur création facture', variant: 'destructive' }),
+});
+
+// Dans le JSX, sous la liste des actes :
+{actes.length > 0 && !factureExistante && (
+  <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+    <p className="text-sm text-blue-700 mb-2">
+      {actes.length} acte(s) enregistré(s) — Total : {totalTtc.toFixed(2)} €
+    </p>
+    <Button 
+      onClick={() => creerFacture.mutate()}
+      disabled={creerFacture.isPending}
+      className="w-full"
+    >
+      💶 Créer la facture ({totalTtc.toFixed(2)} €)
+    </Button>
+  </div>
+)}
+
+{factureExistante && (
+  <div className="mt-4 p-3 bg-green-50 rounded-lg border border-green-200 flex justify-between items-center">
+    <span className="text-green-700 font-medium">
+      📄 {factureExistante.numero} — {parseFloat(factureExistante.montant_ttc || '0').toFixed(2)} € 
+      ({factureExistante.statut})
+    </span>
+    <a href={`/factures/${factureExistante.id}`} className="text-blue-600 underline text-sm">
+      Voir la facture →
+    </a>
+  </div>
+)}
+```
+
+**3B. Route GET /api/factures/by-consultation/:id**
+
+```typescript
+router.get('/factures/by-consultation/:consultationId', authenticate, async (req, res) => {
+  const consultationId = parseInt(req.params.consultationId);
+  const facture = await db.select()
+    .from(factures)
+    .where(and(
+      eq(factures.consultationId, consultationId),
+      eq(factures.clinicId, req.auth.clinicId)
+    ))
+    .get();
+  
+  if (!facture) return res.status(404).json(null);
+  res.json(facture);
+});
+```
+
+**3C. La route POST /api/factures doit maintenant calculer les lignes depuis la consultation :**
+
+```typescript
+router.post('/factures', authenticate, async (req, res) => {
+  const { consultationId, patientId } = req.body;
+  
+  // Récupérer les actes de la consultation
+  const lignes = await db.select()
+    .from(lignesFacture)
+    .where(eq(lignesFacture.consultationId, consultationId));
+  
+  if (lignes.length === 0) {
+    return res.status(400).json({ 
+      error: 'Impossible de créer une facture sans actes enregistrés.' 
+    });
+  }
+  
+  const totalHt = lignes.reduce((sum, l) => sum + parseFloat(l.totalHt || '0'), 0);
+  const totalTva = lignes.reduce((sum, l) => 
+    sum + (parseFloat(l.totalHt || '0') * (parseFloat(l.tvaRate || '20') / 100)), 0);
+  const totalTtc = totalHt + totalTva;
+  
+  // Générer le numéro de facture
+  const year = new Date().getFullYear();
+  const count = await db.select({ count: sql`COUNT(*)` })
+    .from(factures)
+    .where(and(
+      eq(factures.clinicId, req.auth.clinicId),
+      sql`EXTRACT(YEAR FROM created_at) = ${year}`
+    ))
+    .get();
+  const numero = `FACT-${year}-${String(Number(count?.count || 0) + 1).padStart(4, '0')}`;
+  
+  const [facture] = await db.insert(factures).values({
+    consultationId,
+    patientId,
+    clinicId: req.auth.clinicId,
+    numero,
+    statut: 'en_attente',
+    montantHt: totalHt.toString(),
+    montantTtc: totalTtc.toString(),
+    dateEmission: new Date().toISOString().split('T')[0],
+  }).returning();
+  
+  res.json(facture);
+});
+```
+
+---
+
+## BLOC 4 — FORMATAGE DES DATES (PARTOUT)
+
+### Créer un helper partagé
+
+```typescript
+// client/src/lib/formatters.ts
+
+export const formatDate = (dateStr: string | Date | null | undefined): string => {
+  if (!dateStr) return '—';
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return String(dateStr);
+  return d.toLocaleDateString('fr-FR', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    timeZone: 'Europe/Paris',
+  });
+};
+
+export const formatDateShort = (dateStr: string | Date | null | undefined): string => {
+  if (!dateStr) return '—';
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return String(dateStr);
+  return d.toLocaleDateString('fr-FR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    timeZone: 'Europe/Paris',
+  });
+};
+
+export const formatDateTime = (dateStr: string | Date | null | undefined): string => {
+  if (!dateStr) return '—';
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return String(dateStr);
+  return d.toLocaleString('fr-FR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: 'Europe/Paris',
+  });
+};
+
+export const formatCurrency = (amount: number | string | null | undefined): string => {
+  const n = Number(amount || 0);
+  return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(n);
+};
+```
+
+### Remplacer dans tous les fichiers
+
+Chercher et remplacer dans tout le code client :
+- `new Date(x).toLocaleDateString()` → `formatDate(x)`
+- `date.split('T')[0]` dans les affichages → `formatDate(x)`
+- Toute date affichée au format `YYYY-MM-DD` dans les composants
+
+Fichiers prioritaires à corriger :
+- `client/src/pages/factures/[id].tsx` (ou similaire) — "Date consultation"
+- `client/src/pages/factures/index.tsx` — dates dans la liste
+- `client/src/components/ConsultationCard.tsx` (ou similaire)
+- `client/src/pages/patients/[id].tsx` — historique consultations
+
+---
+
+## BLOC 5 — AMÉLIORATION PROMPT ORDONNANCE IA
+
+### Problème
+L'ordonnance IA prescrit de l'Amoxicilline pour une entorse ligamentaire (pas d'indication infectieuse). Le prompt doit être plus strict sur les indications.
+
+### Fix — Améliorer le prompt système de l'ordonnance
+
+Trouver le fichier qui appelle l'API Anthropic pour l'ordonnance (probablement dans `server/routes/` ou `server/services/`).
+
+Remplacer/améliorer le prompt système :
+
+```typescript
+const ORDONNANCE_SYSTEM_PROMPT = `Tu es un vétérinaire praticien expert. Tu génères des ordonnances vétérinaires précises et médicalement justifiées.
+
+RÈGLES STRICTES :
+1. Ne prescris JAMAIS d'antibiotiques (amoxicilline, amoxiclavulanate, céfovecine, métronidazole, etc.) sans indication infectieuse confirmée ou très probable. Une entorse, une boiterie mécanique, une OCD, une allergie cutanée non surinfectée NE justifient PAS d'ATB.
+2. Calcule toujours les doses en mg/kg en fonction du POIDS EXACT fourni.
+3. Prescris uniquement ce qui est médicalement indiqué par le diagnostic retenu (pas les hypothèses écartées).
+4. Pour les AINS (méloxicam, carprofène, robenacoxib) : toujours préciser la durée maximale (5-7j pour les chiens, 3-5j pour les chats) et mentionner la protection gastrique si > 5j.
+5. Pour les corticoïdes : toujours préciser la décroissance progressive.
+6. Format de sortie : liste numérotée, une ligne par médicament avec : nom (DCI + spécialité si possible), forme galénique, dose exacte, fréquence, durée, voie d'administration.
+
+ESPÈCE : ${species}
+POIDS : ${weight} kg
+DIAGNOSTIC RETENU : ${diagnostic}
+CONTEXTE CLINIQUE : ${context}
+
+Génère l'ordonnance adaptée à ce cas précis. Justifie brièvement chaque prescription en 1 ligne.`;
+```
+
+---
+
+## BLOC 6 — AMÉLIORATIONS UX SUPPLÉMENTAIRES (pour atteindre 9/10)
+
+### 6A. Indicateur de consultation ROCKY dans salle d'attente
+Quand une consultation est créée (statut 'en_cours'), elle devrait apparaître automatiquement dans la salle d'attente colonne "EN CONSULTATION". Vérifier la query qui alimente la salle d'attente et s'assurer qu'elle joint les consultations du jour.
+
+### 6B. Breadcrumb/lien retour sur la page consultation
+Depuis `/consultations/13`, ajouter un lien "← Retour à ROCKY" qui pointe vers `/patients/[patientId]`.
+
+```typescript
+// En haut de la page consultation détail
+<Link href={`/patients/${consultation.patientId}`} className="text-blue-600 text-sm flex items-center gap-1">
+  ← Retour à {consultation.patient?.nom}
+</Link>
+```
+
+### 6C. Tronquer le texte du diagnostic dans la fiche facture
+La fiche facture affiche "Entorse ligamentaire carpe gauche grade II. Traitement médical conservateur : méloxica..." — ajouter un tooltip ou un accordéon pour voir le texte complet.
+
+```typescript
+<div title={diagnostic} className="cursor-help">
+  {diagnostic.length > 60 ? diagnostic.slice(0, 60) + '...' : diagnostic}
+</div>
+```
+
+### 6D. Section Encaissement — afficher le rendu monnaie AVANT validation
+Quand mode Espèces sélectionné et montant saisi, afficher :
+```
+Montant dû : 45.00 €
+Montant reçu : 50.00 €
+Rendu monnaie : 5.00 € ← en vert, gros, visible
+```
+
+---
+
+## ORDRE D'EXÉCUTION RECOMMANDÉ
+
+```
+1. Bloc 1 (SQL nettoyage) → immédiat, 5 min
+2. Bloc 4 (formatters dates) → 20 min, impact visuel immédiat partout
+3. Bloc 2 (modal actes) → 45 min, débloque tout le flux financier
+4. Bloc 3 (bouton facture + routes) → 30 min, ferme la boucle clinique→financier
+5. Bloc 5 (prompt ordonnance) → 15 min, qualité clinique
+6. Bloc 6 (UX polish) → 20 min, finition
+```
+
+**Total estimé : 2h30 — Score attendu après : 9/10 partout**
+
+---
+
+## TESTS DE VALIDATION POST-DÉPLOIEMENT
+
+Après chaque déploiement, vérifier dans l'ordre :
+
+1. `/factures` → aucune facture à 0€ dans la liste
+2. `/consultations/[id]` → onglet "Ordonnance & Actes" → clic "+ Ajouter un acte" → modal s'ouvre
+3. Ajouter 2 actes → "Enregistrer les actes" → bouton "Créer la facture (XX.XX€)" apparaît
+4. Clic "Créer la facture" → redirect vers `/factures/[id]` avec montant correct
+5. Sélectionner Espèces → montant → vérifier rendu monnaie s'affiche
+6. Valider le paiement → section encaissement disparaît
+7. Tenter de payer une facture à 0€ → toast d'erreur serveur
+8. `/factures/[id]` → "Date consultation : 17 avril 2026" (pas "2026-04-17")
