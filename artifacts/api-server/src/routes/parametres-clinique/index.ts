@@ -7,6 +7,7 @@ const router = Router();
 router.get("/", async (req, res) => {
   try {
     const rows = await db.select().from(parametresCliniqueTable).limit(1);
+    const DEFAULT_MENTIONS = "Vétérinaire inscrit à l'Ordre National des Vétérinaires. Données personnelles traitées conformément au RGPD. Document confidentiel à conserver.";
     if (rows.length === 0) {
       return res.json({
         id: null,
@@ -22,11 +23,16 @@ router.get("/", async (req, res) => {
         numTVA: null,
         logoUrl: null,
         horaires: null,
-        mentionsLegales: null,
+        mentionsLegales: DEFAULT_MENTIONS,
       });
     }
     const row = rows[0];
-    return res.json({ ...row, createdAt: row.createdAt.toISOString(), updatedAt: row.updatedAt.toISOString() });
+    return res.json({
+      ...row,
+      mentionsLegales: row.mentionsLegales ?? DEFAULT_MENTIONS,
+      createdAt: row.createdAt.toISOString(),
+      updatedAt: row.updatedAt.toISOString(),
+    });
   } catch (err) {
     req.log.error(err);
     return res.status(500).json({ error: "Erreur interne" });

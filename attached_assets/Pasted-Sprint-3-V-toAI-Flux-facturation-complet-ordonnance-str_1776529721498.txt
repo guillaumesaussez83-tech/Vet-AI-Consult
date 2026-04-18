@@ -1,0 +1,166 @@
+Sprint 3 VétoAI — Flux facturation complet + ordonnance structurée + rappels liés
+
+---
+
+### BLOC A : Flux facturation bout-en-bout (critique business)
+
+Objectif : depuis une consultation terminée → créer actes → créer facture → encaisser.
+
+**A1 — Bouton "Finaliser et facturer" en fin de consultation**
+Sur l'onglet "Ordonnance & Actes" quand la consultation a au moins 1 acte :
+1. Ajouter un bouton bleu "Finaliser et facturer" en bas de page
+2. Ce bouton appelle POST /api/factures avec :
+   - `consultationId`
+   - `patientId` (depuis la consultation)
+   - `lignes` (actes de la consultation)
+   - Calcule automatiquement `totalHt`, `tva`, `montantTtc`
+3. Redirige vers `/factures/[newId]`
+
+**A2 — Route POST /api/factures depuis actes consultation**
+Si pas encore implémenté :
+```typescript
+router.post('/api/factures', async (req, res) => {
+  const { consultationId, patientId } = req.body
+  const actes = await db.select().from(actesTable).where(eq(actesTable.consultationId, consultationId))
+  if (!actes.length) return res.status(400).json({ error: 'Aucun acte — impossible de facturer' })
+  
+  const lignes = actes.map(a => ({
+    description: a.description,
+    quantite: a.quantite,
+    prixUnitaireHt: a.prixUnitaireHt,
+    tauxTva: a.tauxTva ?? 20,
+    total: a.quantite * a.prixUnitaireHt * (1 + (a.tauxTva ?? 20) / 100)
+  }))
+  const totalHt = lignes.reduce((sum, l) => sum + l.quantite * l.prixUnitaireHt, 0)
+  const montantTtc = lignes.reduce((sum, l) => sum + l.total, 0)
+  
+  const numero = await generateFactureNumero() // FACT-2026-XXXX
+  const [facture] = await db.insert(facturesTable).values({
+    consultationId, patientId, lignes, totalHt, montantTtc, statut: 'en_attente', numero
+  }).returning()
+  
+  res.json(facture)
+})
+```
+
+**A3 — Garde-fous serveur (si pas encore déployés)**
+```typescript
+// Dans PATCH /api/factures/:id
+if (req.body.statut === 'payee' && Number(facture.montant_ttc) === 0) {
+  return res.status(400).json({ error: 'Impossible de marquer payée une facture à 0€' })
+}
+// Dans POST /api/factures
+if (!lignes || lignes.length === 0) {
+  return res.status(400).json({ error: 'Impossible de créer une facture sans actes' })
+}
+```
+
+---
+
+### BLOC B : Ordonnance — layout structuré à l'impression
+
+**B1 — Refactorer le composant prescription dans /ordonnances/[id]/imprimer**
+
+Remplacer le bloc de texte plat par un tableau structuré :
+```tsx
+<table className="w-full border-collapse mt-4">
+  <thead>
+    <tr className="border-b-2 border-gray-300">
+      <th className="text-left py-2">Médicament</th>
+      <th className="text-left py-2">Posologie</th>
+      <th className="text-left py-2">Voie</th>
+      <th className="text-left py-2">Durée</th>
+      <th className="text-right py-2">Qté</th>
+    </tr>
+  </thead>
+  <tbody>
+    {lignes.filter(l => l.nomMedicament).map((ligne, i) => (
+      <tr key={i} className="border-b border-gray-100 py-3">
+        <td className="py-3 font-semibold">{ligne.nomMedicament}</td>
+        <td className="py-3">{ligne.dosage ?? '—'}</td>
+        <td className="py-3">{ligne.voieAdmin ?? '—'}</td>
+        <td className="py-3">{ligne.duree ? `${ligne.duree} j` : '—'}</td>
+        <td className="py-3 text-right">{ligne.quantite ?? '—'} {ligne.unite ?? ''}</td>
+      </tr>
+    ))}
+  </tbody>
+</table>
+```
+
+**B2 — Ajouter le N° Ordre vétérinaire sur le document imprimé**
+Dans la section PRESCRIPTEUR de l'ordonnance imprimée :
+```tsx
+<div>
+  <p className="font-bold">Dr. {veterinaire.nom}</p>
+  <p className="text-sm text-gray-600">N° Ordre : {clinicSettings.numeroOrdre}</p>
+</div>
+```
+
+---
+
+### BLOC C : Rappels liés à la consultation
+
+**C1 — Ajouter un panel "Rappels post-consultation" dans l'onglet Ordonnance & Actes**
+
+Après la section Ordonnance, ajouter :
+```tsx
+<div className="mt-6 border-t pt-4">
+  <h3 className="font-semibold mb-3">Rappels post-consultation</h3>
+  <div className="flex gap-2 flex-wrap">
+    {['J+7 Contrôle', 'J+14 Suivi', '1 mois Bilan', '1 an Vaccin'].map(label => (
+      <Button variant="outline" size="sm" key={label}
+        onClick={() => createRappel({ consultationId, patientId, label, delai: parseDelai(label) })}>
+        + {label}
+      </Button>
+    ))}
+  </div>
+</div>
+```
+
+**C2 — Route POST /api/rappels depuis consultation**
+```typescript
+router.post('/api/rappels', async (req, res) => {
+  const { consultationId, patientId, label, joursDelai } = req.body
+  const dateEcheance = new Date()
+  dateEcheance.setDate(dateEcheance.getDate() + joursDelai)
+  const rappel = await db.insert(rappelsTable).values({
+    consultationId, patientId, label, dateEcheance, statut: 'actif'
+  }).returning()
+  res.json(rappel[0])
+})
+```
+
+---
+
+### BLOC D : Performance — Skeletons de chargement
+
+Pages concernées : Agenda, Encaissements, Certificats (flash blanc ~3s)
+
+Pour chaque page, wrapper le contenu principal dans :
+```tsx
+import { Skeleton } from "@/components/ui/skeleton"
+
+if (isLoading) return (
+  <div className="p-6 space-y-4">
+    <Skeleton className="h-8 w-64" />
+    <Skeleton className="h-32 w-full" />
+    <Skeleton className="h-32 w-full" />
+  </div>
+)
+```
+
+Ajouter aussi dans `App.tsx` ou le router principal :
+```tsx
+<Suspense fallback={<PageSkeleton />}>
+  <Routes>...</Routes>
+</Suspense>
+```
+
+---
+
+### Vérifications post-Sprint 3 :
+1. Ajouter un acte → Finaliser → Facture créée avec le bon montant ✓
+2. Ordonnance imprimée → tableau lisible, pas de "null" ✓
+3. N° Ordre vétérinaire visible sur ordonnance ✓
+4. Créer rappel J+7 depuis consultation → apparaît dans /rappels ✓
+5. Agenda, Encaissements, Certificats → skeleton visible pendant le chargement ✓

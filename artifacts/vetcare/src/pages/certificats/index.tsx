@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { Award, Loader2, Printer, CheckCircle, FileText, Heart, Shield, ClipboardList, Pill } from "lucide-react";
+import ReactMarkdown from "react-markdown";
 import { useListPatients } from "@workspace/api-client-react";
 
 const API_BASE = "/api";
@@ -217,7 +218,9 @@ export default function CertificatsPage() {
           </DialogHeader>
           <div className="flex-1 overflow-y-auto">
             <div className="print:block">
-              <pre className="text-sm whitespace-pre-wrap font-sans leading-relaxed bg-white p-6 border rounded-lg min-h-[400px]">{certificatText}</pre>
+              <div className="text-sm leading-relaxed bg-white p-6 border rounded-lg min-h-[400px] prose prose-sm max-w-none prose-headings:text-gray-900 prose-p:text-gray-700 prose-strong:text-gray-900 prose-ul:text-gray-700 prose-li:my-0.5">
+                <ReactMarkdown>{certificatText}</ReactMarkdown>
+              </div>
             </div>
           </div>
           <DialogFooter className="gap-2">

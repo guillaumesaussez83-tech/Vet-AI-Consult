@@ -5,7 +5,7 @@ import {
   useGenerateOrdonnance, useGenerateFacture, useListActes,
   getGetConsultationQueryKey, getListFacturesQueryKey
 } from "@workspace/api-client-react";
-import { formatDateFR } from "@/lib/utils";
+import { formatDateFR, formatDateLong } from "@/lib/utils";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -237,7 +237,7 @@ export default function ConsultationDetailPage() {
             Consultation — {patient?.nom ?? "Patient"}
           </h1>
           <p className="text-muted-foreground text-sm">
-            Dr. {consultation.veterinaire} • {formatDateFR(consultation.date)}
+            Dr. {consultation.veterinaire} • {formatDateLong(consultation.date)}
             {patient?.owner && ` • ${patient.owner.prenom} ${patient.owner.nom}`}
           </p>
         </div>

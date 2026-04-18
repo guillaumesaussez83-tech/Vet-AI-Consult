@@ -301,9 +301,22 @@ router.post("/confirmer-dictee-ordonnance", async (req, res) => {
     const lastSeq = lastOrd?.num ? parseInt(lastOrd.num.split("-")[2] ?? "0") : 0;
     const numeroOrdonnance = `ORD-${year}-${String(lastSeq + 1).padStart(5, "0")}`;
 
-    const contenu = prescriptions.map((p: any) =>
-      `${p.nom_medicament} — ${p.dose} — ${p.voie_administration} — ${p.frequence} — pendant ${p.duree} — Qté: ${p.quantite_a_delivrer} ${p.unite}`
-    ).join("\n");
+    const contenu = prescriptions.map((p: any) => {
+      const qte = p.quantite_a_delivrer != null ? `${p.quantite_a_delivrer} ${p.unite ?? ""}`.trim() : "";
+      const dose = p.dose ?? "";
+      const voie = p.voie_administration ?? "";
+      const freq = p.frequence ?? "";
+      const duree = p.duree ?? "";
+      const parts = [
+        p.nom_medicament,
+        dose && `Dose : ${dose}`,
+        voie && `Voie : ${voie}`,
+        freq && `Fréquence : ${freq}`,
+        duree && `Durée : ${duree}`,
+        qte && `Qté : ${qte}`,
+      ].filter(Boolean);
+      return parts.join(" — ");
+    }).join("\n");
 
     const [ordonnance] = await db.insert(ordonnancesTable).values({
       consultationId: Number(consultationId),

@@ -11,9 +11,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
+import { useListPatients } from "@workspace/api-client-react";
 import {
   ChevronLeft, ChevronRight, Plus, Calendar, Settings, ClipboardList,
-  User, Clock, Stethoscope, Edit2, Trash2, AlertTriangle, CalendarX2, Loader2,
+  User, Clock, Stethoscope, Edit2, Trash2, AlertTriangle, CalendarX2, Loader2, Search,
 } from "lucide-react";
 
 const API = "/api/agenda";
@@ -448,11 +449,13 @@ function RdvDialog({ open, onClose, vets, initialDate, initialHeure, initialVetI
   onSaved: () => void;
 }) {
   const { toast } = useToast();
+  const defaultVetId = rdv?.veterinaireId ?? (initialVetId ? initialVetId : (vets[0]?.id ?? ""));
   const [form, setForm] = useState(() => ({
-    veterinaireId: rdv?.veterinaireId ?? initialVetId,
-    dateHeure: rdv?.dateHeure ?? `${initialDate}T${initialHeure || "09:00"}`,
+    veterinaireId: defaultVetId,
+    dateHeure: rdv?.dateHeure ?? `${initialDate || new Date().toISOString().split("T")[0]}T${initialHeure || "09:00"}`,
     dureeMinutes: rdv?.dureeMinutes ?? 20,
     typeRdv: rdv?.typeRdv ?? "consultation",
+    patientId: rdv?.patient?.id ?? null as number | null,
     animalNom: rdv?.animalNom ?? rdv?.patient?.nom ?? "",
     animalEspece: rdv?.animalEspece ?? rdv?.patient?.espece ?? "chien",
     proprietaireNom: rdv?.proprietaireNom ?? (rdv?.owner ? `${rdv.owner.prenom ?? ""} ${rdv.owner.nom}`.trim() : ""),
@@ -460,6 +463,15 @@ function RdvDialog({ open, onClose, vets, initialDate, initialHeure, initialVetI
     motif: rdv?.motif ?? "",
     notes: rdv?.notes ?? "",
   }));
+  const [patientSearch, setPatientSearch] = useState("");
+  const [showPatientList, setShowPatientList] = useState(false);
+  const { data: allPatients = [] } = useListPatients();
+  const filteredPatients = patientSearch.length >= 2
+    ? allPatients.filter(p =>
+        p.nom.toLowerCase().includes(patientSearch.toLowerCase()) ||
+        (p.owner && `${p.owner.prenom ?? ""} ${p.owner.nom}`.toLowerCase().includes(patientSearch.toLowerCase()))
+      ).slice(0, 8)
+    : [];
 
   const { data: slots = [] } = useQuery<Slot[]>({
     queryKey: ["agenda-slots", form.veterinaireId, form.dateHeure.split("T")[0]],
@@ -584,36 +596,98 @@ function RdvDialog({ open, onClose, vets, initialDate, initialHeure, initialVetI
             </div>
           </div>
 
-          {/* Animal */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1">
-              <Label>Nom de l'animal</Label>
-              <Input value={form.animalNom} onChange={e => set("animalNom", e.target.value)} placeholder="Rex, Félix..." />
-            </div>
-            <div className="space-y-1">
-              <Label>Espèce</Label>
-              <Select value={form.animalEspece} onValueChange={v => set("animalEspece", v)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {Object.entries(ESPECE_LABELS).map(([k, v]) => (
-                    <SelectItem key={k} value={k}>{v}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+          {/* Patient (recherche liée) */}
+          <div className="space-y-1">
+            <Label>Patient (recherche dans la base)</Label>
+            {form.patientId ? (
+              <div className="flex items-center gap-2 px-3 py-2 border rounded-md bg-blue-50 border-blue-200">
+                <User className="h-4 w-4 text-blue-600 shrink-0" />
+                <span className="text-sm font-medium text-blue-900 flex-1">{form.animalNom}</span>
+                <span className="text-xs text-blue-600">{form.proprietaireNom}</span>
+                <button
+                  type="button"
+                  className="text-xs text-blue-400 hover:text-red-500 ml-2"
+                  onClick={() => {
+                    set("patientId", null);
+                    set("animalNom", ""); set("animalEspece", "chien");
+                    set("proprietaireNom", ""); set("proprietaireTelephone", "");
+                    setPatientSearch("");
+                  }}
+                >✕</button>
+              </div>
+            ) : (
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  className="pl-9"
+                  placeholder="Nom animal ou propriétaire..."
+                  value={patientSearch}
+                  onChange={e => { setPatientSearch(e.target.value); setShowPatientList(true); }}
+                  onFocus={() => setShowPatientList(true)}
+                  onBlur={() => setTimeout(() => setShowPatientList(false), 150)}
+                />
+                {showPatientList && filteredPatients.length > 0 && (
+                  <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white border rounded-md shadow-lg max-h-48 overflow-y-auto">
+                    {filteredPatients.map(p => (
+                      <button
+                        key={p.id}
+                        type="button"
+                        className="w-full text-left px-3 py-2 hover:bg-blue-50 flex items-center gap-3 border-b last:border-0"
+                        onClick={() => {
+                          set("patientId", p.id);
+                          set("animalNom", p.nom ?? "");
+                          set("animalEspece", p.espece ?? "chien");
+                          set("proprietaireNom", p.owner ? `${p.owner.prenom ?? ""} ${p.owner.nom}`.trim() : "");
+                          set("proprietaireTelephone", (p.owner as any)?.telephone ?? "");
+                          setPatientSearch("");
+                          setShowPatientList(false);
+                        }}
+                      >
+                        <span className="text-sm font-medium">{p.nom}</span>
+                        <span className="text-xs text-muted-foreground">{ESPECE_LABELS[p.espece] ?? p.espece}</span>
+                        {p.owner && <span className="text-xs text-muted-foreground ml-auto">{p.owner.prenom} {p.owner.nom}</span>}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
+          {/* Animal + Espèce (saisie libre si pas de patient lié) */}
+          {!form.patientId && (
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label>Nom de l'animal</Label>
+                <Input value={form.animalNom} onChange={e => set("animalNom", e.target.value)} placeholder="Rex, Félix..." />
+              </div>
+              <div className="space-y-1">
+                <Label>Espèce</Label>
+                <Select value={form.animalEspece} onValueChange={v => set("animalEspece", v)}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(ESPECE_LABELS).map(([k, v]) => (
+                      <SelectItem key={k} value={k}>{v}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          )}
+
           {/* Propriétaire */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1">
-              <Label>Nom du propriétaire</Label>
-              <Input value={form.proprietaireNom} onChange={e => set("proprietaireNom", e.target.value)} placeholder="Dupont" />
+          {!form.patientId && (
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label>Nom du propriétaire</Label>
+                <Input value={form.proprietaireNom} onChange={e => set("proprietaireNom", e.target.value)} placeholder="Dupont" />
+              </div>
+              <div className="space-y-1">
+                <Label>Téléphone</Label>
+                <Input value={form.proprietaireTelephone} onChange={e => set("proprietaireTelephone", e.target.value)} placeholder="06..." />
+              </div>
             </div>
-            <div className="space-y-1">
-              <Label>Téléphone</Label>
-              <Input value={form.proprietaireTelephone} onChange={e => set("proprietaireTelephone", e.target.value)} placeholder="06..." />
-            </div>
-          </div>
+          )}
 
           {/* Motif */}
           <div className="space-y-1">
