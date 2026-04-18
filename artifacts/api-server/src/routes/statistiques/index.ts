@@ -20,34 +20,48 @@ router.get("/", async (req, res) => {
     const allFactures = await db.select().from(facturesTable);
     const allConsultations = await db.select().from(consultationsTable);
 
-    const todayFactures = allFactures.filter(f => f.dateEmission === todayStr);
     const todayConsultations = allConsultations.filter(c => c.date === todayStr);
-    const paidFactures = allFactures.filter(f => f.statut === "payée");
+    const paidFactures = allFactures.filter(f => f.statut === "payee");
     const totalEmis = allFactures.reduce((s, f) => s + (f.montantTTC ?? 0), 0);
     const totalEncaisse = paidFactures.reduce((s, f) => s + (f.montantTTC ?? 0), 0);
 
-    const caAujourdhui = todayFactures.reduce((s, f) => s + (f.montantTTC ?? 0), 0);
-    const caAujourdhuiHT = todayFactures.reduce((s, f) => s + (f.montantHT ?? 0), 0);
-    const facturesEmisesAujourdhui = todayFactures.length;
+    // CA aujourd'hui = factures payées aujourd'hui (date paiement ou date émission)
+    const todayPaidFactures = paidFactures.filter(f =>
+      (f.datePaiement === todayStr) || (!f.datePaiement && f.dateEmission === todayStr)
+    );
+    const caAujourdhui = todayPaidFactures.reduce((s, f) => s + (f.montantTTC ?? 0), 0);
+    const caAujourdhuiHT = todayPaidFactures.reduce((s, f) => s + (f.montantHT ?? 0), 0);
+    const facturesEmisesAujourdhui = allFactures.filter(f => f.dateEmission === todayStr).length;
     const consultationsAujourdhui = todayConsultations.length;
-    const tauxEncaissement = totalEmis > 0 ? Math.round((totalEncaisse / totalEmis) * 100) : 0;
 
-    const caThisMonth = allFactures
-      .filter(f => f.dateEmission >= firstDayThisMonth && f.dateEmission <= todayStr)
+    // Taux encaissement sur le mois en cours
+    const thisMonthFactures = allFactures.filter(f =>
+      f.dateEmission >= firstDayThisMonth && f.dateEmission <= todayStr
+    );
+    const thisMonthPaid = thisMonthFactures.filter(f => f.statut === "payee");
+    const tauxEncaissement = thisMonthFactures.length > 0
+      ? Math.round((thisMonthPaid.length / thisMonthFactures.length) * 100)
+      : 0;
+
+    // CA mensuel = factures payées dans le mois
+    const caThisMonth = paidFactures
+      .filter(f => (f.datePaiement ?? f.dateEmission) >= firstDayThisMonth && (f.datePaiement ?? f.dateEmission) <= todayStr)
       .reduce((s, f) => s + (f.montantTTC ?? 0), 0);
-    const caLastMonth = allFactures
-      .filter(f => f.dateEmission >= firstDayLastMonth && f.dateEmission <= lastDayLastMonth)
+    const caLastMonth = paidFactures
+      .filter(f => (f.datePaiement ?? f.dateEmission) >= firstDayLastMonth && (f.datePaiement ?? f.dateEmission) <= lastDayLastMonth)
       .reduce((s, f) => s + (f.montantTTC ?? 0), 0);
 
     const monthlyData: { month: string; ca: number; nbConsultations: number }[] = [];
     for (let i = 11; i >= 0; i--) {
       const d = new Date(year, month - i, 1);
       const mStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-      const mFactures = allFactures.filter(f => f.dateEmission?.startsWith(mStr));
+      const mPaidFactures = paidFactures.filter(f =>
+        (f.datePaiement ?? f.dateEmission)?.startsWith(mStr)
+      );
       const mConsultations = allConsultations.filter(c => c.date?.startsWith(mStr));
       monthlyData.push({
         month: mStr,
-        ca: mFactures.reduce((s, f) => s + (f.montantTTC ?? 0), 0),
+        ca: mPaidFactures.reduce((s, f) => s + (f.montantTTC ?? 0), 0),
         nbConsultations: mConsultations.length,
       });
     }

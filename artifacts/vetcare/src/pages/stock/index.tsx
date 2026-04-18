@@ -171,7 +171,7 @@ function AlertesTab() {
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium">{a.message}</p>
                 <p className="text-xs opacity-70 mt-0.5">
-                  {new Date(a.createdAt).toLocaleString("fr-FR")}
+                  {new Date(a.createdAt).toLocaleString("fr-FR", { timeZone: "Europe/Paris", day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}
                   {a.nomMedicament && ` — ${a.nomMedicament}`}
                 </p>
               </div>
@@ -792,7 +792,7 @@ function MouvementsTab() {
                 const cfg = TYPE_LABELS[m.typeMouvement] ?? { label: m.typeMouvement, color: "bg-gray-100 text-gray-600" };
                 return (
                   <tr key={m.id} className="border-b last:border-b-0">
-                    <td className="p-3 text-sm">{new Date(m.createdAt).toLocaleString("fr-FR")}</td>
+                    <td className="p-3 text-sm">{new Date(m.createdAt).toLocaleString("fr-FR", { timeZone: "Europe/Paris", day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}</td>
                     <td className="p-3"><span className={`text-xs px-2 py-0.5 rounded-full font-medium ${cfg.color}`}>{cfg.label}</span></td>
                     <td className={`p-3 text-right font-semibold ${m.quantite > 0 ? "text-green-600" : "text-red-600"}`}>{m.quantite > 0 ? "+" : ""}{m.quantite}</td>
                     <td className="p-3 text-right text-muted-foreground hidden md:table-cell">{m.prixUnitaireHT ? `${m.prixUnitaireHT.toFixed(2)} €` : "—"}</td>
@@ -857,7 +857,7 @@ function RegistreStupefiantsTab() {
             <tbody>
               {registre.map((m: any) => (
                 <tr key={m.id} className="border-b last:border-b-0 hover:bg-muted/10">
-                  <td className="p-3 text-xs">{new Date(m.createdAt).toLocaleString("fr-FR")}</td>
+                  <td className="p-3 text-xs">{new Date(m.createdAt).toLocaleString("fr-FR", { timeZone: "Europe/Paris", day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}</td>
                   <td className="p-3 font-medium">
                     <div className="flex items-center gap-1.5">
                       <Badge variant="destructive" className="text-[10px] px-1 py-0">STU</Badge>

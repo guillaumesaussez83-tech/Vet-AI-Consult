@@ -1,12 +1,31 @@
+import { useState } from "react";
 import { useRoute, Link } from "wouter";
 import { useGetFacture } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Printer, ArrowLeft } from "lucide-react";
+import { Printer, ArrowLeft, Download, Loader2 } from "lucide-react";
 
 export default function FactureImprimerPage() {
   const [, params] = useRoute("/factures/:id/imprimer");
   const id = parseInt(params?.id ?? "0");
+  const [downloadingPDF, setDownloadingPDF] = useState(false);
+
+  const downloadPDF = async (numero: string) => {
+    setDownloadingPDF(true);
+    try {
+      const html2pdf = (await import("html2pdf.js")).default;
+      const element = document.getElementById("facture-content");
+      if (!element) return;
+      await html2pdf().set({
+        margin: 8,
+        filename: `${numero}.pdf`,
+        html2canvas: { scale: 2, useCORS: true, logging: false },
+        jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+      }).from(element).save();
+    } finally {
+      setDownloadingPDF(false);
+    }
+  };
 
   const { data: facture, isLoading } = useGetFacture(id, {
     query: { enabled: !!id, queryKey: ["facture", id] }
@@ -56,13 +75,24 @@ export default function FactureImprimerPage() {
             Retour
           </Button>
         </Link>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => downloadPDF(facture.numero)}
+          disabled={downloadingPDF}
+        >
+          {downloadingPDF
+            ? <><Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />Génération…</>
+            : <><Download className="mr-1.5 h-3.5 w-3.5" />Télécharger PDF</>
+          }
+        </Button>
         <Button size="sm" onClick={() => window.print()}>
           <Printer className="mr-1.5 h-3.5 w-3.5" />
-          Imprimer / PDF
+          Imprimer
         </Button>
       </div>
 
-      <div className="max-w-3xl mx-auto px-8 py-12">
+      <div id="facture-content" className="max-w-3xl mx-auto px-8 py-12">
         <div className="flex items-start justify-between mb-10">
           <div>
             <div className="text-2xl font-bold text-blue-900">VétoAI</div>

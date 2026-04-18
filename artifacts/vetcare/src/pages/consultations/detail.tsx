@@ -18,6 +18,8 @@ import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Brain, FileText, Sparkles, Check, ChevronRight, Plus, Trash2, Receipt, Loader2, Printer, ExternalLink, Mic, Package, CheckCircle2, XCircle } from "lucide-react";
 import { AnesthesieSection } from "@/components/AnesthesieSection";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { PatientBarre } from "@/components/PatientBarre";
 import { VoiceRecorder } from "@/components/VoiceRecorder";
 import DicteeOrdonnanceDialog, { PrescriptionConfirmee } from "@/components/DicteeOrdonnanceDialog";
@@ -522,6 +524,7 @@ function EtapeOrdonnanceActes({
   const [dicteeOpen, setDicteeOpen] = useState(false);
   const [showAddActeDialog, setShowAddActeDialog] = useState(false);
   const [newActeForm, setNewActeForm] = useState({ description: "", quantite: 1, prixHT: "", tva: "20", acteId: "" });
+  const [catalogueOpen, setCatalogueOpen] = useState(false);
   const [decrementeStockOpen, setDecrementeStockOpen] = useState(false);
   const [decrementeStockResult, setDecrementeStockResult] = useState<any>(null);
   const [decrementeStockLoading, setDecrementeStockLoading] = useState(false);
@@ -1011,30 +1014,48 @@ function EtapeOrdonnanceActes({
           <div className="space-y-4 py-2">
             {actesList.length > 0 && (
               <div className="space-y-1">
-                <Label className="text-sm">Choisir depuis le catalogue (optionnel)</Label>
-                <Select
-                  value={newActeForm.acteId}
-                  onValueChange={v => {
-                    const found = actesList.find((a: any) => String(a.id) === v);
-                    setNewActeForm(f => ({
-                      ...f,
-                      acteId: v,
-                      description: found?.nom ?? f.description,
-                      prixHT: found?.prixDefaut != null ? String(found.prixDefaut) : f.prixHT,
-                    }));
-                  }}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Catalogue d'actes..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {actesList.map((a: any) => (
-                      <SelectItem key={a.id} value={String(a.id)}>
-                        {a.nom} — {a.prixDefaut?.toFixed(2)} € HT
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label className="text-sm">Rechercher dans le catalogue</Label>
+                <Popover open={catalogueOpen} onOpenChange={setCatalogueOpen}>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" role="combobox" className="w-full justify-between font-normal text-sm">
+                      {newActeForm.acteId
+                        ? (actesList.find((a: any) => String(a.id) === newActeForm.acteId) as any)?.nom ?? "Sélectionner…"
+                        : "Rechercher un acte ou médicament…"}
+                      <span className="ml-2 opacity-40 text-xs">▼</span>
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[400px] p-0" align="start">
+                    <Command>
+                      <CommandInput placeholder="Rechercher un acte…" className="text-sm" />
+                      <CommandList>
+                        <CommandEmpty>Aucun acte trouvé.</CommandEmpty>
+                        <CommandGroup>
+                          {actesList.map((a: any) => (
+                            <CommandItem
+                              key={a.id}
+                              value={`${a.nom} ${a.categorie ?? ""}`}
+                              onSelect={() => {
+                                setNewActeForm(f => ({
+                                  ...f,
+                                  acteId: String(a.id),
+                                  description: a.nom,
+                                  prixHT: a.prixDefaut != null ? String(a.prixDefaut) : f.prixHT,
+                                  tva: a.tvaRate != null ? String(a.tvaRate) : f.tva,
+                                }));
+                                setCatalogueOpen(false);
+                              }}
+                            >
+                              <div className="flex justify-between w-full">
+                                <span>{a.nom}</span>
+                                <span className="text-muted-foreground text-xs ml-4">{a.prixDefaut?.toFixed(2)} € HT</span>
+                              </div>
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
               </div>
             )}
             <div className="space-y-1">

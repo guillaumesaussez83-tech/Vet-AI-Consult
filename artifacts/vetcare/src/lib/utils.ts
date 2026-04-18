@@ -23,3 +23,31 @@ export function formatMontant(value: number | null | undefined, suffix = " €")
   if (value == null) return "—";
   return `${value.toLocaleString("fr-FR", { minimumFractionDigits: 2 })}${suffix}`;
 }
+
+export function formatDateTime(dateStr: string | Date | null | undefined): string {
+  if (!dateStr) return "—";
+  const d = typeof dateStr === "string" ? new Date(dateStr) : dateStr;
+  if (isNaN(d.getTime())) return String(dateStr);
+  return d.toLocaleString("fr-FR", {
+    timeZone: "Europe/Paris",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+export function formatDateTimeCourt(dateStr: string | Date | null | undefined): string {
+  if (!dateStr) return "—";
+  const d = typeof dateStr === "string" ? new Date(dateStr) : dateStr;
+  if (isNaN(d.getTime())) return String(dateStr);
+  return d.toLocaleString("fr-FR", {
+    timeZone: "Europe/Paris",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}

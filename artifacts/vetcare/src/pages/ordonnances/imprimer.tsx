@@ -1,8 +1,9 @@
+import { useState } from "react";
 import { useRoute } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Printer, ArrowLeft } from "lucide-react";
+import { Printer, ArrowLeft, Download, Loader2 } from "lucide-react";
 import { Link } from "wouter";
 
 const API_BASE = "/api";
@@ -55,6 +56,24 @@ async function fetchPatient(id: number) {
 export default function OrdonnanceImprimerPage() {
   const [, params] = useRoute("/ordonnances/:id/imprimer");
   const id = parseInt(params?.id ?? "0");
+  const [downloadingPDF, setDownloadingPDF] = useState(false);
+
+  const downloadPDF = async (ordNo: string) => {
+    setDownloadingPDF(true);
+    try {
+      const html2pdf = (await import("html2pdf.js")).default;
+      const element = document.getElementById("ordonnance-content");
+      if (!element) return;
+      await html2pdf().set({
+        margin: 8,
+        filename: `${ordNo}.pdf`,
+        html2canvas: { scale: 2, useCORS: true, logging: false },
+        jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+      }).from(element).save();
+    } finally {
+      setDownloadingPDF(false);
+    }
+  };
 
   const { data: ordonnance, isLoading: loadingOrd } = useQuery({
     queryKey: ["ordonnance", id],
@@ -109,6 +128,17 @@ export default function OrdonnanceImprimerPage() {
           </Button>
         </Link>
         <div className="flex-1" />
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => downloadPDF(ordonnance?.numeroOrdonnance ?? `ORD-${id}`)}
+          disabled={downloadingPDF}
+        >
+          {downloadingPDF
+            ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Génération…</>
+            : <><Download className="h-4 w-4 mr-2" />Télécharger PDF</>
+          }
+        </Button>
         <Button onClick={() => window.print()} size="sm">
           <Printer className="h-4 w-4 mr-2" />
           Imprimer
@@ -116,7 +146,7 @@ export default function OrdonnanceImprimerPage() {
       </div>
 
       <div className="max-w-2xl mx-auto p-8 print:p-6 font-sans">
-        <div className="border rounded-xl print:border print:rounded-none overflow-hidden">
+        <div id="ordonnance-content" className="border rounded-xl print:border print:rounded-none overflow-hidden">
           {/* Header — Clinique */}
           <div className="bg-blue-900 text-white px-8 py-6 print:bg-blue-900 print:text-white">
             <div className="flex items-start justify-between">
