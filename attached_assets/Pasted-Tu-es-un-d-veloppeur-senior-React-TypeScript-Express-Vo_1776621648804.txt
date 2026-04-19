@@ -1,0 +1,160 @@
+Tu es un développeur senior React/TypeScript/Express. 
+Voici la liste exacte des bugs à corriger dans ce projet VétoAI, 
+classés par priorité. Corrige-les tous.
+
+======================================================
+BUG-01 [CRITIQUE - 5 min] : Lien menu "Facturation" → 404
+======================================================
+SYMPTÔME : Le lien "Facturation" dans la sidebar pointe vers 
+/facturation mais la page réelle est /factures → erreur 404.
+
+LOCALISATION : Composant sidebar/navigation (probablement 
+client/src/components/Sidebar.tsx ou Layout.tsx).
+
+FIX : Dans le composant de navigation, changer le href/to du 
+lien "Facturation" de "/facturation" vers "/factures".
+
+======================================================
+BUG-02 [CRITIQUE - 1h] : "Finaliser et facturer" → 400 
+======================================================
+SYMPTÔME : Le bouton "Finaliser et facturer" envoie un 
+PATCH /api/consultations/:id avec { statut: 'terminee', actes: [...] }. 
+Le backend rejette la requête avec 400 "Données invalides" car 
+le schéma Zod du PATCH ne contient pas le champ "actes".
+
+SOLUTION CÔTÉ BACKEND (server/routes/consultations.ts) :
+Option A (recommandée) : Dans le handler PATCH /api/consultations/:id,
+extraire le champ "actes" du body avant validation Zod, puis :
+  1. Mettre à jour le statut via updateConsultationSchema (sans actes)
+  2. Si actes est présent et non vide, créer les actes via insertActeSchema
+  3. Créer automatiquement la facture via POST /api/consultations/:id/facture
+     avec montantHT et montantTTC calculés depuis la somme des actes
+
+Option B : Modifier le schéma Zod pour accepter le champ actes 
+(optionnel) et l'ignorer dans la validation, en gérant les actes 
+dans un second appel.
+
+SOLUTION CÔTÉ FRONTEND (si Option B) : Séparer le PATCH statut 
+et la création d'actes en deux appels distincts dans le handler 
+du bouton "Finaliser et facturer".
+
+======================================================
+BUG-03 [MAJEUR - 30 min] : Modal "Ajouter un acte" → erreur
+======================================================
+SYMPTÔME : La modal d'ajout d'acte envoie le champ 
+"prixUnitaireHt" mais le backend POST /api/consultations/:id/actes 
+attend "prixUnitaire". Résultat : Zod rejette la requête, 
+l'acte n'est jamais créé, message "Erreur lors de l'ajout de l'acte".
+
+LOCALISATION FRONTEND : Chercher dans les composants de consultation 
+le formulaire qui gère l'ajout d'actes (probablement 
+client/src/components/ActeModal.tsx ou similaire). 
+Trouver le champ nommé "prixUnitaireHt" dans l'objet envoyé 
+au POST et le renommer en "prixUnitaire".
+
+FIX : Renommer partout dans ce composant :
+  prixUnitaireHt → prixUnitaire
+
+Vérifier aussi que le schéma Zod côté backend 
+(server/schemas/actes.ts ou similaire) utilise bien "prixUnitaire" 
+comme champ requis.
+
+======================================================
+BUG-04 [MINEUR - 15 min] : Mode paiement affiché en raw
+======================================================
+SYMPTÔME : Dans les listes Facturation et Encaissements, 
+le mode de paiement s'affiche en snake_case brut 
+("carte_bancaire") au lieu du libellé formaté 
+("Carte bancaire"). La page de détail d'une facture affiche 
+correctement "Carte bancaire (puce)" — la logique de formatage 
+existe donc déjà, mais n'est pas appliquée dans les listes.
+
+FIX : Créer ou réutiliser un helper formatModePaiement() :
+
+const formatModePaiement = (mode: string): string => {
+  const labels: Record<string, string> = {
+    'carte_bancaire': 'Carte bancaire',
+    'especes': 'Espèces',
+    'cheque': 'Chèque',
+    'virement': 'Virement',
+    'autre': 'Autre'
+  };
+  return labels[mode] || mode;
+};
+
+Appliquer ce helper partout où le mode de paiement est affiché 
+en liste (composants FactureList, EncaissementList, etc.).
+
+======================================================
+BUG-05 [MINEUR - 30 min] : "Client sans RDV" redirige 
+vers /agenda au lieu d'ouvrir une modal
+======================================================
+SYMPTÔME : Dans la Salle d'attente, le bouton "Client sans RDV" 
+navigue vers /agenda au lieu d'ouvrir une modal d'ajout direct 
+d'un patient en salle d'attente (sans passer par l'agenda).
+
+FIX : Dans le composant SalleAttente :
+  1. Remplacer la navigation par un state modal : 
+     const [showAddModal, setShowAddModal] = useState(false)
+  2. Créer une modal simple avec : sélection du patient (search), 
+     motif de venue, puis POST /api/salle-attente ou équivalent 
+     pour l'ajouter directement en statut "en_attente"
+  3. Après ajout, rafraîchir le kanban
+
+======================================================
+BUG-06 [MINEUR - 1h] : Top 10 actes affiche "—" 
+dans les Statistiques
+======================================================
+SYMPTÔME : Le widget "Top 10 actes & produits" affiche 
+"—" pour le nom de l'acte au lieu du nom réel 
+(ex: "Consultation", "Vaccination", etc.).
+
+CAUSE PROBABLE : La requête SQL/ORM d'agrégation pour les stats 
+ne joint pas correctement la table des actes ou le champ 
+"description" n'est pas remonté dans le résultat.
+
+LOCALISATION : server/routes/statistiques.ts (ou équivalent), 
+requête d'agrégation TOP actes.
+
+FIX : Vérifier la requête de top actes. Elle devrait grouper 
+par "description" (le libellé de l'acte) et non par "acteId" 
+(qui peut être null pour les actes libres). Exemple :
+
+SELECT description, COUNT(*) as nb, SUM(prix_unitaire * quantite) as ca
+FROM actes 
+WHERE consultation_id IN (SELECT id FROM consultations WHERE ...)
+GROUP BY description
+ORDER BY nb DESC
+LIMIT 10
+
+======================================================
+BUG-07 [MINEUR - 15 min] : "Qté: null" dans les ordonnances
+======================================================
+SYMPTÔME : Dans la liste des ordonnances, certaines lignes 
+affichent "Qté: null" lorsque la quantité n'est pas renseignée.
+
+FIX : Dans le composant d'affichage des ordonnances, 
+ajouter un guard sur la quantité :
+
+// Avant
+`Qté: ${medicament.quantite} comprimé`
+
+// Après  
+medicament.quantite 
+  ? `Qté: ${medicament.quantite} comprimé` 
+  : ''
+
+Ou utiliser un fallback : `Qté: ${medicament.quantite ?? '—'}`
+
+======================================================
+TESTS POST-CORRECTION À EFFECTUER
+======================================================
+Après corrections, valider ces scénarios :
+
+1. Cliquer sur "Facturation" dans le menu → doit charger /factures ✓
+2. Créer une consultation → ajouter actes via modal UI → 
+   cliquer "Finaliser et facturer" → facture créée automatiquement ✓
+3. Vérifier dans la liste Facturation que le mode paiement 
+   s'affiche "Carte bancaire" et non "carte_bancaire" ✓
+4. Vérifier que Statistiques > "Top 10 actes" affiche des noms ✓
+5. Vérifier les ordonnances sans quantité n'affichent plus "null" ✓
