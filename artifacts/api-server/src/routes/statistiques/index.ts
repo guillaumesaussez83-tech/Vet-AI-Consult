@@ -68,14 +68,13 @@ router.get("/", async (req, res) => {
 
     const actesConso = await db
       .select({
-        acteId: actesConsultationsTable.acteId,
-        nomActe: actesTable.nom,
+        nomActe: sql<string>`COALESCE(${actesTable.nom}, ${actesConsultationsTable.description}, 'Acte libre')`,
         totalQuantite: sql<number>`sum(${actesConsultationsTable.quantite})`,
         totalValeur: sql<number>`sum(${actesConsultationsTable.quantite} * ${actesConsultationsTable.prixUnitaire})`,
       })
       .from(actesConsultationsTable)
       .leftJoin(actesTable, eq(actesConsultationsTable.acteId, actesTable.id))
-      .groupBy(actesConsultationsTable.acteId, actesTable.nom)
+      .groupBy(sql`COALESCE(${actesTable.nom}, ${actesConsultationsTable.description}, 'Acte libre')`)
       .orderBy(desc(sql`sum(${actesConsultationsTable.quantite})`))
       .limit(10);
 

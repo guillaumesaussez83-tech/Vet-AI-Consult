@@ -467,7 +467,7 @@ export const UpdateConsultationBody = zod.object({
   actes: zod
     .array(
       zod.object({
-        acteId: zod.number(),
+        acteId: zod.number().nullish(),
         quantite: zod.number(),
         prixUnitaire: zod.number(),
         description: zod.string().nullish(),

@@ -2,8 +2,12 @@ import { useState, useCallback, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Clock, RefreshCw, Plus, ChevronRight, ChevronLeft, FileText, Euro, User, AlertCircle } from "lucide-react";
+import { useListPatients } from "@workspace/api-client-react";
+import { Clock, RefreshCw, Plus, ChevronRight, ChevronLeft, FileText, Euro, User, AlertCircle, Search, Loader2 } from "lucide-react";
 
 const API_BASE = "/api";
 
@@ -88,6 +92,15 @@ export default function SalleAttentePage() {
   const [now, setNow] = useState(new Date());
   const [dragId, setDragId] = useState<number | null>(null);
   const [dropTarget, setDropTarget] = useState<Statut | null>(null);
+  const [showSansRdvModal, setShowSansRdvModal] = useState(false);
+  const [sansRdvForm, setSansRdvForm] = useState({ patientId: "", patientNom: "", motif: "", patientSearch: "" });
+  const [savingSansRdv, setSavingSansRdv] = useState(false);
+  const { data: allPatients = [] } = useListPatients();
+  const filteredPatients = sansRdvForm.patientSearch.length >= 2
+    ? allPatients.filter(p => p.nom.toLowerCase().includes(sansRdvForm.patientSearch.toLowerCase()) ||
+        (p.owner && `${p.owner.prenom ?? ""} ${p.owner.nom}`.toLowerCase().includes(sansRdvForm.patientSearch.toLowerCase()))
+      ).slice(0, 6)
+    : [];
 
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 60000);
@@ -195,12 +208,10 @@ export default function SalleAttentePage() {
             <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
             Actualiser
           </Button>
-          <Link href="/agenda">
-            <Button size="sm">
-              <Plus className="h-3.5 w-3.5 mr-1.5" />
-              Client sans RDV
-            </Button>
-          </Link>
+          <Button size="sm" onClick={() => { setSansRdvForm({ patientId: "", patientNom: "", motif: "", patientSearch: "" }); setShowSansRdvModal(true); }}>
+            <Plus className="h-3.5 w-3.5 mr-1.5" />
+            Client sans RDV
+          </Button>
         </div>
       </div>
 
@@ -342,6 +353,95 @@ export default function SalleAttentePage() {
           );
         })}
       </div>
+
+      {/* Modal — Client sans RDV */}
+      <Dialog open={showSansRdvModal} onOpenChange={setShowSansRdvModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Ajouter un client sans RDV</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div>
+              <Label className="text-sm mb-1.5 block">Patient <span className="text-muted-foreground">(optionnel)</span></Label>
+              <div className="relative">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Rechercher un animal…"
+                  className="pl-8"
+                  value={sansRdvForm.patientSearch}
+                  onChange={e => setSansRdvForm(f => ({ ...f, patientSearch: e.target.value, patientId: "", patientNom: "" }))}
+                />
+              </div>
+              {filteredPatients.length > 0 && !sansRdvForm.patientId && (
+                <div className="mt-1 border rounded-md bg-white shadow-sm divide-y max-h-40 overflow-y-auto">
+                  {filteredPatients.map((p: any) => (
+                    <button
+                      key={p.id}
+                      className="w-full text-left px-3 py-2 hover:bg-muted/50 text-sm"
+                      onClick={() => setSansRdvForm(f => ({
+                        ...f,
+                        patientId: String(p.id),
+                        patientNom: `${p.nom} (${p.espece})`,
+                        patientSearch: `${p.nom} — ${p.owner ? `${p.owner.prenom ?? ""} ${p.owner.nom}`.trim() : ""}`,
+                      }))}
+                    >
+                      <span className="font-medium">{p.nom}</span>
+                      <span className="text-muted-foreground ml-2 text-xs">{p.espece}</span>
+                      {p.owner && <span className="text-muted-foreground ml-2 text-xs">• {p.owner.prenom ?? ""} {p.owner.nom}</span>}
+                    </button>
+                  ))}
+                </div>
+              )}
+              {sansRdvForm.patientId && (
+                <p className="text-xs text-green-600 mt-1">✓ {sansRdvForm.patientNom} sélectionné</p>
+              )}
+            </div>
+            <div>
+              <Label className="text-sm mb-1.5 block">Motif de venue</Label>
+              <Input
+                placeholder="Ex. : contrôle, urgence, vaccin…"
+                value={sansRdvForm.motif}
+                onChange={e => setSansRdvForm(f => ({ ...f, motif: e.target.value }))}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowSansRdvModal(false)}>Annuler</Button>
+            <Button
+              disabled={savingSansRdv}
+              onClick={async () => {
+                setSavingSansRdv(true);
+                try {
+                  const now = new Date();
+                  const dateHeure = `${now.toISOString().split("T")[0]}T${now.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Paris" }).replace(":", ":")}`;
+                  const res = await fetch(`${API_BASE}/agenda/rendez-vous`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      dateHeure,
+                      dureeMinutes: 20,
+                      motif: sansRdvForm.motif || "Consultation sans RDV",
+                      typeRdv: "consultation",
+                      patientId: sansRdvForm.patientId ? parseInt(sansRdvForm.patientId) : null,
+                      animalNom: sansRdvForm.patientNom || sansRdvForm.patientSearch || null,
+                    }),
+                  });
+                  if (!res.ok) throw new Error("Erreur serveur");
+                  await qc.invalidateQueries({ queryKey: ["salle-attente"] });
+                  setShowSansRdvModal(false);
+                  toast({ title: "Client ajouté en salle d'attente" });
+                } catch {
+                  toast({ title: "Erreur lors de l'ajout", variant: "destructive" });
+                } finally {
+                  setSavingSansRdv(false);
+                }
+              }}
+            >
+              {savingSansRdv ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Ajout…</> : "Ajouter en salle d'attente"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

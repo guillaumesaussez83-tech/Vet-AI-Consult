@@ -22,6 +22,11 @@ const MODES_PAIEMENT = [
   { value: "autre", label: "Autre", icon: Euro },
 ];
 
+function formatModePaiement(mode: string): string {
+  const m = MODES_PAIEMENT.find(p => p.value === mode);
+  return m ? m.label : mode;
+}
+
 function SkeletonList() {
   return (
     <div className="space-y-3">
@@ -71,7 +76,7 @@ function FactureCard({ f }: { f: any }) {
                 <div className="text-xs text-muted-foreground">TTC</div>
               </div>
               {f.modePaiement && (
-                <span className="text-xs text-muted-foreground border rounded px-2 py-0.5">{f.modePaiement}</span>
+                <span className="text-xs text-muted-foreground border rounded px-2 py-0.5">{formatModePaiement(f.modePaiement)}</span>
               )}
               <span className={`text-xs font-medium px-2.5 py-1 rounded-full border ${s.className}`}>{s.label}</span>
               <ArrowRight className="h-4 w-4 text-muted-foreground" />
