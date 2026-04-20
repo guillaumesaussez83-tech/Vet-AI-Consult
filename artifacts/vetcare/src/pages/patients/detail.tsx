@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, Plus, Dog, Cat, Rabbit, Bird, Syringe, ShieldCheck, ChevronRight } from "lucide-react";
 import { formatDateFR } from "@/lib/utils";
 import { PatientTimeline } from "@/components/PatientTimeline";
+import { WeightChart } from "@/components/WeightChart";
 import { useState } from "react";
 
 const especeIcon: Record<string, React.ElementType> = {
@@ -138,21 +139,34 @@ export default function PatientDetailPage() {
 
       {/* Tab: Timeline */}
       {activeTab === "timeline" && (
-        <Card>
-          <CardHeader className="pb-4">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-base">Historique chronologique</CardTitle>
-              <div className="flex items-center gap-2">
+        <div className="space-y-4">
+          {/* Graphique poids */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base flex items-center gap-2">
+                📈 Évolution du poids
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <WeightChart consultations={consultations} />
+            </CardContent>
+          </Card>
+
+          {/* Timeline */}
+          <Card>
+            <CardHeader className="pb-4">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base">Historique chronologique</CardTitle>
                 <Badge variant="secondary" className="text-xs">
                   {consultations.length} consultation{consultations.length > 1 ? "s" : ""}
                 </Badge>
               </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <PatientTimeline patientId={id} consultations={consultations} />
-          </CardContent>
-        </Card>
+            </CardHeader>
+            <CardContent>
+              <PatientTimeline patientId={id} consultations={consultations} />
+            </CardContent>
+          </Card>
+        </div>
       )}
 
       {/* Tab: Informations */}
