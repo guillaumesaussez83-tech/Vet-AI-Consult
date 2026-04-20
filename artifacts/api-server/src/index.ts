@@ -1,6 +1,7 @@
 import app from "./app";
 import { logger } from "./lib/logger";
 import { runStockSeeder } from "./routes/stock/seeder";
+import { startSyncJob } from "./jobs/syncSalleAttente";
 
 const rawPort = process.env["PORT"];
 
@@ -34,4 +35,7 @@ app.listen(port, (err) => {
     .catch(err => {
       logger.warn({ err }, "Auto-seeding du stock ignoré (erreur non bloquante)");
     });
+
+  // Sync salle d'attente ↔ agenda toutes les 5 min
+  startSyncJob();
 });

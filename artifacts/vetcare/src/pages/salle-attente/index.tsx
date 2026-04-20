@@ -95,6 +95,9 @@ export default function SalleAttentePage() {
   const [showSansRdvModal, setShowSansRdvModal] = useState(false);
   const [sansRdvForm, setSansRdvForm] = useState({ patientId: "", patientNom: "", motif: "", patientSearch: "" });
   const [savingSansRdv, setSavingSansRdv] = useState(false);
+  const [lastSyncAt, setLastSyncAt] = useState<Date | null>(null);
+  const [newRdvCount, setNewRdvCount] = useState(0);
+  const prevIdsRef = useRef<Set<number>>(new Set());
   const { data: allPatients = [] } = useListPatients();
   const filteredPatients = sansRdvForm.patientSearch.length >= 2
     ? allPatients.filter(p => p.nom.toLowerCase().includes(sansRdvForm.patientSearch.toLowerCase()) ||
@@ -113,6 +116,29 @@ export default function SalleAttentePage() {
     refetchInterval: 30000,
     staleTime: 10000,
   });
+
+  // Détecter les nouveaux RDVs à chaque polling
+  useEffect(() => {
+    if (!rdvs.length) return;
+    const currentIds = new Set(rdvs.map(r => r.id));
+
+    if (prevIdsRef.current.size > 0) {
+      const nouveaux = rdvs.filter(r => !prevIdsRef.current.has(r.id));
+      if (nouveaux.length > 0) {
+        setNewRdvCount(nouveaux.length);
+        toast({
+          title: `${nouveaux.length} nouveau${nouveaux.length > 1 ? "x" : ""} rendez-vous`,
+          description: nouveaux
+            .map(r => r.patient?.nom ?? r.animalNom ?? "Patient inconnu")
+            .join(", "),
+        });
+        setTimeout(() => setNewRdvCount(0), 8000);
+      }
+    }
+
+    prevIdsRef.current = currentIds;
+    setLastSyncAt(new Date());
+  }, [rdvs]);
 
   const updateStatut = useMutation({
     mutationFn: ({ id, statutSalle }: { id: number; statutSalle: Statut }) =>
@@ -203,6 +229,16 @@ export default function SalleAttentePage() {
         </div>
 
         <div className="flex items-center gap-2">
+          {newRdvCount > 0 && (
+            <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full bg-primary text-primary-foreground animate-bounce">
+              +{newRdvCount} nouveau{newRdvCount > 1 ? "x" : ""}
+            </span>
+          )}
+          {lastSyncAt && !isFetching && (
+            <span className="text-xs text-muted-foreground hidden sm:inline">
+              Sync {lastSyncAt.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
+            </span>
+          )}
           {isFetching && <RefreshCw className="h-4 w-4 animate-spin text-muted-foreground" />}
           <Button size="sm" variant="outline" onClick={() => qc.invalidateQueries({ queryKey: ["salle-attente"] })}>
             <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
