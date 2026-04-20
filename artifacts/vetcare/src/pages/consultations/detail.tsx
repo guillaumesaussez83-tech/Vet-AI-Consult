@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { VoiceInput } from "@/components/VoiceInput";
 
 type ActeLine = {
   acteId: number;
@@ -400,8 +401,11 @@ function EtapeAnamnese({ consultation, onAutoSave }: any) {
           <Input className="mt-1" value={motif} onChange={e => setMotif(e.target.value)} placeholder="Ex: Boiterie membre antérieur droit depuis 3 jours..." />
         </div>
         <div>
-          <Label>Anamnèse (dictée ou saisie)</Label>
-          <Textarea className="mt-1" rows={8} value={anamnese} onChange={e => setAnamnese(e.target.value)}
+          <div className="flex items-center justify-between mb-1">
+            <Label>Anamnèse (dictée ou saisie)</Label>
+            <VoiceInput onTranscript={(t) => setAnamnese(prev => prev ? prev + " " + t : t)} />
+          </div>
+          <Textarea rows={8} value={anamnese} onChange={e => setAnamnese(e.target.value)}
             placeholder="Décrivez l'histoire clinique du patient : début des symptômes, évolution, contexte, traitements en cours, comportement alimentaire, hydratation, etc." />
         </div>
       </CardContent>
@@ -453,8 +457,11 @@ function EtapeExamenClinique({ consultation, onAutoSave }: any) {
           </div>
         </div>
         <div>
-          <Label>Examen clinique (dictée ou saisie)</Label>
-          <Textarea className="mt-1" rows={10} value={examenClinique} onChange={e => setExamenClinique(e.target.value)}
+          <div className="flex items-center justify-between mb-1">
+            <Label>Examen clinique (dictée ou saisie)</Label>
+            <VoiceInput onTranscript={(t) => setExamenClinique(prev => prev ? prev + " " + t : t)} />
+          </div>
+          <Textarea rows={10} value={examenClinique} onChange={e => setExamenClinique(e.target.value)}
             placeholder="État général, muqueuses, fréquence cardiaque, respiratoire, palpation abdominale, auscultation cardiopulmonaire, examen locomoteur, ganglions, peau et phanères..." />
         </div>
       </CardContent>
@@ -490,8 +497,11 @@ function EtapeExamensCompl({ consultation, onAutoSave }: any) {
       </CardHeader>
       <CardContent className="space-y-4">
         <div>
-          <Label>Résultats des examens complémentaires</Label>
-          <Textarea className="mt-1" rows={10} value={examens} onChange={e => setExamens(e.target.value)}
+          <div className="flex items-center justify-between mb-1">
+            <Label>Résultats des examens complémentaires</Label>
+            <VoiceInput onTranscript={(t) => setExamens(prev => prev ? prev + " " + t : t)} />
+          </div>
+          <Textarea rows={10} value={examens} onChange={e => setExamens(e.target.value)}
             placeholder="NFS, biochimie, urines, résultats radiographiques, échographiques, etc. Laissez vide si aucun examen complémentaire." />
         </div>
       </CardContent>
@@ -545,8 +555,11 @@ function EtapeDiagnosticIA({ consultation, onAutoSave, onGenerateIA, isGeneratin
         )}
 
         <div>
-          <Label>Diagnostic retenu (à compléter par le vétérinaire)</Label>
-          <Textarea className="mt-1" rows={4} value={diagnostic} onChange={e => setDiagnostic(e.target.value)}
+          <div className="flex items-center justify-between mb-1">
+            <Label>Diagnostic retenu (à compléter par le vétérinaire)</Label>
+            <VoiceInput onTranscript={(t) => setDiagnostic(prev => prev ? prev + " " + t : t)} />
+          </div>
+          <Textarea rows={4} value={diagnostic} onChange={e => setDiagnostic(e.target.value)}
             placeholder="Diagnostic final retenu après analyse..." />
         </div>
       </CardContent>
