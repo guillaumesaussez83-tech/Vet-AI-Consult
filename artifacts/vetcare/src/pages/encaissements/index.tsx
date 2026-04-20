@@ -5,11 +5,29 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Euro, CreditCard, Banknote, Building2, FileCheck } from "lucide-react";
 
+const MODES_LABELS: Record<string, string> = {
+  carte_bancaire: "Carte bancaire",
+  carte_sans_contact: "Carte sans contact",
+  payvet: "PayVet",
+  especes: "Espèces",
+  cheque: "Chèque",
+  virement: "Virement bancaire",
+  autre: "Autre",
+};
+
+function labelMode(raw: string | null | undefined): string {
+  if (!raw) return "Non renseigné";
+  return MODES_LABELS[raw] ?? raw;
+}
+
 const modeIcons: Record<string, any> = {
-  "Carte bancaire": CreditCard,
-  "Espèces": Banknote,
-  "Virement": Building2,
-  "Chèque": FileCheck,
+  carte_bancaire: CreditCard,
+  carte_sans_contact: CreditCard,
+  payvet: CreditCard,
+  especes: Banknote,
+  cheque: FileCheck,
+  virement: Building2,
+  autre: Euro,
 };
 
 function groupBy<T>(arr: T[], key: (item: T) => string): Record<string, T[]> {
@@ -124,7 +142,7 @@ export default function EncaissementsPage() {
                       </div>
                       <div className="flex-1">
                         <div className="flex justify-between text-sm mb-1">
-                          <span className="font-medium">{mode}</span>
+                          <span className="font-medium">{labelMode(mode)}</span>
                           <span className="text-muted-foreground">{total.toFixed(2)} € ({pct}%)</span>
                         </div>
                         <div className="h-1.5 bg-muted rounded-full overflow-hidden">
@@ -187,7 +205,7 @@ export default function EncaissementsPage() {
                         <div className="text-xs text-muted-foreground">
                           {f.datePaiement ?? f.dateEmission}
                           {f.consultation?.patient && ` — ${f.consultation.patient.nom}`}
-                          {f.modePaiement && ` · ${f.modePaiement}`}
+                          {f.modePaiement && ` · ${labelMode(f.modePaiement)}`}
                         </div>
                       </div>
                     </div>

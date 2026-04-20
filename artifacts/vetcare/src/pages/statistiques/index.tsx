@@ -105,11 +105,11 @@ export default function StatistiquesPage() {
           sub="ce jour"
         />
         <KpiCard
-          title="CA ce mois"
+          title="CA encaissé (mois)"
           value={kpiVal(kpis.caThisMonth, " €")}
           icon={FileText}
           trend={hasData ? kpis.evolutionMensuelle : null}
-          sub="vs mois précédent"
+          sub="Factures payées · vs mois précédent"
         />
         <KpiCard
           title="Taux d'encaissement"

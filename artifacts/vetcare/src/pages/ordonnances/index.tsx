@@ -28,6 +28,24 @@ async function fetchOrdonnances(search?: string): Promise<Ordonnance[]> {
   return r.json();
 }
 
+function sanitizeContenu(raw: string): string {
+  if (!raw) return "";
+  return raw
+    .split("\n")
+    .map(line =>
+      line
+        .replace(/\bnull\b/gi, "")
+        .replace(/\bundefined\b/gi, "")
+        .replace(/Qté\s*:\s*,/g, "")
+        .replace(/\s{2,}/g, " ")
+        .replace(/,\s*,/g, ",")
+        .replace(/^\s*[-–•]\s*$/, "")
+        .trim()
+    )
+    .filter(line => line.length > 0 && line !== "-" && line !== "–")
+    .join("\n");
+}
+
 export default function OrdonnancesPage() {
   const [search, setSearch] = useState("");
 
@@ -112,7 +130,7 @@ export default function OrdonnancesPage() {
                           {new Date(o.createdAt).toLocaleDateString("fr-FR")}
                         </span>
                       </div>
-                      <p className="text-xs text-muted-foreground mt-1.5 line-clamp-2">{o.contenu}</p>
+                      <p className="text-xs text-muted-foreground mt-1.5 line-clamp-2">{sanitizeContenu(o.contenu)}</p>
                     </div>
                   </div>
                   <div className="flex gap-2 shrink-0">
