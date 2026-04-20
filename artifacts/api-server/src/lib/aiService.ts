@@ -160,6 +160,14 @@ EXAMEN CLINIQUE :
 ${examenClinique}
 
 ${examensComplementaires ? `EXAMENS COMPLÉMENTAIRES :\n${examensComplementaires}` : ""}
+${poids ? `
+CALCUL DE POSOLOGIE OBLIGATOIRE (poids = ${poids} kg) :
+Pour CHAQUE médicament mentionné dans tes recommandations, tu DOIS calculer et indiquer :
+  • La dose totale en mg = posologie_mg/kg × ${poids} kg
+  • La posologie pratique en nombre de comprimés selon conditionnements standards
+  • La durée de traitement recommandée
+Exemple : Carprofène 4 mg/kg/j × ${poids} kg = ${(4 * poids).toFixed(1)} mg/j → ${Math.ceil((4 * poids) / 50)} comprimé(s) de 50 mg une fois par jour pendant 5 à 7 jours
+Ne laisse JAMAIS une posologie sans calcul concret si le poids est connu.` : ""}
 
 Réponds UNIQUEMENT avec un objet JSON valide (sans bloc de code markdown) ayant cette structure exacte :
 {
@@ -168,9 +176,9 @@ Réponds UNIQUEMENT avec un objet JSON valide (sans bloc de code markdown) ayant
     {"nom": "Nom du diagnostic 2", "probabilite": "Élevée/Modérée/Faible", "description": "Explication clinique concise"},
     {"nom": "Nom du diagnostic 3", "probabilite": "Élevée/Modérée/Faible", "description": "Explication clinique concise"}
   ],
-  "recommandations": "Recommandations thérapeutiques et examens complémentaires à effectuer",
+  "recommandations": "Recommandations thérapeutiques avec posologies CALCULÉES selon le poids de l'animal",
   "urgence": "Urgence vitale/Urgence relative/Non urgent",
-  "texteComplet": "Analyse clinique complète et détaillée"
+  "texteComplet": "Analyse clinique complète avec toutes les posologies calculées selon le poids réel de l'animal"
 }`;
 
   const message = await anthropic.messages.create({
@@ -218,6 +226,13 @@ ${examenClinique}
 ${examensComplementaires ? `EXAMENS COMPLÉMENTAIRES (texte) :\n${examensComplementaires}` : ""}
 
 ${objectPaths && objectPaths.length > 0 ? "Des fichiers joints (radios, échos, bilans sanguins) sont fournis ci-dessus pour compléter votre analyse." : ""}
+${poids ? `
+CALCUL DE POSOLOGIE OBLIGATOIRE (poids = ${poids} kg) :
+Pour CHAQUE médicament mentionné dans tes recommandations, tu DOIS calculer et indiquer :
+  • La dose totale en mg = posologie_mg/kg × ${poids} kg
+  • La posologie pratique en nombre de comprimés selon conditionnements standards
+  • La durée de traitement recommandée
+Ne laisse JAMAIS une posologie sans calcul concret si le poids est connu.` : ""}
 
 Réponds UNIQUEMENT avec un objet JSON valide (sans bloc de code markdown) ayant cette structure exacte :
 {
@@ -226,9 +241,9 @@ Réponds UNIQUEMENT avec un objet JSON valide (sans bloc de code markdown) ayant
     {"nom": "Nom du diagnostic 2", "probabilite": "Élevée/Modérée/Faible", "description": "Explication clinique concise"},
     {"nom": "Nom du diagnostic 3", "probabilite": "Élevée/Modérée/Faible", "description": "Explication clinique concise"}
   ],
-  "recommandations": "Recommandations thérapeutiques précises basées sur l'ensemble des données disponibles",
+  "recommandations": "Recommandations thérapeutiques avec posologies CALCULÉES selon le poids de l'animal",
   "urgence": "Urgence vitale/Urgence relative/Non urgent",
-  "texteComplet": "Analyse clinique complète et détaillée intégrant tous les résultats d'examens"
+  "texteComplet": "Analyse clinique complète avec toutes les posologies calculées selon le poids réel de l'animal"
 }`,
   };
 

@@ -30,6 +30,7 @@ import {
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { VoiceInput } from "@/components/VoiceInput";
+import { DoseCalculator } from "@/components/DoseCalculator";
 
 type ActeLine = {
   acteId: number;
@@ -718,11 +719,15 @@ function EtapeOrdonnanceActes({
 
   return (
     <div className="space-y-6">
+      <DoseCalculator
+        poids={consultation?.patient?.poids ?? consultation?.poids}
+        espece={consultation?.patient?.espece}
+      />
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle>Étape 5 — Actes réalisés</CardTitle>
+              <CardTitle>Actes réalisés</CardTitle>
               <p className="text-sm text-muted-foreground mt-1">Saisissez les actes et médicaments de cette consultation</p>
             </div>
             <Button onClick={() => {
