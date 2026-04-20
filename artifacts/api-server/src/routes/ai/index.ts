@@ -301,12 +301,26 @@ router.post("/confirmer-dictee-ordonnance", async (req, res) => {
     const lastSeq = lastOrd?.num ? parseInt(lastOrd.num.split("-")[2] ?? "0") : 0;
     const numeroOrdonnance = `ORD-${year}-${String(lastSeq + 1).padStart(5, "0")}`;
 
+    // Strip null/dash/"null" values from AI-returned fields
+    const cleanField = (v: any): string => {
+      if (v == null) return "";
+      const s = String(v).trim();
+      if (!s || s === "—" || s === "-" || s === "–" || /^null$/i.test(s) || /^undefined$/i.test(s)) return "";
+      return s;
+    };
+
     const contenu = prescriptions.map((p: any) => {
-      const qte = p.quantite_a_delivrer != null ? `${p.quantite_a_delivrer} ${p.unite ?? ""}`.trim() : "";
-      const dose = p.dose ?? "";
-      const voie = p.voie_administration ?? "";
-      const freq = p.frequence ?? "";
-      const duree = p.duree ?? "";
+      const dose = cleanField(p.dose);
+      const voie = cleanField(p.voie_administration);
+      const freq = cleanField(p.frequence);
+      const duree = cleanField(p.duree);
+
+      // qte: only include when we have an actual numeric quantity
+      const rawQte = cleanField(p.quantite_a_delivrer != null ? String(p.quantite_a_delivrer) : null);
+      const unite = cleanField(p.unite);
+      // Only build qte string if rawQte is a number or non-empty meaningful value (not just a unit word)
+      const qte = rawQte ? `${rawQte}${unite ? " " + unite : ""}`.trim() : "";
+
       const parts = [
         p.nom_medicament,
         dose && `Dose : ${dose}`,

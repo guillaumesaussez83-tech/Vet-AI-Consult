@@ -29,21 +29,44 @@ async function fetchOrdonnances(search?: string): Promise<Ordonnance[]> {
   return r.json();
 }
 
+const DASH_RE = /^[—\-–]+$/;
+const EMPTY_VAL_RE = /^(null|undefined|—|-|–)$/i;
+
 function sanitizeContenu(raw: string): string {
   if (!raw) return "";
   return raw
     .split("\n")
-    .map(line =>
-      line
+    .map(line => {
+      // For structured dictation lines (parts joined by " — "), filter each segment
+      const parts = line.split(" — ").map(part => {
+        // Strip stray leading dashes (e.g. "— Qté : comprimé" left by split)
+        const t = part.replace(/^[—\-–]+\s*/, "").trim();
+        if (!t || DASH_RE.test(t)) return "";
+        // Part ends with colon (no value at all, e.g. "Voie :")
+        if (/:\s*$/.test(t)) return "";
+        // "Label : —" or "Label : null" → drop
+        const colonIdx = t.indexOf(" : ");
+        if (colonIdx !== -1) {
+          const val = t.slice(colonIdx + 3).trim();
+          if (!val || EMPTY_VAL_RE.test(val)) return "";
+          // "Qté : comprimé" — unit without a leading number → drop
+          if (/^qté$/i.test(t.slice(0, colonIdx).trim()) && !/\d/.test(val)) return "";
+        }
+        // "pendant —" or "pendant null"
+        if (/^pendant\s+[—\-–]+$/i.test(t) || /^pendant\s+(null|undefined)$/i.test(t)) return "";
+        return t;
+      }).filter(Boolean);
+
+      // Re-join surviving parts and apply remaining cleanups
+      return parts.join(" — ")
         .replace(/\bnull\b/gi, "")
         .replace(/\bundefined\b/gi, "")
-        .replace(/Qté\s*:\s*,/g, "")
+        .replace(/(\s*[—\-–]\s*){2,}/g, " — ")
+        .replace(/^[\s—\-–]+|[\s—\-–]+$/g, "")
         .replace(/\s{2,}/g, " ")
-        .replace(/,\s*,/g, ",")
-        .replace(/^\s*[-–•]\s*$/, "")
-        .trim()
-    )
-    .filter(line => line.length > 0 && line !== "-" && line !== "–")
+        .trim();
+    })
+    .filter(line => line.length > 0 && !DASH_RE.test(line))
     .join("\n");
 }
 
