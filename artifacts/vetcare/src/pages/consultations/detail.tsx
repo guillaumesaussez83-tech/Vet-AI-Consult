@@ -197,6 +197,10 @@ export default function ConsultationDetailPage() {
       } as any
     });
     queryClient.invalidateQueries({ queryKey: getGetConsultationQueryKey(id) });
+    queryClient.invalidateQueries({ queryKey: getListFacturesQueryKey() });
+    queryClient.invalidateQueries({ queryKey: ["facture-by-consultation", id] });
+    // Invalider toutes les factures individuelles pour éviter le cache périmé
+    queryClient.invalidateQueries({ queryKey: ["factures"] });
   };
 
   const addActe = () => {

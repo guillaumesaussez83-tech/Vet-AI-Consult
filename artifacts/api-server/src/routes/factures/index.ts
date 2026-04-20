@@ -2,7 +2,7 @@ import { Router } from "express";
 import { db } from "@workspace/db";
 import { facturesTable, consultationsTable, patientsTable, ownersTable, actesConsultationsTable, actesTable } from "@workspace/db";
 import { GetFactureParams, UpdateFactureStatutParams, UpdateFactureStatutBody, ListFacturesQueryParams } from "@workspace/api-zod";
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { decrementerConsultationFEFO } from "../stock/ia-engine";
 
 const router = Router();
@@ -19,7 +19,49 @@ router.get("/", async (req, res) => {
       factures = await db.select().from(facturesTable);
     }
 
+    if (factures.length === 0) return res.json([]);
+
+    // Batch-fetch all actes for all consultation IDs at once (avoid N+1)
+    const consultationIds = [...new Set(factures.map(f => f.consultationId))];
+    const allActes = await db
+      .select({
+        consultationId: actesConsultationsTable.consultationId,
+        prixUnitaire: actesConsultationsTable.prixUnitaire,
+        quantite: actesConsultationsTable.quantite,
+      })
+      .from(actesConsultationsTable)
+      .where(inArray(actesConsultationsTable.consultationId, consultationIds));
+
+    // Compute fresh totals per consultationId
+    const totalsMap = new Map<number, { montantHT: number; montantTTC: number }>();
+    for (const cid of consultationIds) {
+      const actes = allActes.filter(a => a.consultationId === cid);
+      if (actes.length > 0) {
+        const ht = parseFloat(actes.reduce((s, a) => s + a.prixUnitaire * a.quantite, 0).toFixed(2));
+        totalsMap.set(cid, { montantHT: ht, montantTTC: parseFloat((ht * 1.2).toFixed(2)) });
+      }
+    }
+
+    // Update stale factures in background (non-blocking)
+    const staleUpdates = factures.filter(f => {
+      const fresh = totalsMap.get(f.consultationId);
+      if (!fresh) return false;
+      return Math.abs(f.montantHT - fresh.montantHT) > 0.005 || Math.abs(f.montantTTC - fresh.montantTTC) > 0.005;
+    });
+    if (staleUpdates.length > 0) {
+      Promise.all(staleUpdates.map(f => {
+        const fresh = totalsMap.get(f.consultationId)!;
+        return db.update(facturesTable)
+          .set({ montantHT: fresh.montantHT, montantTTC: fresh.montantTTC })
+          .where(eq(facturesTable.id, f.id));
+      })).catch(() => {});
+    }
+
     const result = await Promise.all(factures.map(async (f) => {
+      const fresh = totalsMap.get(f.consultationId);
+      const montantHT = fresh?.montantHT ?? f.montantHT;
+      const montantTTC = fresh?.montantTTC ?? f.montantTTC;
+
       const [consultation] = await db
         .select({
           id: consultationsTable.id,
@@ -70,6 +112,8 @@ router.get("/", async (req, res) => {
 
       return {
         ...f,
+        montantHT,
+        montantTTC,
         dateEmission: f.dateEmission,
         createdAt: f.createdAt.toISOString(),
         consultation: consultation ? {
