@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { useRoute, Link, useLocation } from "wouter";
 import {
   useGetConsultation, useUpdateConsultation, useGetDiagnosticIA,
@@ -28,14 +28,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-
-const ETAPES = [
-  { id: 1, label: "Anamnèse", icon: "📋" },
-  { id: 2, label: "Examen clinique", icon: "🩺" },
-  { id: 3, label: "Examens compl.", icon: "🔬" },
-  { id: 4, label: "Diagnostic IA", icon: "🧠" },
-  { id: 5, label: "Ordonnance & Actes", icon: "💊" },
-];
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 type ActeLine = {
   acteId: number;
@@ -51,7 +44,6 @@ export default function ConsultationDetailPage() {
   const { toast } = useToast();
   const [, navigate] = useLocation();
 
-  const [etapeActive, setEtapeActive] = useState(1);
   const [iaSaving, setIaSaving] = useState(false);
 
   const { data: consultation, isLoading } = useGetConsultation(id, {
@@ -97,6 +89,15 @@ export default function ConsultationDetailPage() {
       toast({ title: "Erreur lors de la sauvegarde", variant: "destructive" });
     }
   }, [id, updateConsultation, queryClient, toast]);
+
+  const handleAutoSave = useCallback(async (data: Record<string, unknown>) => {
+    try {
+      await updateConsultation.mutateAsync({ id, data: data as any });
+      queryClient.invalidateQueries({ queryKey: getGetConsultationQueryKey(id) });
+    } catch {
+      // autosave silent — ne pas bloquer l'UX
+    }
+  }, [id, updateConsultation, queryClient]);
 
   const handleDiagnosticIA = async () => {
     if (!consultation) return;
@@ -296,83 +297,55 @@ export default function ConsultationDetailPage() {
         </div>
       )}
 
-      {/* Navigation étapes */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-2">
-        {ETAPES.map((etape, idx) => (
-          <div key={etape.id} className="flex items-center gap-2">
-            <button
-              onClick={() => setEtapeActive(etape.id)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all ${
-                etapeActive === etape.id
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-muted text-muted-foreground hover:bg-muted/80"
-              }`}
-            >
-              <span>{etape.label}</span>
-              {etapeActive > etape.id && <Check className="h-3 w-3" />}
-            </button>
-            {idx < ETAPES.length - 1 && <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />}
-          </div>
-        ))}
-      </div>
+      <Tabs defaultValue="anamnese" className="space-y-4">
+        <TabsList className="w-full justify-start overflow-x-auto h-auto flex-wrap gap-1 p-1">
+          <TabsTrigger value="anamnese" className="text-sm">📋 Anamnèse</TabsTrigger>
+          <TabsTrigger value="examen" className="text-sm">🩺 Examen clinique</TabsTrigger>
+          <TabsTrigger value="examens-compl" className="text-sm">🔬 Examens compl.</TabsTrigger>
+          <TabsTrigger value="diagnostic" className="text-sm">🧠 Diagnostic IA</TabsTrigger>
+          <TabsTrigger value="actes" className="text-sm">💊 Ordonnance & Actes</TabsTrigger>
+        </TabsList>
 
-      {/* Étape 1 — Anamnèse */}
-      {etapeActive === 1 && (
-        <EtapeAnamnese
-          consultation={consultation}
-          onSave={handleSaveStep}
-          onNext={() => setEtapeActive(2)}
-        />
-      )}
+        <TabsContent value="anamnese">
+          <EtapeAnamnese consultation={consultation} onAutoSave={handleAutoSave} />
+        </TabsContent>
 
-      {/* Étape 2 — Examen clinique */}
-      {etapeActive === 2 && (
-        <EtapeExamenClinique
-          consultation={consultation}
-          onSave={handleSaveStep}
-          onNext={() => setEtapeActive(3)}
-        />
-      )}
+        <TabsContent value="examen">
+          <EtapeExamenClinique consultation={consultation} onAutoSave={handleAutoSave} />
+        </TabsContent>
 
-      {/* Étape 3 — Examens complémentaires */}
-      {etapeActive === 3 && (
-        <EtapeExamensCompl
-          consultation={consultation}
-          onSave={handleSaveStep}
-          onNext={() => setEtapeActive(4)}
-        />
-      )}
+        <TabsContent value="examens-compl">
+          <EtapeExamensCompl consultation={consultation} onAutoSave={handleAutoSave} />
+        </TabsContent>
 
-      {/* Étape 4 — Diagnostic IA */}
-      {etapeActive === 4 && (
-        <EtapeDiagnosticIA
-          consultation={consultation}
-          onSave={handleSaveStep}
-          onGenerateIA={handleDiagnosticIA}
-          isGenerating={iaSaving || getDiagnosticIA.isPending}
-          onNext={() => setEtapeActive(5)}
-        />
-      )}
+        <TabsContent value="diagnostic">
+          <EtapeDiagnosticIA
+            consultation={consultation}
+            onAutoSave={handleAutoSave}
+            onGenerateIA={handleDiagnosticIA}
+            isGenerating={iaSaving || getDiagnosticIA.isPending}
+          />
+        </TabsContent>
 
-      {/* Étape 5 — Ordonnance & Actes */}
-      {etapeActive === 5 && (
-        <EtapeOrdonnanceActes
-          consultation={consultation}
-          actes={actes}
-          actesList={actesList ?? []}
-          onActesChange={setActes}
-          onAddActe={addActe}
-          onRemoveActe={removeActe}
-          onSaveActes={handleSaveActes}
-          onGenerateOrdonnance={handleGenerateOrdonnance}
-          onGenerateFacture={handleGenerateFacture}
-          onGenerateFactureFromActes={handleGenerateFactureFromActes}
-          totalHT={totalHT}
-          totalTTC={totalTTC}
-          isGeneratingOrdonnance={generateOrdonnance.isPending}
-          isGeneratingFacture={generateFacture.isPending}
-        />
-      )}
+        <TabsContent value="actes">
+          <EtapeOrdonnanceActes
+            consultation={consultation}
+            actes={actes}
+            actesList={actesList ?? []}
+            onActesChange={setActes}
+            onAddActe={addActe}
+            onRemoveActe={removeActe}
+            onSaveActes={handleSaveActes}
+            onGenerateOrdonnance={handleGenerateOrdonnance}
+            onGenerateFacture={handleGenerateFacture}
+            onGenerateFactureFromActes={handleGenerateFactureFromActes}
+            totalHT={totalHT}
+            totalTTC={totalTTC}
+            isGeneratingOrdonnance={generateOrdonnance.isPending}
+            isGeneratingFacture={generateFacture.isPending}
+          />
+        </TabsContent>
+      </Tabs>
 
       <AnesthesieSection
         consultationId={consultation.id}
@@ -385,14 +358,39 @@ export default function ConsultationDetailPage() {
   );
 }
 
-function EtapeAnamnese({ consultation, onSave, onNext }: any) {
+function AutoSaveIndicator({ state }: { state: "idle" | "pending" | "saved" }) {
+  if (state === "idle") return null;
+  return (
+    <span className={`text-xs font-normal ml-2 ${state === "pending" ? "text-muted-foreground" : "text-green-600"}`}>
+      {state === "pending" ? "Enregistrement…" : "✓ Sauvegardé"}
+    </span>
+  );
+}
+
+function EtapeAnamnese({ consultation, onAutoSave }: any) {
   const [anamnese, setAnamnese] = useState(consultation.anamnese ?? "");
   const [motif, setMotif] = useState(consultation.motif ?? "");
+  const [saveState, setSaveState] = useState<"idle" | "pending" | "saved">("idle");
+  const timerRef = useRef<ReturnType<typeof setTimeout>>();
+  const isFirst = useRef(true);
+
+  useEffect(() => {
+    if (isFirst.current) { isFirst.current = false; return; }
+    setSaveState("pending");
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(async () => {
+      await onAutoSave({ motif, anamnese, statut: "en_cours" });
+      setSaveState("saved");
+      setTimeout(() => setSaveState("idle"), 2000);
+    }, 1000);
+  }, [anamnese, motif]);
+
   return (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <span>Étape 1 — Anamnèse</span>
+          <span>Anamnèse</span>
+          <AutoSaveIndicator state={saveState} />
         </CardTitle>
         <p className="text-sm text-muted-foreground">Motif de consultation et historique rapporté par le propriétaire</p>
       </CardHeader>
@@ -406,27 +404,41 @@ function EtapeAnamnese({ consultation, onSave, onNext }: any) {
           <Textarea className="mt-1" rows={8} value={anamnese} onChange={e => setAnamnese(e.target.value)}
             placeholder="Décrivez l'histoire clinique du patient : début des symptômes, évolution, contexte, traitements en cours, comportement alimentaire, hydratation, etc." />
         </div>
-        <div className="flex gap-3">
-          <Button onClick={() => onSave({ motif, anamnese, statut: "en_cours" })}>
-            Sauvegarder
-          </Button>
-          <Button variant="outline" onClick={onNext}>
-            Étape suivante <ChevronRight className="ml-2 h-4 w-4" />
-          </Button>
-        </div>
       </CardContent>
     </Card>
   );
 }
 
-function EtapeExamenClinique({ consultation, onSave, onNext }: any) {
+function EtapeExamenClinique({ consultation, onAutoSave }: any) {
   const [examenClinique, setExamenClinique] = useState(consultation.examenClinique ?? "");
   const [poids, setPoids] = useState(consultation.poids?.toString() ?? "");
   const [temperature, setTemperature] = useState(consultation.temperature?.toString() ?? "");
+  const [saveState, setSaveState] = useState<"idle" | "pending" | "saved">("idle");
+  const timerRef = useRef<ReturnType<typeof setTimeout>>();
+  const isFirst = useRef(true);
+
+  useEffect(() => {
+    if (isFirst.current) { isFirst.current = false; return; }
+    setSaveState("pending");
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(async () => {
+      await onAutoSave({
+        examenClinique,
+        poids: poids ? parseFloat(poids) : null,
+        temperature: temperature ? parseFloat(temperature) : null,
+      });
+      setSaveState("saved");
+      setTimeout(() => setSaveState("idle"), 2000);
+    }, 1000);
+  }, [examenClinique, poids, temperature]);
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Étape 2 — Examen clinique</CardTitle>
+        <CardTitle className="flex items-center gap-2">
+          <span>Examen clinique</span>
+          <AutoSaveIndicator state={saveState} />
+        </CardTitle>
         <p className="text-sm text-muted-foreground">Constantes vitales et observations systèmes</p>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -445,27 +457,35 @@ function EtapeExamenClinique({ consultation, onSave, onNext }: any) {
           <Textarea className="mt-1" rows={10} value={examenClinique} onChange={e => setExamenClinique(e.target.value)}
             placeholder="État général, muqueuses, fréquence cardiaque, respiratoire, palpation abdominale, auscultation cardiopulmonaire, examen locomoteur, ganglions, peau et phanères..." />
         </div>
-        <div className="flex gap-3">
-          <Button onClick={() => onSave({
-            examenClinique,
-            poids: poids ? parseFloat(poids) : null,
-            temperature: temperature ? parseFloat(temperature) : null,
-          })}>Sauvegarder</Button>
-          <Button variant="outline" onClick={onNext}>
-            Étape suivante <ChevronRight className="ml-2 h-4 w-4" />
-          </Button>
-        </div>
       </CardContent>
     </Card>
   );
 }
 
-function EtapeExamensCompl({ consultation, onSave, onNext }: any) {
+function EtapeExamensCompl({ consultation, onAutoSave }: any) {
   const [examens, setExamens] = useState(consultation.examensComplementaires ?? "");
+  const [saveState, setSaveState] = useState<"idle" | "pending" | "saved">("idle");
+  const timerRef = useRef<ReturnType<typeof setTimeout>>();
+  const isFirst = useRef(true);
+
+  useEffect(() => {
+    if (isFirst.current) { isFirst.current = false; return; }
+    setSaveState("pending");
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(async () => {
+      await onAutoSave({ examensComplementaires: examens });
+      setSaveState("saved");
+      setTimeout(() => setSaveState("idle"), 2000);
+    }, 1000);
+  }, [examens]);
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Étape 3 — Examens complémentaires</CardTitle>
+        <CardTitle className="flex items-center gap-2">
+          <span>Examens complémentaires</span>
+          <AutoSaveIndicator state={saveState} />
+        </CardTitle>
         <p className="text-sm text-muted-foreground">Résultats biologiques, imagerie et autres examens</p>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -474,27 +494,35 @@ function EtapeExamensCompl({ consultation, onSave, onNext }: any) {
           <Textarea className="mt-1" rows={10} value={examens} onChange={e => setExamens(e.target.value)}
             placeholder="NFS, biochimie, urines, résultats radiographiques, échographiques, etc. Laissez vide si aucun examen complémentaire." />
         </div>
-        <div className="flex gap-3">
-          <Button onClick={() => onSave({ examensComplementaires: examens })}>Sauvegarder</Button>
-          <Button variant="outline" onClick={onNext}>
-            Analyser avec l'IA <ChevronRight className="ml-2 h-4 w-4" />
-          </Button>
-        </div>
       </CardContent>
     </Card>
   );
 }
 
-function EtapeDiagnosticIA({ consultation, onSave, onGenerateIA, isGenerating, onNext }: any) {
+function EtapeDiagnosticIA({ consultation, onAutoSave, onGenerateIA, isGenerating }: any) {
   const [diagnostic, setDiagnostic] = useState(consultation.diagnostic ?? "");
-  const [diagnosticIA] = useState(consultation.diagnosticIA ?? "");
+  const [saveState, setSaveState] = useState<"idle" | "pending" | "saved">("idle");
+  const timerRef = useRef<ReturnType<typeof setTimeout>>();
+  const isFirst = useRef(true);
+
+  useEffect(() => {
+    if (isFirst.current) { isFirst.current = false; return; }
+    setSaveState("pending");
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(async () => {
+      await onAutoSave({ diagnostic });
+      setSaveState("saved");
+      setTimeout(() => setSaveState("idle"), 2000);
+    }, 1000);
+  }, [diagnostic]);
 
   return (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Brain className="h-5 w-5 text-primary" />
-          Étape 4 — Diagnostic différentiel IA
+          <span>Diagnostic différentiel IA</span>
+          <AutoSaveIndicator state={saveState} />
         </CardTitle>
         <p className="text-sm text-muted-foreground">
           Claude analyse l'anamnèse et l'examen clinique pour proposer des diagnostics différentiels
@@ -520,12 +548,6 @@ function EtapeDiagnosticIA({ consultation, onSave, onGenerateIA, isGenerating, o
           <Label>Diagnostic retenu (à compléter par le vétérinaire)</Label>
           <Textarea className="mt-1" rows={4} value={diagnostic} onChange={e => setDiagnostic(e.target.value)}
             placeholder="Diagnostic final retenu après analyse..." />
-        </div>
-        <div className="flex gap-3">
-          <Button onClick={() => onSave({ diagnostic })}>Sauvegarder le diagnostic</Button>
-          <Button variant="outline" onClick={onNext}>
-            Ordonnance & Actes <ChevronRight className="ml-2 h-4 w-4" />
-          </Button>
         </div>
       </CardContent>
     </Card>
