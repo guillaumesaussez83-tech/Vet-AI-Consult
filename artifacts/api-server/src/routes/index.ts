@@ -19,6 +19,7 @@ import statistiquesRouter from "./statistiques";
 import ordonnancesRouter from "./ordonnances";
 import parametresCliniqueRouter from "./parametres-clinique";
 import agendaRouter from "./agenda";
+import searchRouter from "./search";
 
 const router: IRouter = Router();
 
@@ -40,6 +41,7 @@ router.use("/portail", portailRouter);
 router.use("/ordonnances", ordonnancesRouter);
 router.use("/parametres-clinique", parametresCliniqueRouter);
 router.use("/agenda", agendaRouter);
+router.use("/search", searchRouter);
 router.use(storageRouter);
 
 export default router;

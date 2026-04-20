@@ -91,7 +91,7 @@ export default function OrdonnancesPage() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-semibold text-sm">Ordonnance #{o.id}</span>
+                        <span className="font-semibold text-sm">{(o as any).numeroOrdonnance ?? `Ordonnance #${o.id}`}</span>
                         <span className="text-muted-foreground text-xs">Consultation #{o.consultationId}</span>
                         {o.genereIA && (
                           <Badge variant="secondary" className="text-xs flex items-center gap-1">

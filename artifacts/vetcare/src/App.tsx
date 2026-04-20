@@ -36,8 +36,10 @@ import PortailPage from "./pages/portail/index";
 import ConfidentialitePage from "./pages/confidentialite";
 import { AppLayout } from "./components/layout/AppLayout";
 import IaDisclaimerModal from "./components/IaDisclaimerModal";
+import { CommandPalette } from "./components/CommandPalette";
 import NotFound from "@/pages/not-found";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { useState } from "react";
 
 const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 const clerkProxyUrl = import.meta.env.VITE_CLERK_PROXY_URL;
@@ -159,6 +161,18 @@ import { useLocation, Router as WouterRouter } from "wouter";
 
 function ClerkProviderWithRoutes() {
   const [, setLocation] = useLocation();
+  const [cmdOpen, setCmdOpen] = useState(false);
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === "k") {
+        e.preventDefault();
+        setCmdOpen(prev => !prev);
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
 
   return (
     <ClerkProvider
@@ -170,6 +184,7 @@ function ClerkProviderWithRoutes() {
       <QueryClientProvider client={queryClient}>
         <ClerkQueryClientCacheInvalidator />
         <Router />
+        <CommandPalette open={cmdOpen} onOpenChange={setCmdOpen} />
       </QueryClientProvider>
     </ClerkProvider>
   );
