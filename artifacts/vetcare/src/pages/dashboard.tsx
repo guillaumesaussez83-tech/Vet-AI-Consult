@@ -3,9 +3,9 @@ import { useQuery } from "@tanstack/react-query";
 import { useGetDashboardStats, useGetConsultationsRecentes } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, Activity, CreditCard, Stethoscope, ArrowRight, Syringe, Phone, AlertTriangle } from "lucide-react";
-import { format, parseISO, differenceInDays } from "date-fns";
-import { fr } from "date-fns/locale";
+import { parseISO, differenceInDays } from "date-fns";
 import { Button } from "@/components/ui/button";
+import { formatDateHeureFR } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 
 interface RappelVaccin {
@@ -206,7 +206,7 @@ export default function Dashboard() {
                       <div>
                         <p className="font-medium text-foreground">{consultation.patient?.nom || "Inconnu"}</p>
                         <p className="text-sm text-muted-foreground">
-                          {format(new Date(consultation.date), "dd MMM yyyy 'à' HH:mm", { locale: fr })}
+                          {formatDateHeureFR(consultation.date)}
                         </p>
                       </div>
                     </div>
