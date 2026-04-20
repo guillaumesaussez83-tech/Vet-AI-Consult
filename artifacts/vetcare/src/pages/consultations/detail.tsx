@@ -1199,7 +1199,9 @@ function EtapeOrdonnanceActes({
                 }
                 setSavingActe(true);
                 try {
-                  const res = await fetch(`/api/consultations/${id}/actes`, {
+                  const consultationId = consultation?.id;
+                  if (!consultationId) throw new Error("Consultation introuvable");
+                  const res = await fetch(`/api/consultations/${consultationId}/actes`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
@@ -1209,8 +1211,11 @@ function EtapeOrdonnanceActes({
                       acteId: newActeForm.acteId ? parseInt(newActeForm.acteId) : null,
                     }),
                   });
-                  if (!res.ok) throw new Error("Erreur serveur");
-                  await queryClient.invalidateQueries({ queryKey: getGetConsultationQueryKey(id) });
+                  if (!res.ok) {
+                    const errData = await res.json().catch(() => ({}));
+                    throw new Error(errData.error ?? "Erreur serveur");
+                  }
+                  await queryClient.invalidateQueries({ queryKey: getGetConsultationQueryKey(consultationId) });
                   setShowAddActeDialog(false);
                   setNewActeForm({ description: "", quantite: 1, prixHT: "", tva: "20", acteId: "" });
                   toast({ title: "Acte ajouté avec succès" });
