@@ -276,6 +276,26 @@ export default function ConsultationDetailPage() {
         <PatientBarre patient={patient as any} />
       )}
 
+      {patient?.allergies && (
+        <div className="flex items-start gap-3 bg-red-50 border-l-4 border-red-600 px-4 py-3 rounded-r-lg">
+          <span className="text-red-600 mt-0.5 flex-shrink-0">⚠️</span>
+          <div>
+            <span className="text-red-800 font-bold text-sm uppercase tracking-wide">ALLERGIES : </span>
+            <span className="text-red-700 text-sm">{patient.allergies}</span>
+          </div>
+        </div>
+      )}
+
+      {patient?.antecedents && (
+        <div className="flex items-start gap-3 bg-amber-50 border-l-4 border-amber-500 px-4 py-3 rounded-r-lg">
+          <span className="text-amber-600 mt-0.5 flex-shrink-0">📋</span>
+          <div>
+            <span className="text-amber-800 font-bold text-sm">Antécédents : </span>
+            <span className="text-amber-700 text-sm">{patient.antecedents}</span>
+          </div>
+        </div>
+      )}
+
       {/* Navigation étapes */}
       <div className="flex items-center gap-2 overflow-x-auto pb-2">
         {ETAPES.map((etape, idx) => (
