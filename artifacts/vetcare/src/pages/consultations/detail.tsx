@@ -72,15 +72,22 @@ export default function ConsultationDetailPage() {
   const [actes, setActes] = useState<ActeLine[]>([]);
   const [actesInit, setActesInit] = useState(false);
 
-  if (consultation && !actesInit) {
+  useEffect(() => {
+    if (!consultation?.actes) return;
+    setActes(prev => {
+      if (!actesInit || (prev.length === 0 && consultation.actes!.length > 0)) {
+        return consultation.actes!.map(a => ({
+          acteId: a.acteId,
+          quantite: a.quantite,
+          prixUnitaire: a.prixUnitaire,
+          description: a.description ?? "",
+        }));
+      }
+      return prev;
+    });
     setActesInit(true);
-    setActes(consultation.actes?.map(a => ({
-      acteId: a.acteId,
-      quantite: a.quantite,
-      prixUnitaire: a.prixUnitaire,
-      description: a.description ?? "",
-    })) ?? []);
-  }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [consultation?.id, consultation?.actes?.length]);
 
   const handleSaveStep = useCallback(async (data: Record<string, unknown>) => {
     try {

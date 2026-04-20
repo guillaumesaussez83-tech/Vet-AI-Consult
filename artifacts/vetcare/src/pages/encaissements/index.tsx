@@ -4,6 +4,7 @@ import { useListFactures } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Euro, CreditCard, Banknote, Building2, FileCheck } from "lucide-react";
+import { formatDateFR } from "@/lib/utils";
 
 const MODES_LABELS: Record<string, string> = {
   carte_bancaire: "Carte bancaire",
@@ -203,7 +204,7 @@ export default function EncaissementsPage() {
                       <div>
                         <div className="text-sm font-medium">{f.numero}</div>
                         <div className="text-xs text-muted-foreground">
-                          {f.datePaiement ?? f.dateEmission}
+                          {formatDateFR(f.datePaiement ?? f.dateEmission)}
                           {f.consultation?.patient && ` — ${f.consultation.patient.nom}`}
                           {f.modePaiement && ` · ${labelMode(f.modePaiement)}`}
                         </div>

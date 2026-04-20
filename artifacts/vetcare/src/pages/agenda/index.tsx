@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
+import { formatDateFR } from "@/lib/utils";
 import { useListPatients } from "@workspace/api-client-react";
 import {
   ChevronLeft, ChevronRight, Plus, Calendar, Settings, ClipboardList,
@@ -1418,7 +1419,7 @@ function RotationDialog({ open, onClose, vets, toast }: {
                   const vet = vetMap[r.veterinaireId];
                   return (
                     <div key={i} className="flex items-center justify-between px-3 py-1.5 text-xs">
-                      <span className="text-gray-600">{r.date}</span>
+                      <span className="text-gray-600">{formatDateFR(r.date)}</span>
                       <div className="flex items-center gap-1.5">
                         <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: vet?.couleur }} />
                         <span>Dr. {vet?.initiales}</span>

@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { ArrowLeft, Check, Printer, CreditCard, Smartphone, PawPrint, FileText, Building2, Banknote } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { formatDateFR } from "@/lib/utils";
 
 const MODES_PAIEMENT = [
   { value: "carte_bancaire", label: "Carte bancaire (puce)", icon: CreditCard },
@@ -93,7 +94,7 @@ export default function FactureDetailPage() {
         </Link>
         <div className="flex-1">
           <h1 className="text-2xl font-bold tracking-tight">{facture.numero}</h1>
-          <p className="text-muted-foreground text-sm">Émise le {facture.dateEmission}</p>
+          <p className="text-muted-foreground text-sm">Émise le {formatDateFR(facture.dateEmission)}</p>
         </div>
         <Badge variant={facture.statut === "payee" ? "outline" : facture.statut === "annulee" ? "destructive" : "secondary"}>
           {statutLabels[facture.statut] ?? facture.statut}
@@ -126,7 +127,7 @@ export default function FactureDetailPage() {
               <span className="text-muted-foreground">Vétérinaire</span>
               <span>{facture.consultation?.veterinaire}</span>
               <span className="text-muted-foreground">Date consultation</span>
-              <span>{facture.consultation?.date}</span>
+              <span>{formatDateFR(facture.consultation?.date)}</span>
               {modePaiementLabel && <>
                 <span className="text-muted-foreground">Mode de paiement</span>
                 <span className="font-medium">{modePaiementLabel}</span>

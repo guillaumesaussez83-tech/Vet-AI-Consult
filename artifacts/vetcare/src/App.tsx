@@ -165,14 +165,26 @@ function ClerkProviderWithRoutes() {
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement)?.tagName ?? "";
+      const editable = (e.target as HTMLElement)?.isContentEditable;
+      const inInput = ["INPUT", "TEXTAREA", "SELECT"].includes(tag) || editable;
+
       if ((e.ctrlKey || e.metaKey) && e.key === "k") {
         e.preventDefault();
         setCmdOpen(prev => !prev);
+        return;
       }
+
+      if (inInput || e.ctrlKey || e.metaKey || e.altKey) return;
+
+      if (e.key === "n") { e.preventDefault(); setLocation("/consultations/nouvelle"); }
+      else if (e.key === "p") { e.preventDefault(); setLocation("/patients/nouveau"); }
+      else if (e.key === "f") { e.preventDefault(); setLocation("/factures"); }
+      else if (e.key === "?") { e.preventDefault(); setCmdOpen(true); }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, []);
+  }, [setLocation]);
 
   return (
     <ClerkProvider

@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
+import { formatDateFR } from "@/lib/utils";
 import { ArrowLeft, Plus, Syringe, AlertTriangle, Clock, CheckCircle, FileText, Loader2 } from "lucide-react";
 
 const API_BASE = "/api";
@@ -159,8 +160,8 @@ export default function VaccinationsPage() {
                             {statut === "ok" && <Badge variant="secondary" className="text-xs text-green-600"><CheckCircle className="h-3 w-3 mr-1" />A jour</Badge>}
                           </div>
                           <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-1 text-sm text-muted-foreground">
-                            <span>Injection : <strong className="text-foreground">{new Date(v.dateInjection).toLocaleDateString("fr-FR")}</strong></span>
-                            {v.dateRappel && <span>Rappel : <strong className={statut === "retard" ? "text-red-600" : statut === "bientot" ? "text-orange-500" : "text-foreground"}>{new Date(v.dateRappel).toLocaleDateString("fr-FR")}</strong></span>}
+                            <span>Injection : <strong className="text-foreground">{formatDateFR(v.dateInjection)}</strong></span>
+                            {v.dateRappel && <span>Rappel : <strong className={statut === "retard" ? "text-red-600" : statut === "bientot" ? "text-orange-500" : "text-foreground"}>{formatDateFR(v.dateRappel)}</strong></span>}
                             {v.voieInjection && <span>Voie : <strong className="text-foreground">{v.voieInjection}</strong></span>}
                             {v.fabricant && <span>Fabricant : {v.fabricant}</span>}
                             {v.lotNumero && <span>Lot : {v.lotNumero}</span>}

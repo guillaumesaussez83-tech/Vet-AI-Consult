@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { FileText, Printer, Sparkles, Search, Calendar, User } from "lucide-react";
+import { formatDateFR } from "@/lib/utils";
 
 const API_BASE = "/api";
 
@@ -127,7 +128,7 @@ export default function OrdonnancesPage() {
                         )}
                         <span className="flex items-center gap-1">
                           <Calendar className="h-3 w-3" />
-                          {new Date(o.createdAt).toLocaleDateString("fr-FR")}
+                          {formatDateFR(o.createdAt)}
                         </span>
                       </div>
                       <p className="text-xs text-muted-foreground mt-1.5 line-clamp-2">{sanitizeContenu(o.contenu)}</p>

@@ -4,6 +4,7 @@ import { useGetFacture } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Printer, ArrowLeft, Download, Loader2 } from "lucide-react";
+import { formatDateFR } from "@/lib/utils";
 
 export default function FactureImprimerPage() {
   const [, params] = useRoute("/factures/:id/imprimer");
@@ -108,11 +109,11 @@ export default function FactureImprimerPage() {
             <div className="text-3xl font-bold text-gray-800">FACTURE</div>
             <div className="text-lg font-semibold text-blue-800 mt-1">{facture.numero}</div>
             <div className="text-sm text-gray-500 mt-2">
-              Date d'émission : <strong>{facture.dateEmission}</strong>
+              Date d'émission : <strong>{formatDateFR(facture.dateEmission)}</strong>
             </div>
             {facture.datePaiement && (
               <div className="text-sm text-gray-500">
-                Date de paiement : <strong>{facture.datePaiement}</strong>
+                Date de paiement : <strong>{formatDateFR(facture.datePaiement)}</strong>
               </div>
             )}
             <div className="mt-2">
@@ -159,7 +160,7 @@ export default function FactureImprimerPage() {
             )}
             {facture.consultation && (
               <div className="text-xs text-gray-400 mt-2">
-                Consultation du {facture.consultation.date}
+                Consultation du {formatDateFR(facture.consultation.date)}
                 {facture.consultation.veterinaire && ` — Dr. ${facture.consultation.veterinaire}`}
               </div>
             )}

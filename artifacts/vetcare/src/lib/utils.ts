@@ -9,7 +9,7 @@ export function formatDateFR(date: string | Date | null | undefined): string {
   if (!date) return "—";
   const d = typeof date === "string" ? new Date(date.includes("T") ? date : date + "T12:00:00") : date;
   if (isNaN(d.getTime())) return String(date);
-  return d.toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric" });
+  return new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "short", year: "numeric" }).format(d);
 }
 
 export function formatDateLong(date: string | Date | null | undefined): string {

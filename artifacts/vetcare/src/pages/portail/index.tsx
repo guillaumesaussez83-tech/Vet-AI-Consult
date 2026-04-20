@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Stethoscope, Syringe, User, Calendar, CheckCircle, AlertTriangle, Clock } from "lucide-react";
+import { formatDateFR } from "@/lib/utils";
 
 const API_BASE = "/api";
 
@@ -158,7 +159,7 @@ export default function PortailPage() {
                               <div key={v.id} className="flex items-center justify-between gap-3 py-2 border-b last:border-b-0">
                                 <div>
                                   <p className="text-sm font-medium">{v.nomVaccin}</p>
-                                  <p className="text-xs text-muted-foreground">Le {new Date(v.dateInjection).toLocaleDateString("fr-FR")}</p>
+                                  <p className="text-xs text-muted-foreground">Le {formatDateFR(v.dateInjection)}</p>
                                 </div>
                                 <div className="text-right">
                                   {v.dateRappel && (
@@ -169,7 +170,7 @@ export default function PortailPage() {
                                       </span>
                                     </div>
                                   )}
-                                  {v.dateRappel && <p className="text-xs text-muted-foreground">Rappel : {new Date(v.dateRappel).toLocaleDateString("fr-FR")}</p>}
+                                  {v.dateRappel && <p className="text-xs text-muted-foreground">Rappel : {formatDateFR(v.dateRappel)}</p>}
                                 </div>
                               </div>
                             );
