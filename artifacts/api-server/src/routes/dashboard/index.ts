@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { patientsTable, consultationsTable, facturesTable, ownersTable } from "@workspace/db";
-import { eq, gte, sql } from "drizzle-orm";
+import { patientsTable, consultationsTable, facturesTable, ownersTable, vaccinationsTable } from "@workspace/db";
+import { eq, gte, lte, and, isNotNull, sql } from "drizzle-orm";
 
 const router = Router();
 
@@ -101,6 +101,54 @@ router.get("/consultations-recentes", async (req, res) => {
           createdAt: c.patient.owner.createdAt.toISOString(),
         } : null,
       } : null,
+    })));
+  } catch (err) {
+    req.log.error(err);
+    return res.status(500).json({ error: "Erreur interne du serveur" });
+  }
+});
+
+router.get("/rappels-vaccins", async (req, res) => {
+  try {
+    const today = new Date();
+    const sevenDaysAgo = new Date(today);
+    sevenDaysAgo.setDate(today.getDate() - 7);
+    const sevenDaysAhead = new Date(today);
+    sevenDaysAhead.setDate(today.getDate() + 7);
+
+    const ago = sevenDaysAgo.toISOString().split("T")[0];
+    const ahead = sevenDaysAhead.toISOString().split("T")[0];
+
+    const rappels = await db
+      .select({
+        id: vaccinationsTable.id,
+        nomVaccin: vaccinationsTable.nomVaccin,
+        dateRappel: vaccinationsTable.dateRappel,
+        patientId: vaccinationsTable.patientId,
+        nomPatient: patientsTable.nom,
+        espece: patientsTable.espece,
+        ownerId: patientsTable.ownerId,
+        nomProprietaire: ownersTable.nom,
+        prenomProprietaire: ownersTable.prenom,
+        telephoneProprietaire: ownersTable.telephone,
+      })
+      .from(vaccinationsTable)
+      .leftJoin(patientsTable, eq(vaccinationsTable.patientId, patientsTable.id))
+      .leftJoin(ownersTable, eq(patientsTable.ownerId, ownersTable.id))
+      .where(
+        and(
+          isNotNull(vaccinationsTable.dateRappel),
+          gte(vaccinationsTable.dateRappel, ago),
+          lte(vaccinationsTable.dateRappel, ahead)
+        )
+      )
+      .orderBy(vaccinationsTable.dateRappel)
+      .limit(15);
+
+    const todayStr = today.toISOString().split("T")[0];
+    return res.json(rappels.map(r => ({
+      ...r,
+      enRetard: r.dateRappel != null && r.dateRappel < todayStr,
     })));
   } catch (err) {
     req.log.error(err);
