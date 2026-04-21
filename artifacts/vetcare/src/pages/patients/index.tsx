@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, Search, Dog, Cat, Rabbit, Bird, Trash2, Eye } from "lucide-react";
+import { Plus, Search, Dog, Cat, Rabbit, Bird, Trash2, Eye, ShieldAlert } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -128,6 +128,14 @@ export default function PatientsPage() {
                       <span className="font-medium">
                         {patient.owner ? `${patient.owner.prenom} ${patient.owner.nom}` : "—"}
                       </span>
+                      {patient.owner && !(patient.owner as any).rgpdAccepted && (
+                        <span
+                          title="Consentement RGPD non recueilli"
+                          className="inline-flex items-center text-amber-600"
+                        >
+                          <ShieldAlert className="h-4 w-4" />
+                        </span>
+                      )}
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="text-muted-foreground">Sexe :</span>

@@ -1,0 +1,8 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "wl8SbqokAX0ZQBk7ks3aV"
+uri = "file://.local/test-rgpd.pdf"
+type = "pdf"
+title = "Aperçu : Formulaire de consentement RGPD généré"

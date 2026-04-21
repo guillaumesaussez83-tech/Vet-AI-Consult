@@ -45,11 +45,13 @@ export default function FactureImprimerPage() {
 
   const patient = facture.consultation?.patient;
   const owner = patient?.owner;
-  const lignes = (facture as any).lignes ?? [];
+  const facAny = facture as any;
+  const lignes = facAny.lignes ?? [];
 
-  const totalHT = lignes.reduce((s: number, l: any) => s + l.montantHT, 0);
-  const totalTVA = totalHT * 0.20;
-  const totalTTC = totalHT + totalTVA;
+  const computedHT = lignes.reduce((s: number, l: any) => s + Number(l.montantHT || 0), 0);
+  const totalHT = lignes.length > 0 ? computedHT : Number(facAny.montantHT ?? 0);
+  const totalTVA = facAny.montantTVA != null ? Number(facAny.montantTVA) : totalHT * 0.20;
+  const totalTTC = facAny.montantTTC != null ? Number(facAny.montantTTC) : totalHT + totalTVA;
 
   const categorieLabel: Record<string, string> = {
     consultation: "Consultations",
@@ -63,7 +65,7 @@ export default function FactureImprimerPage() {
 
   const parCategorie = lignes.reduce((acc: Record<string, number>, l: any) => {
     const cat = l.acte?.categorie ?? "autre";
-    acc[cat] = (acc[cat] ?? 0) + l.montantHT;
+    acc[cat] = (acc[cat] ?? 0) + Number(l.montantHT || 0);
     return acc;
   }, {} as Record<string, number>);
 

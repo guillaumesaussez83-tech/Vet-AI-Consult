@@ -25,8 +25,11 @@ interface ParametresClinique {
   siret: string | null;
   numeroOrdre: string | null;
   numTVA: string | null;
+  logoUrl: string | null;
   horaires: string | null;
   mentionsLegales: string | null;
+  rgpdResponsableNom: string | null;
+  rgpdAdresseExercice: string | null;
 }
 
 async function fetchClinique(): Promise<ParametresClinique> {
@@ -65,8 +68,11 @@ function CliniqueForm() {
     siret: "",
     numeroOrdre: "",
     numTVA: "",
+    logoUrl: "",
     horaires: "",
     mentionsLegales: "",
+    rgpdResponsableNom: "",
+    rgpdAdresseExercice: "",
   });
 
   const [isDirty, setIsDirty] = useState(false);
@@ -84,8 +90,11 @@ function CliniqueForm() {
         siret: data.siret ?? "",
         numeroOrdre: data.numeroOrdre ?? "",
         numTVA: data.numTVA ?? "",
+        logoUrl: data.logoUrl ?? "",
         horaires: data.horaires ?? "",
         mentionsLegales: data.mentionsLegales ?? "",
+        rgpdResponsableNom: data.rgpdResponsableNom ?? "",
+        rgpdAdresseExercice: data.rgpdAdresseExercice ?? "",
       });
       setIsDirty(false);
     }
@@ -118,8 +127,11 @@ function CliniqueForm() {
       siret: form.siret || null,
       numeroOrdre: form.numeroOrdre || null,
       numTVA: form.numTVA || null,
+      logoUrl: form.logoUrl || null,
       horaires: form.horaires || null,
       mentionsLegales: form.mentionsLegales || null,
+      rgpdResponsableNom: form.rgpdResponsableNom || null,
+      rgpdAdresseExercice: form.rgpdAdresseExercice || null,
     });
   }
 
@@ -221,6 +233,39 @@ function CliniqueForm() {
             placeholder="ONVS-12345"
             value={form.numeroOrdre}
             onChange={e => update("numeroOrdre", e.target.value)}
+          />
+        </div>
+      </div>
+
+      <Separator />
+      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Informations RGPD</p>
+
+      <div className="grid grid-cols-1 gap-4">
+        <div className="space-y-1.5">
+          <Label>Responsable du traitement des données</Label>
+          <Input
+            placeholder="Nom et qualité (ex : Dr. Martin Dupont, gérant)"
+            value={form.rgpdResponsableNom}
+            onChange={e => update("rgpdResponsableNom", e.target.value)}
+          />
+          <p className="text-xs text-muted-foreground">Apparaît sur les formulaires de consentement RGPD générés.</p>
+        </div>
+        <div className="space-y-1.5">
+          <Label>Adresse pour exercer les droits RGPD</Label>
+          <Textarea
+            placeholder="Adresse postale complète où les propriétaires peuvent envoyer leurs demandes (accès, rectification, effacement…)"
+            value={form.rgpdAdresseExercice}
+            onChange={e => update("rgpdAdresseExercice", e.target.value)}
+            rows={2}
+          />
+          <p className="text-xs text-muted-foreground">Si vide, l'adresse de la clinique sera utilisée.</p>
+        </div>
+        <div className="space-y-1.5">
+          <Label>Logo de la clinique (URL)</Label>
+          <Input
+            placeholder="https://… (laisser vide pour utiliser le nom de la clinique en en-tête)"
+            value={form.logoUrl}
+            onChange={e => update("logoUrl", e.target.value)}
           />
         </div>
       </div>

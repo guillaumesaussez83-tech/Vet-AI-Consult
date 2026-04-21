@@ -48,6 +48,9 @@ router.get("/", async (req, res) => {
           email: ownersTable.email,
           telephone: ownersTable.telephone,
           adresse: ownersTable.adresse,
+          rgpdAccepted: ownersTable.rgpdAccepted,
+          rgpdAcceptedAt: ownersTable.rgpdAcceptedAt,
+          rgpdDocumentUrl: ownersTable.rgpdDocumentUrl,
           createdAt: ownersTable.createdAt,
         },
       })
@@ -136,6 +139,9 @@ router.get("/:id", async (req, res) => {
           email: ownersTable.email,
           telephone: ownersTable.telephone,
           adresse: ownersTable.adresse,
+          rgpdAccepted: ownersTable.rgpdAccepted,
+          rgpdAcceptedAt: ownersTable.rgpdAcceptedAt,
+          rgpdDocumentUrl: ownersTable.rgpdDocumentUrl,
           createdAt: ownersTable.createdAt,
         },
       })

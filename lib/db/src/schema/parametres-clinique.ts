@@ -17,6 +17,8 @@ export const parametresCliniqueTable = pgTable("parametres_clinique", {
   logoUrl: text("logo_url"),
   horaires: text("horaires"),
   mentionsLegales: text("mentions_legales"),
+  rgpdResponsableNom: text("rgpd_responsable_nom"),
+  rgpdAdresseExercice: text("rgpd_adresse_exercice"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });

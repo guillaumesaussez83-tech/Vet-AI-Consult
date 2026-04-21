@@ -46,6 +46,7 @@ router.put("/", async (req, res) => {
     const {
       nomClinique, adresse, codePostal, ville, telephone, email,
       siteWeb, siret, numeroOrdre, numTVA, logoUrl, horaires, mentionsLegales,
+      rgpdResponsableNom, rgpdAdresseExercice,
     } = req.body;
 
     const data = {
@@ -62,6 +63,8 @@ router.put("/", async (req, res) => {
       logoUrl: logoUrl ?? null,
       horaires: horaires ?? null,
       mentionsLegales: mentionsLegales ?? null,
+      rgpdResponsableNom: rgpdResponsableNom ?? null,
+      rgpdAdresseExercice: rgpdAdresseExercice ?? null,
     };
 
     const existing = await db.select().from(parametresCliniqueTable).limit(1);

@@ -3,7 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { build as esbuild } from "esbuild";
 import esbuildPluginPino from "esbuild-plugin-pino";
-import { rm } from "node:fs/promises";
+import { rm, mkdir, cp } from "node:fs/promises";
 
 // Plugins (e.g. 'esbuild-plugin-pino') may use `require` to resolve dependencies
 globalThis.require = createRequire(import.meta.url);
@@ -118,6 +118,19 @@ globalThis.__dirname = __bannerPath.dirname(globalThis.__filename);
     `,
     },
   });
+
+  // pdfkit reads its bundled AFM fonts via fs from `${__dirname}/data/`.
+  // Since the bundle puts __dirname at dist/, copy pdfkit's data folder there.
+  try {
+    const require = createRequire(import.meta.url);
+    const pdfkitJsPath = require.resolve("pdfkit");
+    const pdfkitDataDir = path.join(path.dirname(pdfkitJsPath), "data");
+    const destDataDir = path.join(distDir, "data");
+    await mkdir(destDataDir, { recursive: true });
+    await cp(pdfkitDataDir, destDataDir, { recursive: true });
+  } catch (err) {
+    console.warn("[build] pdfkit data copy skipped:", err?.message);
+  }
 }
 
 buildAll().catch((err) => {

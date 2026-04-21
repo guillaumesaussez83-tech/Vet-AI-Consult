@@ -4,11 +4,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, Plus, Dog, Cat, Rabbit, Bird, Syringe, ShieldCheck, ChevronRight } from "lucide-react";
+import { ArrowLeft, Plus, Dog, Cat, Rabbit, Bird, Syringe, ShieldCheck, ShieldAlert, ChevronRight, FileText, Loader2, Check, Download } from "lucide-react";
 import { formatDateFR } from "@/lib/utils";
 import { PatientTimeline } from "@/components/PatientTimeline";
 import { WeightChart } from "@/components/WeightChart";
 import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
 
 const especeIcon: Record<string, React.ElementType> = {
   chien: Dog, chat: Cat, lapin: Rabbit, oiseau: Bird,
@@ -20,6 +22,9 @@ export default function PatientDetailPage() {
   const [, params] = useRoute("/patients/:id");
   const id = parseInt(params?.id ?? "0");
   const [activeTab, setActiveTab] = useState<Tab>("timeline");
+  const [rgpdLoading, setRgpdLoading] = useState<"generate" | "confirm" | null>(null);
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   const { data: patient, isLoading } = useGetPatient(id, {
     query: { enabled: !!id, queryKey: getGetPatientQueryKey(id) }
@@ -27,6 +32,44 @@ export default function PatientDetailPage() {
   const { data: consultations = [] } = useListPatientConsultations(id, {
     query: { enabled: !!id, queryKey: ["patient-consultations", id] }
   });
+
+  async function handleGenerateRgpd(ownerId: number, ownerNom: string) {
+    setRgpdLoading("generate");
+    try {
+      const r = await fetch(`/api/owners/${ownerId}/rgpd/generate`, { method: "POST" });
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      const blob = await r.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `consentement-rgpd-${ownerNom.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${ownerId}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      toast({ title: "Formulaire RGPD généré", description: "Le PDF a été téléchargé pour impression et signature." });
+      queryClient.invalidateQueries({ queryKey: getGetPatientQueryKey(id) });
+    } catch (e) {
+      toast({ title: "Erreur", description: "Impossible de générer le formulaire RGPD.", variant: "destructive" });
+    } finally {
+      setRgpdLoading(null);
+    }
+  }
+
+  async function handleConfirmRgpd(ownerId: number) {
+    setRgpdLoading("confirm");
+    try {
+      const r = await fetch(`/api/owners/${ownerId}/rgpd/confirm`, { method: "POST" });
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      toast({ title: "Consentement enregistré", description: "Le consentement RGPD a été marqué comme obtenu." });
+      queryClient.invalidateQueries({ queryKey: getGetPatientQueryKey(id) });
+      queryClient.invalidateQueries({ queryKey: ["/api/patients"] });
+    } catch (e) {
+      toast({ title: "Erreur", description: "Impossible d'enregistrer le consentement.", variant: "destructive" });
+    } finally {
+      setRgpdLoading(null);
+    }
+  }
 
   if (isLoading) return (
     <div className="space-y-4">
@@ -238,9 +281,20 @@ export default function PatientDetailPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Propriétaire</CardTitle>
+              <CardTitle className="flex items-center justify-between">
+                <span>Propriétaire</span>
+                {patient.owner && ((patient.owner as any).rgpdAccepted ? (
+                  <Badge variant="secondary" className="gap-1 bg-green-100 text-green-700 hover:bg-green-100">
+                    <ShieldCheck className="h-3 w-3" /> RGPD signé
+                  </Badge>
+                ) : (
+                  <Badge variant="secondary" className="gap-1 bg-amber-100 text-amber-800 hover:bg-amber-100">
+                    <ShieldAlert className="h-3 w-3" /> RGPD à recueillir
+                  </Badge>
+                ))}
+              </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-2 text-sm">
+            <CardContent className="space-y-3 text-sm">
               {patient.owner ? (
                 <>
                   <div className="text-xl font-semibold">{patient.owner.prenom} {patient.owner.nom}</div>
@@ -257,6 +311,54 @@ export default function PatientDetailPage() {
                   {patient.owner.adresse && (
                     <p className="text-muted-foreground">📍 {patient.owner.adresse}</p>
                   )}
+
+                  <div className="border-t pt-3 space-y-2">
+                    <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      <FileText className="h-3.5 w-3.5" />
+                      Consentement RGPD
+                    </div>
+                    {(patient.owner as any).rgpdAccepted ? (
+                      <p className="text-xs text-green-700 flex items-center gap-1.5">
+                        <ShieldCheck className="h-3.5 w-3.5" />
+                        Recueilli
+                        {(patient.owner as any).rgpdAcceptedAt && (
+                          <> le {new Date((patient.owner as any).rgpdAcceptedAt).toLocaleDateString("fr-FR")}</>
+                        )}
+                      </p>
+                    ) : (
+                      <p className="text-xs text-amber-700 flex items-center gap-1.5">
+                        <ShieldAlert className="h-3.5 w-3.5" />
+                        Non recueilli — à imprimer et faire signer
+                      </p>
+                    )}
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleGenerateRgpd(patient.owner!.id, patient.owner!.nom)}
+                        disabled={rgpdLoading !== null}
+                      >
+                        {rgpdLoading === "generate" ? (
+                          <><Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />Génération…</>
+                        ) : (
+                          <><Download className="mr-2 h-3.5 w-3.5" />Générer formulaire RGPD</>
+                        )}
+                      </Button>
+                      {!(patient.owner as any).rgpdAccepted && (
+                        <Button
+                          size="sm"
+                          onClick={() => handleConfirmRgpd(patient.owner!.id)}
+                          disabled={rgpdLoading !== null}
+                        >
+                          {rgpdLoading === "confirm" ? (
+                            <><Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />Enregistrement…</>
+                          ) : (
+                            <><Check className="mr-2 h-3.5 w-3.5" />Marquer comme obtenu</>
+                          )}
+                        </Button>
+                      )}
+                    </div>
+                  </div>
                 </>
               ) : (
                 <p className="text-muted-foreground">Aucun propriétaire</p>
