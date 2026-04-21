@@ -239,13 +239,13 @@ RÈGLES STRICTES :
         role: "user",
         content: `Extrait de cette dictée les prescriptions médicamenteuses sous forme JSON structuré :
 [{
-  "nom_medicament": string,
-  "dose": string,
-  "voie_administration": string,
-  "frequence": string,
-  "duree": string,
-  "quantite_a_delivrer": number,
-  "unite": string,
+  "nom_medicament": string,         // ex: "Amoxicilline 200mg"
+  "dose": string,                    // ex: "10 mg/kg" ou "1 comprimé"
+  "voie_administration": string,    // ex: "per os", "sous-cutané", "intraveineux"
+  "frequence": string,               // ex: "2 fois par jour", "matin et soir", "1 fois par jour"
+  "duree": string,                   // OBLIGATOIRE — toujours exprimée en jours, ex: "7 jours", "5 jours", "10 jours". Si la durée n'est pas dictée, déduis une durée standard pour le médicament (AINS: 5j, antibiotiques: 7-10j, corticoïdes avec décroissance: 7-14j). NE JAMAIS laisser vide ou null.
+  "quantite_a_delivrer": number,     // entier positif
+  "unite": string,                   // ex: "comprimé", "ml", "flacon"
   "justification": string
 }]
 Réponds UNIQUEMENT avec le JSON valide, sans texte supplémentaire ni bloc markdown.

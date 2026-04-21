@@ -7,6 +7,14 @@ import { useToast } from "@/hooks/use-toast";
 import { Mic, MicOff, Loader2, CheckCircle, AlertTriangle, Package } from "lucide-react";
 
 const API_BASE = "/api";
+
+function displayField(v: unknown, fallback = "à définir"): string {
+  if (v == null) return fallback;
+  const s = String(v).trim();
+  if (!s || s === "—" || s === "-" || s === "–" || /^(null|undefined)$/i.test(s)) return fallback;
+  return s;
+}
+
 interface Prescription {
   nom_medicament: string;
   dose: string;
@@ -100,11 +108,15 @@ export default function DicteeOrdonnanceDialog({ open, onClose, onConfirmed }: P
 
   const confirmer = () => {
     const lignes = prescriptions.map(p => {
+      const nom = `${p.nom_medicament}${displayField(p.dose) !== "à définir" ? " " + p.dose : ""}`;
+      const voie = displayField(p.voie_administration);
+      const freq = displayField(p.frequence);
+      const duree = displayField(p.duree);
       const parts = [
-        `${p.nom_medicament} ${p.dose}`,
-        `${p.voie_administration}, ${p.frequence} pendant ${p.duree}`,
+        nom,
+        `${voie}, ${freq} pendant ${duree}`,
         (p.quantite_a_delivrer != null && p.quantite_a_delivrer > 0)
-          ? `Qté : ${p.quantite_a_delivrer} ${p.unite}`
+          ? `Qté : ${p.quantite_a_delivrer} ${displayField(p.unite, "unité")}`
           : null,
       ].filter(Boolean);
       return parts.join(" — ");
@@ -207,9 +219,21 @@ export default function DicteeOrdonnanceDialog({ open, onClose, onConfirmed }: P
                         )}
                       </div>
                       <div className="text-xs text-muted-foreground space-y-0.5">
-                        <div>Dose : {p.dose} — {p.voie_administration}</div>
-                        <div>Fréquence : {p.frequence} — Durée : {p.duree}</div>
-                        <div>Quantité à délivrer : <strong>{p.quantite_a_delivrer} {p.unite}</strong></div>
+                        <div>Dose : {displayField(p.dose)} — {displayField(p.voie_administration)}</div>
+                        <div>
+                          Fréquence : {displayField(p.frequence)} — Durée :{" "}
+                          <span className={displayField(p.duree) === "à définir" ? "text-amber-600 font-medium" : ""}>
+                            {displayField(p.duree)}
+                          </span>
+                        </div>
+                        <div>
+                          Quantité à délivrer :{" "}
+                          <strong>
+                            {p.quantite_a_delivrer != null && p.quantite_a_delivrer > 0
+                              ? `${p.quantite_a_delivrer} ${displayField(p.unite, "unité")}`
+                              : "à définir"}
+                          </strong>
+                        </div>
                       </div>
                       {p.stockMatch && (
                         <div className="text-xs border-t pt-2 flex items-center justify-between">
