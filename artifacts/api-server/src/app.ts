@@ -1,6 +1,9 @@
 import express, { type Express } from "express";
 import cors from "cors";
 import helmet from "helmet";
+import path from "path";
+import { fileURLToPath } from "url";
+import { existsSync } from "fs";
 import pinoHttp from "pino-http";
 import { clerkMiddleware } from "@clerk/express";
 import { CLERK_PROXY_PATH, clerkProxyMiddleware } from "./middlewares/clerkProxyMiddleware";
@@ -72,6 +75,24 @@ app.use(clerkMiddleware());
 app.use("/api", apiLimiter);
 app.use("/api", responseWrapper);
 app.use("/api", router);
+
+// === Servir le frontend en production (déploiement monolithique) ===
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const frontendDist = path.resolve(__dirname, "../../vetcare/dist/public");
+
+if (existsSync(frontendDist)) {
+  logger.info({ frontendDist }, "Serving frontend static files");
+  app.use(express.static(frontendDist));
+
+  // SPA fallback : toute route non-API renvoie index.html (compatible Express 5)
+  app.use((req, res, next) => {
+    if (req.method !== "GET" || req.path.startsWith("/api/") || req.path.startsWith(CLERK_PROXY_PATH)) {
+      return next();
+    }
+    res.sendFile(path.join(frontendDist, "index.html"));
+  });
+}
 
 // Handler 404 pour toute route inconnue (doit retourner JSON, pas du HTML)
 app.use((req, res) => {
