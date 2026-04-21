@@ -303,8 +303,23 @@ async function parseSuccessBody(
     responseType === "auto" ? inferResponseType(response) : responseType;
 
   switch (effectiveType) {
-    case "json":
-      return parseJsonBody(response, requestInfo);
+    case "json": {
+      const json = await parseJsonBody(response, requestInfo);
+      // Déballe automatiquement l'enveloppe `{ success: true, data, ... }`
+      // renvoyée par le middleware responseWrapper du backend, afin que les
+      // types générés par orval (qui décrivent la donnée brute) restent valides
+      // pour le code applicatif.
+      if (
+        json &&
+        typeof json === "object" &&
+        !Array.isArray(json) &&
+        (json as Record<string, unknown>).success === true &&
+        "data" in (json as Record<string, unknown>)
+      ) {
+        return (json as { data: unknown }).data;
+      }
+      return json;
+    }
 
     case "text": {
       const text = await response.text();

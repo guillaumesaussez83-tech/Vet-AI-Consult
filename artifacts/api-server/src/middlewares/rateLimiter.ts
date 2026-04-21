@@ -1,26 +1,19 @@
 import rateLimit from "express-rate-limit";
+import { fail } from "../lib/response";
 
 export const apiLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 300,
-  message: {
-    success: false,
-    error: "Trop de requêtes, réessayez dans 15 minutes",
-    code: "RATE_LIMIT_EXCEEDED",
-  },
+  windowMs: 60 * 1000,
+  max: 200,
   standardHeaders: true,
   legacyHeaders: false,
   skip: (req) => req.path === "/health",
+  message: fail("RATE_LIMIT", "Trop de requêtes, réessayez dans une minute"),
 });
 
 export const aiLimiter = rateLimit({
   windowMs: 60 * 1000,
-  max: 15,
-  message: {
-    success: false,
-    error: "Limite IA atteinte — attendez 1 minute",
-    code: "AI_RATE_LIMIT_EXCEEDED",
-  },
+  max: 10,
   standardHeaders: true,
   legacyHeaders: false,
+  message: fail("AI_RATE_LIMIT", "Limite IA atteinte — attendez 1 minute"),
 });

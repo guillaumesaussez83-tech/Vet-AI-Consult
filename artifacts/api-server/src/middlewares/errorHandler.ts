@@ -1,5 +1,6 @@
 import type { Request, Response, NextFunction } from "express";
 import { logger } from "../lib/logger";
+import { fail } from "../lib/response";
 
 export class AppError extends Error {
   constructor(
@@ -65,40 +66,36 @@ export function errorHandler(
   _next: NextFunction,
 ): void {
   if (err instanceof AppError) {
-    res.status(err.statusCode).json({
-      success: false,
-      error: err.message,
-      code: err.code,
-      details: err.details,
-    });
+    res
+      .status(err.statusCode)
+      .json(fail(err.code ?? "ERROR", err.message, err.details));
     return;
   }
 
   if (isPostgresError(err) && err.code === "23505") {
-    res.status(409).json({
-      success: false,
-      error: "Cette ressource existe déjà",
-      code: "DUPLICATE_ERROR",
-    });
+    res
+      .status(409)
+      .json(fail("DUPLICATE_ERROR", "Cette ressource existe déjà"));
     return;
   }
 
   if (isPostgresError(err) && err.code === "23503") {
-    res.status(400).json({
-      success: false,
-      error: "Référence invalide — ressource liée introuvable",
-      code: "FOREIGN_KEY_ERROR",
-    });
+    res
+      .status(400)
+      .json(fail("FOREIGN_KEY_ERROR", "Référence invalide — ressource liée introuvable"));
     return;
   }
 
   logger.error({ err }, "Erreur serveur non gérée");
 
   const isDev = process.env["NODE_ENV"] !== "production";
-  res.status(500).json({
-    success: false,
-    error: isDev ? err.message : "Erreur serveur interne",
-    code: "INTERNAL_ERROR",
-    ...(isDev && { stack: err.stack }),
-  });
+  res
+    .status(500)
+    .json(
+      fail(
+        "INTERNAL_ERROR",
+        isDev ? err.message : "Erreur serveur interne",
+        isDev ? { stack: err.stack } : undefined,
+      ),
+    );
 }

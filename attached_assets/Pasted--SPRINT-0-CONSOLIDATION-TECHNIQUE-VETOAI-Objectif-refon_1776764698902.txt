@@ -1,0 +1,326 @@
+# SPRINT 0 — CONSOLIDATION TECHNIQUE VETOAI
+# Objectif : refondation complète du code avant d'ajouter toute nouvelle feature.
+# Mode : big bang, une seule session continue, ne pas déployer avant validation complète.
+# Règle absolue : tester chaque étape AVANT de passer à la suivante.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ÉTAPE 1 — BACKEND : FORMAT DE RÉPONSE UNIFIÉ
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Crée le fichier server/lib/response.ts :
+
+  export const ok = (data: any, meta?: Record<string, any>) =>
+    ({ success: true, data, ...meta });
+
+  export const fail = (code: string, message: string, details?: any) =>
+    ({ success: false, error: { code, message, ...(details && { details }) } });
+
+Mets à jour TOUTES les routes Express pour utiliser ce format :
+- Chaque res.json([...]) devient res.json(ok([...]))
+- Chaque res.json({...}) avec données devient res.json(ok({...}))
+- Pour les listes : res.json(ok(items, { total: items.length, page: 1, pages: 1 }))
+- Chaque res.status(400).json({ error: "..." }) devient
+  res.status(400).json(fail('CODE_ERREUR', 'message lisible'))
+
+Codes d'erreur à utiliser :
+  VALIDATION_ERROR, NOT_FOUND, UNAUTHORIZED, FORBIDDEN,
+  PATIENT_CREATE_FAILED, CONSULTATION_SAVE_FAILED,
+  ACTE_SAVE_FAILED, FACTURE_CREATE_FAILED, INTERNAL_ERROR
+
+✅ VÉRIFICATION ÉTAPE 1 :
+Teste dans la console du navigateur :
+  fetch('/api/patients').then(r=>r.json()).then(console.log)
+La réponse doit être : { success: true, data: [...], total: N, page: 1, pages: 1 }
+Ne pas passer à l'étape 2 avant que ce format soit confirmé.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ÉTAPE 2 — BACKEND : GESTIONNAIRE D'ERREURS GLOBAL
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Crée server/lib/errors.ts :
+
+  export class AppError extends Error {
+    constructor(
+      public code: string,
+      public message: string,
+      public statusCode: number = 400
+    ) {
+      super(message);
+      this.name = 'AppError';
+    }
+  }
+
+À la fin de server/index.ts, après toutes les routes, ajoute dans cet ordre exact :
+
+  // 1. Handler routes inconnues (doit retourner JSON, pas HTML)
+  app.use('*', (req, res) => {
+    res.status(404).json(fail('NOT_FOUND', `Route ${req.method} ${req.path} introuvable`));
+  });
+
+  // 2. Handler erreurs global
+  app.use((err: any, req: any, res: any, next: any) => {
+    if (err instanceof AppError) {
+      return res.status(err.statusCode).json(fail(err.code, err.message));
+    }
+    console.error('[ERROR]', err);
+    return res.status(500).json(fail('INTERNAL_ERROR', 'Une erreur interne est survenue'));
+  });
+
+Dans chaque route, remplace les try/catch génériques par :
+  catch (error) {
+    next(error); // passe au handler global
+  }
+
+✅ VÉRIFICATION ÉTAPE 2 :
+  fetch('/api/route-qui-nexiste-pas').then(r=>r.json()).then(console.log)
+Doit retourner : { success: false, error: { code: 'NOT_FOUND', message: '...' } }
+Et NON plus du HTML. Confirmer avant de continuer.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ÉTAPE 3 — BACKEND : VALIDATION ZOD
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+npm install zod (si pas déjà présent)
+
+Crée server/lib/validate.ts :
+
+  import { ZodSchema } from 'zod';
+  export const validate = (schema: ZodSchema) =>
+    (req: any, res: any, next: any) => {
+      const result = schema.safeParse(req.body);
+      if (!result.success) {
+        const details = result.error.errors.map(e => ({
+          field: e.path.join('.'),
+          message: e.message
+        }));
+        return res.status(422).json(
+          fail('VALIDATION_ERROR', 'Données invalides', details)
+        );
+      }
+      req.body = result.data;
+      next();
+    };
+
+Crée le dossier server/schemas/ avec ces fichiers :
+
+  patient.schema.ts :
+    import { z } from 'zod';
+    export const createPatientSchema = z.object({
+      nom: z.string().min(1, 'Le nom est requis'),
+      espece: z.string().min(1, "L'espèce est requise"),
+      race: z.string().optional(),
+      sexe: z.enum(['M', 'F']).optional(),
+      dateNaissance: z.string().optional(),
+      poids: z.number().positive().optional(),
+      ownerId: z.number().int().positive('Le propriétaire est requis'),
+    });
+
+  consultation.schema.ts :
+    import { z } from 'zod';
+    export const createConsultationSchema = z.object({
+      patientId: z.number().int().positive(),
+      motif: z.string().min(1, 'Le motif est requis'),
+      date: z.string().min(1, 'La date est requise'),
+      statut: z.enum(['en_attente', 'en_cours', 'terminee']).default('en_attente'),
+      poids: z.number().positive().optional(),
+      temperature: z.number().optional(),
+    });
+
+  acte.schema.ts :
+    import { z } from 'zod';
+    export const createActeSchema = z.object({
+      description: z.string().min(1, 'La description est requise'),
+      quantite: z.number().int().positive().default(1),
+      prixUnitaire: z.number().nonnegative('Le prix ne peut pas être négatif'),
+      tva: z.number().min(0).max(100).default(20),
+    });
+
+Applique validate(schema) sur chaque route POST et PUT correspondante.
+
+✅ VÉRIFICATION ÉTAPE 3 :
+  fetch('/api/patients', {method:'POST', headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({})}).then(r=>r.json()).then(console.log)
+Doit retourner 422 avec { error: { code: 'VALIDATION_ERROR', details: [{field:'nom',...}] } }
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ÉTAPE 4 — BACKEND : SÉCURITÉ
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+npm install helmet express-rate-limit
+
+En haut de server/index.ts, après les imports et AVANT toutes les routes :
+
+  import helmet from 'helmet';
+  import rateLimit from 'express-rate-limit';
+
+  // Headers de sécurité
+  app.use(helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'",
+                    "https://clerk.com", "https://*.clerk.accounts.dev"],
+        connectSrc: ["'self'", "https://api.clerk.com",
+                     "https://*.clerk.accounts.dev", "https://api.anthropic.com"],
+        imgSrc: ["'self'", "data:", "https:", "blob:"],
+        frameSrc: ["'self'", "https://clerk.com"],
+        fontSrc: ["'self'", "https:", "data:"],
+      }
+    },
+    crossOriginEmbedderPolicy: false,
+  }));
+
+  // Rate limiting global : 200 req/min par IP
+  app.use('/api/', rateLimit({
+    windowMs: 60 * 1000,
+    max: 200,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: fail('RATE_LIMIT', 'Trop de requêtes, réessayez dans une minute'),
+  }));
+
+  // Rate limiting strict sur les appels IA (coûteux)
+  const aiLimiter = rateLimit({ windowMs: 60000, max: 15,
+    message: fail('AI_RATE_LIMIT', 'Limite IA atteinte, attendez 1 minute') });
+  app.use('/api/consultations/*/diagnostic', aiLimiter);
+  app.use('/api/certificats/*/generate', aiLimiter);
+  app.use('/api/ordonnances/*/generate', aiLimiter);
+
+✅ VÉRIFICATION ÉTAPE 4 :
+Recharge l'app et vérifie que toutes les pages fonctionnent encore.
+Dans les DevTools Network, vérifie que les réponses API ont le header
+content-security-policy présent.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ÉTAPE 5 — BASE DE DONNÉES : NETTOYAGE SCHÉMA
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Dans db/schema.ts, appliquer ces corrections :
+
+a) Ajouter updatedAt sur toutes les tables qui ne l'ont pas :
+   updatedAt: timestamp('updated_at').defaultNow().$onUpdate(() => new Date())
+
+b) Dans la table consultations, AJOUTER (sans supprimer l'existant) :
+   veterinaireId: text('veterinaire_id'),   -- pour le futur multi-tenant
+   veterinaireName: text('veterinaire_name'), -- copie du nom (dénormalisé)
+   Garder le champ veterinaire: text existant pour rétrocompatibilité.
+   Ajouter un trigger qui, si veterinaireId est renseigné, ignore veterinaire.
+
+c) Ajouter sur TOUTES les tables principales (patients, consultations,
+   factures, ordonnances, encaissements, certificats, rappels) :
+   organizationId: integer('organization_id').default(1).notNull()
+
+d) Ajouter des index sur les colonnes fréquemment filtrées :
+   index('patients_owner_idx').on(patients.ownerId)
+   index('consultations_patient_idx').on(consultations.patientId)
+   index('consultations_org_idx').on(consultations.organizationId)
+   index('factures_consultation_idx').on(factures.consultationId)
+   index('factures_org_idx').on(factures.organizationId)
+
+e) Pour les données existantes, mettre à jour toutes les lignes :
+   UPDATE patients SET organization_id = 1 WHERE organization_id IS NULL;
+   (idem pour toutes les tables)
+
+Créer et appliquer la migration Drizzle :
+   npx drizzle-kit generate
+   npx drizzle-kit push
+
+✅ VÉRIFICATION ÉTAPE 5 :
+  fetch('/api/patients').then(r=>r.json()).then(d => console.log(d.data[0]))
+Vérifier que les patients ont bien un champ organizationId = 1 dans la réponse.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ÉTAPE 6 — FRONTEND : CLIENT API CENTRALISÉ
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Crée client/src/lib/apiClient.ts :
+
+  type ApiResponse<T> = { success: true; data: T; total?: number; pages?: number }
+                      | { success: false; error: { code: string; message: string } };
+
+  async function request<T>(url: string, options?: RequestInit): Promise<T> {
+    const res = await fetch(url, {
+      ...options,
+      headers: { 'Content-Type': 'application/json', ...options?.headers },
+    });
+    const json: ApiResponse<T> = await res.json();
+    if (!json.success) {
+      throw new Error(json.error.message);
+    }
+    return json.data;
+  }
+
+  export const api = {
+    get:    <T>(url: string) => request<T>(url),
+    post:   <T>(url: string, body: any) =>
+              request<T>(url, { method: 'POST', body: JSON.stringify(body) }),
+    put:    <T>(url: string, body: any) =>
+              request<T>(url, { method: 'PUT', body: JSON.stringify(body) }),
+    delete: <T>(url: string) =>
+              request<T>(url, { method: 'DELETE' }),
+  };
+
+Remplace TOUS les fetch() directs dans les composants par api.get(), api.post(), etc.
+Cherche dans tout le projet : fetch('/api/ et remplace chaque occurrence.
+
+Crée client/src/constants/routes.ts :
+  export const API = {
+    PATIENTS:      '/api/patients',
+    CONSULTATIONS: '/api/consultations',
+    FACTURES:      '/api/factures',
+    ENCAISSEMENTS: '/api/encaissements',
+    ORDONNANCES:   '/api/ordonnances',
+    ACTES:         (consultationId: number) =>
+                     `/api/consultations/${consultationId}/actes`,
+    STATS:         '/api/stats',
+  } as const;
+
+✅ VÉRIFICATION ÉTAPE 6 :
+Navigue sur chaque page de l'app et vérifie qu'aucune liste n'est vide
+là où elle ne devrait pas l'être. Ouvrir la console : aucune erreur
+"cannot read property of undefined" ne doit apparaître.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ÉTAPE 7 — NETTOYAGE FINAL
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+a) Supprimer TOUS les console.log() dans le code de production.
+   Garder uniquement console.error() pour les erreurs réelles.
+   Faire une recherche globale sur "console.log" et supprimer chaque occurrence.
+
+b) Vérifier qu'il n'y a aucun "any" TypeScript non justifié.
+   Lancer : npx tsc --noEmit
+   Corriger les erreurs TypeScript critiques (pas besoin d'être à zéro,
+   mais les erreurs sur les routes API et les composants principaux
+   doivent être résolues).
+
+c) Vérifier que le build compile sans erreur :
+   npm run build
+   Si des erreurs bloquantes apparaissent, les corriger avant de continuer.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PROTOCOLE DE TEST FINAL AVANT REPUBLICATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Avant de me dire que c'est terminé, tu dois avoir testé et confirmé
+le fonctionnement de chaque point suivant. Donne-moi un rapport
+avec ✅ ou ❌ pour chacun :
+
+[ ] Dashboard charge sans erreur
+[ ] Liste patients s'affiche correctement
+[ ] Création d'un nouveau patient fonctionne
+[ ] Liste consultations s'affiche
+[ ] Ouverture d'une consultation existante fonctionne
+[ ] Ajout d'un acte dans une consultation fonctionne (prix sauvegardé)
+[ ] Génération d'une facture fonctionne (montant correct)
+[ ] Liste factures s'affiche avec les bons montants
+[ ] Salle d'attente s'affiche sans crash
+[ ] Agenda s'affiche
+[ ] Route inconnue retourne JSON (pas HTML)
+[ ] POST vide sur /api/patients retourne 422 avec détails de validation
+[ ] npm run build compile sans erreur bloquante
+
+Seulement si tous ces points sont ✅, republier l'app.
+Si certains sont ❌, les corriger d'abord.
+
+NE PAS republier avec des régressions.
