@@ -1,0 +1,153 @@
+Avant d'ajouter de nouvelles fonctionnalités, je veux consolider 
+l'architecture technique de VétoAI pour avoir des bases solides.
+Voici les 6 points à traiter dans l'ordre :
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. FORMAT DE RÉPONSE API UNIFIÉ
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Crée un helper server/lib/apiResponse.ts avec ces fonctions :
+
+  export const success = (data: any, meta?: any) => 
+    ({ success: true, data, ...(meta || {}) });
+  
+  export const error = (code: string, message: string, status = 400) => 
+    ({ success: false, error: { code, message } });
+
+Mets à jour TOUTES les routes pour utiliser ce format.
+Exemple : au lieu de res.json(patients), faire 
+  res.json(success(patients))
+Exemple erreur : au lieu de res.status(400).json({ error: "..." }), faire
+  res.status(400).json(error('VALIDATION_ERROR', 'Données invalides'))
+
+Pour les listes, ajouter la structure de pagination même si elle n'est 
+pas encore fonctionnelle :
+  res.json(success(patients, { total: patients.length, page: 1, pages: 1 }))
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+2. GESTIONNAIRE D'ERREURS GLOBAL EXPRESS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Crée une classe AppError dans server/lib/errors.ts :
+  export class AppError extends Error {
+    constructor(
+      public code: string,
+      public message: string,
+      public statusCode: number = 400
+    ) { super(message); }
+  }
+
+Ajoute un middleware de gestion d'erreurs global à la FIN de server/index.ts
+(après toutes les routes) :
+  app.use((err, req, res, next) => {
+    if (err instanceof AppError) {
+      return res.status(err.statusCode).json(
+        error(err.code, err.message)
+      );
+    }
+    console.error(err);
+    return res.status(500).json(
+      error('INTERNAL_ERROR', 'Une erreur interne est survenue')
+    );
+  });
+
+Ajoute aussi un handler pour les routes inconnues (avant le handler d'erreur) :
+  app.use('*', (req, res) => {
+    res.status(404).json(error('NOT_FOUND', `Route ${req.path} introuvable`));
+  });
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+3. VALIDATION ZOD SUR TOUS LES INPUTS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+npm install zod (si pas déjà installé)
+
+Crée server/lib/validate.ts avec un middleware :
+  import { ZodSchema } from 'zod';
+  export const validate = (schema: ZodSchema) => (req, res, next) => {
+    const result = schema.safeParse(req.body);
+    if (!result.success) {
+      const fields = result.error.errors.map(e => 
+        ({ field: e.path.join('.'), message: e.message }));
+      return res.status(422).json({ 
+        success: false, 
+        error: { code: 'VALIDATION_ERROR', message: 'Données invalides', fields }
+      });
+    }
+    req.body = result.data;
+    next();
+  };
+
+Crée server/schemas/ avec un fichier par ressource :
+  - patient.schema.ts : schéma Zod pour POST/PUT patient
+  - consultation.schema.ts : schéma pour POST/PUT consultation
+  - facture.schema.ts : schéma pour POST facture
+  - acte.schema.ts : schéma pour POST acte
+
+Applique le middleware validate() sur toutes les routes POST et PUT.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+4. SÉCURITÉ — HELMET + RATE LIMITING
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+npm install helmet express-rate-limit
+
+En haut de server/index.ts, AVANT toutes les routes :
+  import helmet from 'helmet';
+  import rateLimit from 'express-rate-limit';
+
+  // Sécurité HTTP headers (inclut CSP, HSTS, etc.)
+  app.use(helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "'unsafe-inline'", "https://clerk.com"],
+        connectSrc: ["'self'", "https://api.clerk.com", "https://api.anthropic.com"],
+        imgSrc: ["'self'", "data:", "https:"],
+      }
+    }
+  }));
+
+  // Rate limiting global : 100 req/min par IP
+  app.use('/api/', rateLimit({
+    windowMs: 60 * 1000,
+    max: 100,
+    message: { success: false, error: { code: 'RATE_LIMIT', message: 'Trop de requêtes' } }
+  }));
+
+  // Rate limiting strict sur les routes IA (coûteuses)
+  const aiLimiter = rateLimit({ windowMs: 60000, max: 10 });
+  app.use('/api/consultations/*/ia', aiLimiter);
+  app.use('/api/certificats/*/generate', aiLimiter);
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+5. SCHÉMA DB — PRÉPARER LE MULTI-TENANT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Dans db/schema.ts, vérifier et corriger :
+
+a) Toutes les tables doivent avoir updatedAt :
+   updatedAt: timestamp('updated_at').defaultNow().$onUpdate(() => new Date())
+
+b) Dans la table consultations, remplacer le champ texte libre 
+   veterinaire: text('veterinaire')
+   par :
+   veterinaireId: text('veterinaire_id')  -- userId Clerk du vétérinaire
+   veterinaireName: text('veterinaire_name')  -- nom affiché (dénormalisé pour perf)
+
+c) Ajouter organizationId sur toutes les tables principales :
+   organizationId: integer('organization_id').default(1)
+   (default(1) = organisation de démo, sera NOT NULL après la migration multi-tenant)
+
+d) Vérifier que toutes les FK ont des index :
+   Ajouter index sur patientId, consultationId, organizationId partout où ils apparaissent.
+
+Créer et appliquer la migration Drizzle.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+6. NETTOYAGE FRONTEND
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+a) Créer client/src/lib/api.ts — un client API centralisé :
+   const apiClient = {
+     get: (url) => fetch(url).then(r => r.json()),
+     post: (url, body) => fetch(url, { method:'POST', 
+       headers:{'Content-Type':'application/json'}, 
+       body: JSON.stringify(body) }).then(r => r.json()),
+     put: (url, body) => fetch(url, { method:'PUT',
+       headers:{'Content-Type':'application/json'},
+       body: JSON.stringify(body) }).then(r => r
