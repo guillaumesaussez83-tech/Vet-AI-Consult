@@ -1,7 +1,7 @@
 {
   "build": {
     "builder": "NIXPACKS",
-    "buildCommand": "pnpm install --no-frozen-lockfile && pnpm run build && pnpm run build:server"
+    "buildCommand": "pnpm install --no-frozen-lockfile && npm run build && npm run build:server"
   },
   "deploy": {
     "healthcheckPath": "/api/health",
