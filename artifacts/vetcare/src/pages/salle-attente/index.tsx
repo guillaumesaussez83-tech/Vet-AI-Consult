@@ -9,6 +9,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useListPatients } from "@workspace/api-client-react";
 import { Clock, RefreshCw, Plus, ChevronRight, ChevronLeft, FileText, Euro, User, AlertCircle, Search, Loader2 } from "lucide-react";
 
+import { unwrapResponse as __unwrapEnvelope } from "../../lib/queryClient";
+
 const API_BASE = "/api";
 
 type RDV = {
@@ -112,7 +114,7 @@ export default function SalleAttentePage() {
 
   const { data: rdvs = [], isFetching } = useQuery<RDV[]>({
     queryKey: ["salle-attente"],
-    queryFn: () => fetch(`${API_BASE}/rendez-vous/salle-attente`).then(r => r.json()),
+    queryFn: () => fetch(`${API_BASE}/rendez-vous/salle-attente`).then(__unwrapEnvelope),
     refetchInterval: 30000,
     staleTime: 10000,
   });

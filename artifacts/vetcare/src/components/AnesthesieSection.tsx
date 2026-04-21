@@ -9,6 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { ChevronDown, ChevronUp, Loader2, Sparkles, Save } from "lucide-react";
 
+import { unwrapResponse as __unwrapResponse } from "../lib/queryClient";
+
 const API_BASE = "/api";
 
 type AnesthesieData = {
@@ -39,7 +41,7 @@ export function AnesthesieSection({ consultationId, espece, race, poids, diagnos
     queryFn: async () => {
       const r = await fetch(`${API_BASE}/anesthesie/consultation/${consultationId}`);
       if (!r.ok) throw new Error();
-      return r.json();
+      return __unwrapResponse(r);
     },
     enabled: open,
     select: (data) => {
@@ -72,7 +74,7 @@ export function AnesthesieSection({ consultationId, espece, race, poids, diagnos
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ espece, race, poids: form.poids ?? poids, diagnostic }),
       });
-      const data = await r.json();
+      const data = await __unwrapResponse(r);
       if (data.protocole) {
         setForm(f => ({ ...f, protocoleIA: data.protocole }));
         toast({ title: "Protocole IA genere" });

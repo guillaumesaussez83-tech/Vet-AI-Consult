@@ -32,6 +32,8 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { VoiceInput } from "@/components/VoiceInput";
 import { DoseCalculator } from "@/components/DoseCalculator";
 
+import { unwrapResponse as __unwrapEnvelope } from "../../lib/queryClient";
+
 type ActeLine = {
   acteId: number;
   quantite: number;
@@ -1252,7 +1254,7 @@ function RappelsPostConsultation({ consultationId, patientId }: { consultationId
 
   const { data: rappels = [], isLoading } = useQuery({
     queryKey: ["rappels-consultation", consultationId],
-    queryFn: () => fetch(`/api/rappels?consultationId=${consultationId}`).then(r => r.json()),
+    queryFn: () => fetch(`/api/rappels?consultationId=${consultationId}`).then(__unwrapEnvelope),
     enabled: !!consultationId,
   });
 

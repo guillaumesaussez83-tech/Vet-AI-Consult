@@ -11,6 +11,8 @@ import { Label } from "@/components/ui/label";
 import { User, Building, Shield, Save, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
+import { unwrapResponse as __unwrapResponse } from "../../lib/queryClient";
+
 const API_BASE = "/api";
 
 interface ParametresClinique {
@@ -35,7 +37,7 @@ interface ParametresClinique {
 async function fetchClinique(): Promise<ParametresClinique> {
   const r = await fetch(`${API_BASE}/parametres-clinique`);
   if (!r.ok) throw new Error("Erreur serveur");
-  return r.json();
+  return __unwrapResponse(r);
 }
 
 async function saveClinique(data: Omit<ParametresClinique, "id">): Promise<ParametresClinique> {
@@ -45,7 +47,7 @@ async function saveClinique(data: Omit<ParametresClinique, "id">): Promise<Param
     body: JSON.stringify(data),
   });
   if (!r.ok) throw new Error("Erreur serveur");
-  return r.json();
+  return __unwrapResponse(r);
 }
 
 function CliniqueForm() {

@@ -6,6 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 
+import { unwrapResponse as __unwrapResponse } from "../lib/queryClient";
+
 interface SearchResult {
   patients: { id: number; nom: string; espece: string | null; race: string | null }[];
   owners: { id: number; nom: string; prenom: string | null; telephone: string | null; email: string | null }[];
@@ -76,7 +78,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
     setLoading(true);
     try {
       const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`);
-      const data: SearchResult = await res.json();
+      const data: SearchResult = await __unwrapResponse(res);
       setResults(data);
       setSelected(0);
     } catch {

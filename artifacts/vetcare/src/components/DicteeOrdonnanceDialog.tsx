@@ -6,6 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Mic, MicOff, Loader2, CheckCircle, AlertTriangle, Package } from "lucide-react";
 
+import { unwrapResponse as __unwrapResponse } from "../lib/queryClient";
+
 const API_BASE = "/api";
 
 function displayField(v: unknown, fallback = "à définir"): string {
@@ -95,7 +97,7 @@ export default function DicteeOrdonnanceDialog({ open, onClose, onConfirmed }: P
         body: JSON.stringify({ transcription: transcript }),
       });
       if (!res.ok) throw new Error(await res.text());
-      const data = await res.json();
+      const data = await __unwrapResponse(res);
       setPrescriptions(data.prescriptions ?? []);
       setPhase("recap");
     } catch (e) {

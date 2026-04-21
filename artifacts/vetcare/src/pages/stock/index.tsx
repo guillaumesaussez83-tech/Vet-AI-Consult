@@ -11,6 +11,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
+import { unwrapResponse as __unwrapEnvelope } from "../../lib/queryClient";
+
 import {
   Package, AlertTriangle, ShoppingCart, Truck, Activity, Plus, Search,
   Pencil, ArrowUpDown, Download, Brain, CheckCircle, RefreshCw, X, Loader2, Eye, Printer,
@@ -93,28 +95,28 @@ function AlertesTab() {
 
   const { data: alertes = [], isLoading, refetch } = useQuery<Alerte[]>({
     queryKey: ["alertes-stock", "actives"],
-    queryFn: () => fetch(`${API_BASE}/stock/alertes?traitee=false`).then(r => r.json()),
+    queryFn: () => fetch(`${API_BASE}/stock/alertes?traitee=false`).then(__unwrapEnvelope),
   });
 
   const genererMutation = useMutation({
-    mutationFn: () => fetch(`${API_BASE}/stock/alertes/generer`, { method: "POST" }).then(r => r.json()),
+    mutationFn: () => fetch(`${API_BASE}/stock/alertes/generer`, { method: "POST" }).then(__unwrapEnvelope),
     onSuccess: (data) => { toast({ title: `${data.count} alertes générées` }); qc.invalidateQueries({ queryKey: ["alertes-stock"] }); },
     onError: () => toast({ title: "Erreur", variant: "destructive" }),
   });
 
   const traiterMutation = useMutation({
-    mutationFn: (id: number) => fetch(`${API_BASE}/stock/alertes/${id}/traiter`, { method: "PATCH" }).then(r => r.json()),
+    mutationFn: (id: number) => fetch(`${API_BASE}/stock/alertes/${id}/traiter`, { method: "PATCH" }).then(__unwrapEnvelope),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["alertes-stock"] }); },
   });
 
   const analyserMutation = useMutation({
-    mutationFn: () => fetch(`${API_BASE}/stock/ia/analyser-consommation`, { method: "POST" }).then(r => r.json()),
+    mutationFn: () => fetch(`${API_BASE}/stock/ia/analyser-consommation`, { method: "POST" }).then(__unwrapEnvelope),
     onSuccess: (data) => { toast({ title: `Analyse IA complète — ${data.updated} produits mis à jour` }); qc.invalidateQueries({ queryKey: ["stock"] }); },
     onError: () => toast({ title: "Erreur IA", variant: "destructive" }),
   });
 
   const anomaliesMutation = useMutation({
-    mutationFn: () => fetch(`${API_BASE}/stock/ia/detecter-anomalies`, { method: "POST" }).then(r => r.json()),
+    mutationFn: () => fetch(`${API_BASE}/stock/ia/detecter-anomalies`, { method: "POST" }).then(__unwrapEnvelope),
     onSuccess: (data) => {
       toast({ title: `${data.count} anomalie${data.count !== 1 ? "s" : ""} détectée${data.count !== 1 ? "s" : ""}` });
       qc.invalidateQueries({ queryKey: ["alertes-stock"] });
@@ -204,7 +206,7 @@ function ProduitsTab() {
 
   const { data: stock = [], isLoading } = useQuery<Medicament[]>({
     queryKey: ["stock"],
-    queryFn: () => fetch(`${API_BASE}/stock`).then(r => r.json()),
+    queryFn: () => fetch(`${API_BASE}/stock`).then(__unwrapEnvelope),
   });
 
   const saveMutation = useMutation({
@@ -411,18 +413,18 @@ function CommandesTab() {
 
   const { data: commandes = [], isLoading } = useQuery<Commande[]>({
     queryKey: ["commandes"],
-    queryFn: () => fetch(`${API_BASE}/stock/commandes`).then(r => r.json()),
+    queryFn: () => fetch(`${API_BASE}/stock/commandes`).then(__unwrapEnvelope),
   });
 
   const { data: commandeDetail } = useQuery<Commande>({
     queryKey: ["commande-detail", selectedCommande?.id],
-    queryFn: () => fetch(`${API_BASE}/stock/commandes/${selectedCommande?.id}`).then(r => r.json()),
+    queryFn: () => fetch(`${API_BASE}/stock/commandes/${selectedCommande?.id}`).then(__unwrapEnvelope),
     enabled: !!selectedCommande?.id && detailOpen,
   });
 
   const updateStatutMutation = useMutation({
     mutationFn: ({ id, statut }: { id: number; statut: string }) =>
-      fetch(`${API_BASE}/stock/commandes/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ statut }) }).then(r => r.json()),
+      fetch(`${API_BASE}/stock/commandes/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ statut }) }).then(__unwrapEnvelope),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["commandes"] }); toast({ title: "Commande mise à jour" }); },
   });
 
@@ -600,12 +602,12 @@ function ReceptionTab() {
 
   const { data: commandes = [] } = useQuery<Commande[]>({
     queryKey: ["commandes"],
-    queryFn: () => fetch(`${API_BASE}/stock/commandes`).then(r => r.json()),
+    queryFn: () => fetch(`${API_BASE}/stock/commandes`).then(__unwrapEnvelope),
   });
 
   const { data: commandeDetail } = useQuery<Commande>({
     queryKey: ["commande-detail-reception", commandeId],
-    queryFn: () => fetch(`${API_BASE}/stock/commandes/${commandeId}`).then(r => r.json()),
+    queryFn: () => fetch(`${API_BASE}/stock/commandes/${commandeId}`).then(__unwrapEnvelope),
     enabled: !!commandeId,
     select: (data) => {
       if (data?.lignes) {
@@ -738,12 +740,12 @@ function MouvementsTab() {
 
   const { data: stock = [] } = useQuery<Medicament[]>({
     queryKey: ["stock"],
-    queryFn: () => fetch(`${API_BASE}/stock`).then(r => r.json()),
+    queryFn: () => fetch(`${API_BASE}/stock`).then(__unwrapEnvelope),
   });
 
   const { data: mouvements = [], isLoading } = useQuery<any[]>({
     queryKey: ["mouvements", selectedMedId],
-    queryFn: () => fetch(`${API_BASE}/stock/${selectedMedId}/mouvements`).then(r => r.json()),
+    queryFn: () => fetch(`${API_BASE}/stock/${selectedMedId}/mouvements`).then(__unwrapEnvelope),
     enabled: !!selectedMedId,
   });
 
@@ -812,7 +814,7 @@ function MouvementsTab() {
 function RegistreStupefiantsTab() {
   const { data: registre = [], isLoading } = useQuery<any[]>({
     queryKey: ["stupefiants-registre"],
-    queryFn: () => fetch(`${API_BASE}/stock/stupefiants/registre`).then(r => r.json()),
+    queryFn: () => fetch(`${API_BASE}/stock/stupefiants/registre`).then(__unwrapEnvelope),
   });
 
   const handleExportPDF = () => window.print();
@@ -889,17 +891,17 @@ function RegistreStupefiantsTab() {
 export default function StockPage() {
   const { data: stock = [] } = useQuery<Medicament[]>({
     queryKey: ["stock"],
-    queryFn: () => fetch(`${API_BASE}/stock`).then(r => r.json()),
+    queryFn: () => fetch(`${API_BASE}/stock`).then(__unwrapEnvelope),
   });
 
   const { data: alertes = [] } = useQuery<Alerte[]>({
     queryKey: ["alertes-stock", "actives"],
-    queryFn: () => fetch(`${API_BASE}/stock/alertes?traitee=false`).then(r => r.json()),
+    queryFn: () => fetch(`${API_BASE}/stock/alertes?traitee=false`).then(__unwrapEnvelope),
   });
 
   const { data: commandes = [] } = useQuery<Commande[]>({
     queryKey: ["commandes"],
-    queryFn: () => fetch(`${API_BASE}/stock/commandes`).then(r => r.json()),
+    queryFn: () => fetch(`${API_BASE}/stock/commandes`).then(__unwrapEnvelope),
   });
 
   const ruptures = stock.filter(m => m.quantiteStock === 0).length;

@@ -6,6 +6,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Stethoscope, Syringe, User, Calendar, CheckCircle, AlertTriangle, Clock } from "lucide-react";
 import { formatDateFR } from "@/lib/utils";
 
+import { unwrapResponse as __unwrapResponse } from "../../lib/queryClient";
+
 const API_BASE = "/api";
 
 type PortailData = {
@@ -44,7 +46,7 @@ export default function PortailPage() {
     queryKey: ["portail", token],
     queryFn: () => fetch(`${API_BASE}/portail/${token}`).then(async r => {
       if (!r.ok) throw new Error("Lien invalide");
-      return r.json();
+      return __unwrapResponse(r);
     }),
     enabled: !!token,
     retry: false,

@@ -13,6 +13,8 @@ import { useToast } from "@/hooks/use-toast";
 import { formatDateFR } from "@/lib/utils";
 import { ArrowLeft, Plus, Syringe, AlertTriangle, Clock, CheckCircle, FileText, Loader2 } from "lucide-react";
 
+import { unwrapResponse as __unwrapEnvelope } from "../../lib/queryClient";
+
 const API_BASE = "/api";
 
 type Vaccination = {
@@ -53,13 +55,13 @@ export default function VaccinationsPage() {
 
   const { data: patient } = useQuery<Patient>({
     queryKey: ["patient", patientId],
-    queryFn: () => fetch(`${API_BASE}/patients/${patientId}`).then(r => r.json()),
+    queryFn: () => fetch(`${API_BASE}/patients/${patientId}`).then(__unwrapEnvelope),
     enabled: !!patientId,
   });
 
   const { data: vaccinations = [], isLoading } = useQuery<Vaccination[]>({
     queryKey: ["vaccinations", patientId],
-    queryFn: () => fetch(`${API_BASE}/vaccinations/patient/${patientId}`).then(r => r.json()),
+    queryFn: () => fetch(`${API_BASE}/vaccinations/patient/${patientId}`).then(__unwrapEnvelope),
     enabled: !!patientId,
   });
 

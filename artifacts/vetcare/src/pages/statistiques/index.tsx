@@ -8,10 +8,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { TrendingUp, TrendingDown, Euro, FileText, Stethoscope, Percent } from "lucide-react";
 
+import { unwrapResponse as __unwrapEnvelope } from "../../lib/queryClient";
+
 const API_BASE = "/api";
 
 function fetchStats() {
-  return fetch(`${API_BASE}/statistiques`).then(r => r.json());
+  return fetch(`${API_BASE}/statistiques`).then(__unwrapEnvelope);
 }
 
 const MONTHS_FR: Record<string, string> = {

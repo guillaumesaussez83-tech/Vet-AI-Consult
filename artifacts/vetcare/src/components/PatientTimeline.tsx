@@ -10,6 +10,8 @@ import {
 import { format, parseISO, isValid } from "date-fns";
 import { fr } from "date-fns/locale";
 
+import { unwrapResponse as __unwrapEnvelope } from "../lib/queryClient";
+
 const API_BASE = "/api";
 
 type EventType = "consultation" | "vaccination" | "ordonnance" | "facture" | "chirurgie";
@@ -92,13 +94,13 @@ interface Props {
 export function PatientTimeline({ patientId, consultations }: Props) {
   const { data: vaccinations = [], isLoading: vacLoading } = useQuery<any[]>({
     queryKey: ["vaccinations", patientId],
-    queryFn: () => fetch(`${API_BASE}/vaccinations/patient/${patientId}`).then(r => r.json()),
+    queryFn: () => fetch(`${API_BASE}/vaccinations/patient/${patientId}`).then(__unwrapEnvelope),
     enabled: !!patientId,
   });
 
   const { data: ordonnances = [], isLoading: ordLoading } = useQuery<any[]>({
     queryKey: ["ordonnances-patient", patientId],
-    queryFn: () => fetch(`${API_BASE}/ordonnances?patientId=${patientId}`).then(r => r.json()),
+    queryFn: () => fetch(`${API_BASE}/ordonnances?patientId=${patientId}`).then(__unwrapEnvelope),
     enabled: !!patientId,
   });
 

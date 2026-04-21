@@ -15,6 +15,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { formatDateFR } from "@/lib/utils";
 import { useListPatients } from "@workspace/api-client-react";
+import { unwrapResponse as __unwrapEnvelope } from "../../lib/queryClient";
+
 import {
   ChevronLeft, ChevronRight, Plus, Calendar, Settings, ClipboardList,
   User, Clock, Stethoscope, Edit2, Trash2, AlertTriangle, CalendarX2, Loader2, Search,
@@ -137,7 +139,7 @@ export default function AgendaPage() {
 
   const { data: vets = [], isLoading: vetsLoading } = useQuery<Vet[]>({
     queryKey: ["agenda-vets"],
-    queryFn: () => fetch(`${API}/veterinaires`).then(r => r.json()),
+    queryFn: () => fetch(`${API}/veterinaires`).then(__unwrapEnvelope),
   });
 
   return (
@@ -222,7 +224,7 @@ function AgendaTab({ vets, vetsLoading, toast, qc }: {
 
   const { data: rdvs = [], isLoading: rdvsLoading } = useQuery<RDV[]>({
     queryKey: ["agenda-rdvs", weekStart],
-    queryFn: () => fetch(`${API}/rendez-vous/semaine/${weekStart}`).then(r => r.json()),
+    queryFn: () => fetch(`${API}/rendez-vous/semaine/${weekStart}`).then(__unwrapEnvelope),
     refetchInterval: 60000,
   });
 
@@ -502,7 +504,7 @@ function RdvDialog({ open, onClose, vets, initialDate, initialHeure, initialVetI
   const { data: slots = [] } = useQuery<Slot[]>({
     queryKey: ["agenda-slots", form.veterinaireId, form.dateHeure.split("T")[0]],
     queryFn: () => form.veterinaireId
-      ? fetch(`${API}/slots/${form.veterinaireId}/${form.dateHeure.split("T")[0]}?duree=${form.dureeMinutes}`).then(r => r.json())
+      ? fetch(`${API}/slots/${form.veterinaireId}/${form.dateHeure.split("T")[0]}?duree=${form.dureeMinutes}`).then(__unwrapEnvelope)
       : Promise.resolve([]),
     enabled: !!form.veterinaireId,
   });
@@ -765,7 +767,7 @@ function PlanningTab({ vets, toast, qc }: {
 
   const { data: planningData, isLoading } = useQuery({
     queryKey: ["agenda-planning-mois", year, mois],
-    queryFn: () => fetch(`${API}/planning/mois/${year}/${mois}`).then(r => r.json()),
+    queryFn: () => fetch(`${API}/planning/mois/${year}/${mois}`).then(__unwrapEnvelope),
   });
 
   const moisCalendar = planningData?.mois ?? {};
@@ -1016,7 +1018,7 @@ function ConfigTab({ vets, toast, qc }: {
 
   const { data: planning = [] } = useQuery<PlanningSemaine[]>({
     queryKey: ["agenda-planning-semaine", selectedVetId],
-    queryFn: () => fetch(`${API}/planning/semaine-type/${selectedVetId}`).then(r => r.json()),
+    queryFn: () => fetch(`${API}/planning/semaine-type/${selectedVetId}`).then(__unwrapEnvelope),
     enabled: !!selectedVetId,
   });
 
@@ -1356,7 +1358,7 @@ function RotationDialog({ open, onClose, vets, toast }: {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ vetIds, dateDebut, dateFin, confirmer: false }),
-    }).then(r => r.json()),
+    }).then(__unwrapEnvelope),
     onSuccess: data => setPreview(data.preview ?? []),
   });
 
@@ -1365,7 +1367,7 @@ function RotationDialog({ open, onClose, vets, toast }: {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ vetIds, dateDebut, dateFin, confirmer: true }),
-    }).then(r => r.json()),
+    }).then(__unwrapEnvelope),
     onSuccess: () => { toast({ title: "Rotations enregistrées" }); onClose(); },
     onError: () => toast({ title: "Erreur lors de la génération", variant: "destructive" }),
   });

@@ -11,6 +11,8 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Bell, Plus, Trash2, AlertTriangle, Phone, Mail, Dog } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
+import { unwrapResponse as __unwrapResponse } from "../../lib/queryClient";
+
 const API_BASE = "/api";
 
 interface RappelModele {
@@ -35,13 +37,13 @@ interface RappelDu {
 async function fetchModeles(): Promise<RappelModele[]> {
   const r = await fetch(`${API_BASE}/rappels/modeles`);
   if (!r.ok) throw new Error("Erreur serveur");
-  return r.json();
+  return __unwrapResponse(r);
 }
 
 async function fetchDus(): Promise<RappelDu[]> {
   const r = await fetch(`${API_BASE}/rappels/dus`);
   if (!r.ok) throw new Error("Erreur serveur");
-  return r.json();
+  return __unwrapResponse(r);
 }
 
 async function createModele(data: { nom: string; description: string; periodiciteJours: number }): Promise<RappelModele> {
@@ -51,7 +53,7 @@ async function createModele(data: { nom: string; description: string; periodicit
     body: JSON.stringify(data),
   });
   if (!r.ok) throw new Error("Erreur serveur");
-  return r.json();
+  return __unwrapResponse(r);
 }
 
 async function deleteModele(id: number): Promise<void> {

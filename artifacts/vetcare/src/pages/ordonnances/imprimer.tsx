@@ -6,6 +6,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Printer, ArrowLeft, Download, Loader2 } from "lucide-react";
 import { Link } from "wouter";
 
+import { unwrapResponse as __unwrapResponse } from "../../lib/queryClient";
+
 const API_BASE = "/api";
 
 interface Ordonnance {
@@ -38,19 +40,19 @@ interface ParametresClinique {
 async function fetchOrdonnance(id: number): Promise<Ordonnance> {
   const r = await fetch(`${API_BASE}/ordonnances/${id}`);
   if (!r.ok) throw new Error("Ordonnance non trouvée");
-  return r.json();
+  return __unwrapResponse(r);
 }
 
 async function fetchClinique(): Promise<ParametresClinique> {
   const r = await fetch(`${API_BASE}/parametres-clinique`);
   if (!r.ok) return {} as ParametresClinique;
-  return r.json();
+  return __unwrapResponse(r);
 }
 
 async function fetchPatient(id: number) {
   const r = await fetch(`${API_BASE}/patients/${id}`);
   if (!r.ok) return null;
-  return r.json();
+  return __unwrapResponse(r);
 }
 
 export default function OrdonnanceImprimerPage() {

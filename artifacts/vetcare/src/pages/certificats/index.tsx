@@ -14,6 +14,8 @@ import ReactMarkdown from "react-markdown";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useListPatients } from "@workspace/api-client-react";
 
+import { unwrapResponse as __unwrapEnvelope } from "../../lib/queryClient";
+
 const API_BASE = "/api";
 
 type TypeCertificat = {
@@ -44,7 +46,7 @@ export default function CertificatsPage() {
 
   const { data: parametresClinique } = useQuery({
     queryKey: ["parametres-clinique"],
-    queryFn: () => fetch(`${API_BASE}/parametres-clinique`).then(r => r.json()),
+    queryFn: () => fetch(`${API_BASE}/parametres-clinique`).then(__unwrapEnvelope),
     staleTime: 5 * 60 * 1000,
   });
 
@@ -65,13 +67,13 @@ export default function CertificatsPage() {
 
   const { data: vaccinations = [] } = useQuery({
     queryKey: ["vaccinations", patientId],
-    queryFn: () => fetch(`${API_BASE}/vaccinations/patient/${patientId}`).then(r => r.json()),
+    queryFn: () => fetch(`${API_BASE}/vaccinations/patient/${patientId}`).then(__unwrapEnvelope),
     enabled: !!patientId,
   });
 
   const { data: consultations = [] } = useQuery({
     queryKey: ["consultations-patient", patientId],
-    queryFn: () => fetch(`${API_BASE}/consultations?patientId=${patientId}`).then(r => r.json()),
+    queryFn: () => fetch(`${API_BASE}/consultations?patientId=${patientId}`).then(__unwrapEnvelope),
     enabled: !!patientId,
   });
 
