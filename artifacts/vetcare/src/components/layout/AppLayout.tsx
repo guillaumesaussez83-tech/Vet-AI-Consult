@@ -135,6 +135,18 @@ export function AppLayout({ children }: { children: ReactNode }) {
             {children}
           </div>
         </div>
+        {currentPath !== "/salle-attente" && (
+          <footer className="border-t bg-card/50 py-3 px-4 md:px-6">
+            <div className="max-w-6xl mx-auto flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
+              <span>© {new Date().getFullYear()} VétoAI</span>
+              <div className="flex items-center gap-3">
+                <a href="/legal" className="hover:text-foreground hover:underline">Mentions légales</a>
+                <span>·</span>
+                <a href="/confidentialite" className="hover:text-foreground hover:underline">Confidentialité</a>
+              </div>
+            </div>
+          </footer>
+        )}
       </main>
     </div>
   );

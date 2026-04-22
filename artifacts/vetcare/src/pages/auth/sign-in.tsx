@@ -12,6 +12,11 @@ export default function SignInPage() {
         <p className="text-muted-foreground mt-2">Connectez-vous à votre espace clinique</p>
       </div>
       <SignIn routing="path" path={`${basePath}/sign-in`} signUpUrl={`${basePath}/sign-up`} />
+      <footer className="mt-8 flex items-center gap-3 text-xs text-muted-foreground">
+        <a href="/legal" className="hover:text-foreground hover:underline">Mentions légales</a>
+        <span>·</span>
+        <a href="/confidentialite" className="hover:text-foreground hover:underline">Confidentialité</a>
+      </footer>
     </div>
   );
 }

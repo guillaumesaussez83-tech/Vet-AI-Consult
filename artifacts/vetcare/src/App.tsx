@@ -34,6 +34,7 @@ import CertificatsPage from "./pages/certificats/index";
 import VaccinationsPage from "./pages/vaccinations/index";
 import PortailPage from "./pages/portail/index";
 import ConfidentialitePage from "./pages/confidentialite";
+import LegalPage from "./pages/Legal";
 import { AppLayout } from "./components/layout/AppLayout";
 import IaDisclaimerModal from "./components/IaDisclaimerModal";
 import { CommandPalette } from "./components/CommandPalette";
@@ -151,6 +152,7 @@ function Router() {
       <Route path="/patients/:id/vaccinations" component={() => <ProtectedRoute component={VaccinationsPage} />} />
       <Route path="/portail/:token" component={PortailPage} />
       <Route path="/confidentialite" component={ConfidentialitePage} />
+      <Route path="/legal" component={LegalPage} />
 
       <Route component={NotFound} />
     </Switch>
