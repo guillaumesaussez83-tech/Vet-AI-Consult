@@ -2,12 +2,12 @@ import { Router } from "express";
 import { db } from "@workspace/db";
 import { consultationsTable, patientsTable, ownersTable, actesConsultationsTable, actesTable, facturesTable } from "@workspace/db";
 import { CreateConsultationBody, GetConsultationParams, UpdateConsultationBody, UpdateConsultationParams, ListConsultationsQueryParams, GenerateOrdonnanceParams, GenerateFactureParams } from "@workspace/api-zod";
-import { eq, sql } from "drizzle-orm";
+import { eq, and, sql } from "drizzle-orm";
 import { anthropic } from "@workspace/integrations-anthropic-ai";
 
 const router = Router();
 
-async function getConsultationWithDetails(id: number) {
+async function getConsultationWithDetails(id: number, clinicId: string) {
   const [c] = await db
     .select({
       id: consultationsTable.id,
@@ -54,7 +54,7 @@ async function getConsultationWithDetails(id: number) {
     .from(consultationsTable)
     .leftJoin(patientsTable, eq(consultationsTable.patientId, patientsTable.id))
     .leftJoin(ownersTable, eq(patientsTable.ownerId, ownersTable.id))
-    .where(eq(consultationsTable.id, id));
+    .where(and(eq(consultationsTable.clinicId, clinicId), eq(consultationsTable.id, id)));
 
   if (!c) return null;
 
@@ -80,7 +80,7 @@ async function getConsultationWithDetails(id: number) {
     .leftJoin(actesTable, eq(actesConsultationsTable.acteId, actesTable.id))
     .where(eq(actesConsultationsTable.consultationId, id));
 
-  const [facture] = await db.select().from(facturesTable).where(eq(facturesTable.consultationId, id));
+  const [facture] = await db.select().from(facturesTable).where(and(eq(facturesTable.clinicId, clinicId), eq(facturesTable.consultationId, id)));
 
   return {
     ...c,
@@ -103,16 +103,17 @@ router.get("/", async (req, res) => {
     const query = ListConsultationsQueryParams.safeParse(req.query);
     const { statut, date } = query.success ? query.data : {};
 
+    const cidEq = eq(consultationsTable.clinicId, req.clinicId);
     let consultations;
     if (statut && date) {
       consultations = await db.select().from(consultationsTable)
-        .where(sql`${consultationsTable.statut} = ${statut} AND ${consultationsTable.date} = ${date}`);
+        .where(and(cidEq, eq(consultationsTable.statut, statut), eq(consultationsTable.date, date)));
     } else if (statut) {
-      consultations = await db.select().from(consultationsTable).where(eq(consultationsTable.statut, statut));
+      consultations = await db.select().from(consultationsTable).where(and(cidEq, eq(consultationsTable.statut, statut)));
     } else if (date) {
-      consultations = await db.select().from(consultationsTable).where(eq(consultationsTable.date, date));
+      consultations = await db.select().from(consultationsTable).where(and(cidEq, eq(consultationsTable.date, date)));
     } else {
-      consultations = await db.select().from(consultationsTable);
+      consultations = await db.select().from(consultationsTable).where(cidEq);
     }
 
     const result = await Promise.all(consultations.map(async (c) => {
@@ -171,7 +172,12 @@ router.post("/", async (req, res) => {
     const body = CreateConsultationBody.safeParse(req.body);
     if (!body.success) return res.status(400).json({ error: "Données invalides" });
 
-    const [consultation] = await db.insert(consultationsTable).values(body.data).returning();
+    // Vérifier que le patient appartient bien à la clinique (anti-IDOR cross-tenant)
+    const [pat] = await db.select({ id: patientsTable.id }).from(patientsTable)
+      .where(and(eq(patientsTable.clinicId, req.clinicId), eq(patientsTable.id, body.data.patientId)));
+    if (!pat) return res.status(400).json({ error: "Patient introuvable" });
+
+    const [consultation] = await db.insert(consultationsTable).values({ ...body.data, clinicId: req.clinicId }).returning();
     return res.status(201).json({ ...consultation, createdAt: consultation.createdAt.toISOString() });
   } catch (err) {
     req.log.error(err);
@@ -184,7 +190,7 @@ router.get("/:id", async (req, res) => {
     const params = GetConsultationParams.safeParse({ id: Number(req.params.id) });
     if (!params.success) return res.status(400).json({ error: "ID invalide" });
 
-    const consultation = await getConsultationWithDetails(params.data.id);
+    const consultation = await getConsultationWithDetails(params.data.id, req.clinicId);
     if (!consultation) return res.status(404).json({ error: "Consultation non trouvée" });
 
     return res.json(consultation);
@@ -204,12 +210,19 @@ router.patch("/:id", async (req, res) => {
 
     const { actes, ...consultationData } = body.data;
 
+    // Vérifier d'abord que la consultation appartient bien à la clinique avant tout update
+    const [exists] = await db.select({ id: consultationsTable.id }).from(consultationsTable)
+      .where(and(eq(consultationsTable.clinicId, req.clinicId), eq(consultationsTable.id, params.data.id)));
+    if (!exists) return res.status(404).json({ error: "Consultation non trouvée" });
+
     if (Object.keys(consultationData).length > 0) {
-      await db.update(consultationsTable).set(consultationData).where(eq(consultationsTable.id, params.data.id));
+      await db.update(consultationsTable).set(consultationData)
+        .where(and(eq(consultationsTable.clinicId, req.clinicId), eq(consultationsTable.id, params.data.id)));
     }
 
     if (actes !== undefined) {
-      await db.delete(actesConsultationsTable).where(eq(actesConsultationsTable.consultationId, params.data.id));
+      await db.delete(actesConsultationsTable)
+        .where(and(eq(actesConsultationsTable.clinicId, req.clinicId), eq(actesConsultationsTable.consultationId, params.data.id)));
       if (actes.length > 0) {
         await db.insert(actesConsultationsTable).values(
           actes.map(a => ({
@@ -218,12 +231,13 @@ router.patch("/:id", async (req, res) => {
             quantite: a.quantite,
             prixUnitaire: a.prixUnitaire,
             description: a.description ?? null,
+            clinicId: req.clinicId,
           }))
         );
       }
     }
 
-    const consultation = await getConsultationWithDetails(params.data.id);
+    const consultation = await getConsultationWithDetails(params.data.id, req.clinicId);
     if (!consultation) return res.status(404).json({ error: "Consultation non trouvée" });
 
     return res.json(consultation);
@@ -247,12 +261,18 @@ router.post("/:id/actes", async (req, res) => {
       return res.status(400).json({ error: "Prix unitaire requis" });
     }
 
+    // Garde-fou : la consultation cible doit appartenir à la clinique
+    const [exists] = await db.select({ id: consultationsTable.id }).from(consultationsTable)
+      .where(and(eq(consultationsTable.clinicId, req.clinicId), eq(consultationsTable.id, id)));
+    if (!exists) return res.status(404).json({ error: "Consultation non trouvée" });
+
     const [acte] = await db.insert(actesConsultationsTable).values({
       consultationId: id,
       acteId: (acteId && Number(acteId) > 0) ? Number(acteId) : null,
       quantite: Number(quantite) || 1,
       prixUnitaire: Number(prixUnitaire),
       description: String(description).trim(),
+      clinicId: req.clinicId,
     }).returning();
 
     return res.status(201).json(acte);
@@ -267,7 +287,7 @@ router.post("/:id/ordonnance", async (req, res) => {
     const params = GenerateOrdonnanceParams.safeParse({ id: Number(req.params.id) });
     if (!params.success) return res.status(400).json({ error: "ID invalide" });
 
-    const consultation = await getConsultationWithDetails(params.data.id);
+    const consultation = await getConsultationWithDetails(params.data.id, req.clinicId);
     if (!consultation) return res.status(404).json({ error: "Consultation non trouvée" });
 
     const patient = consultation.patient;
@@ -305,7 +325,8 @@ Format: texte structuré lisible, en français, professionnel.`;
       return res.status(500).json({ error: "Erreur lors de la génération de l'ordonnance" });
     }
 
-    await db.update(consultationsTable).set({ ordonnance: content.text }).where(eq(consultationsTable.id, params.data.id));
+    await db.update(consultationsTable).set({ ordonnance: content.text })
+      .where(and(eq(consultationsTable.clinicId, req.clinicId), eq(consultationsTable.id, params.data.id)));
 
     return res.json({ ordonnance: content.text });
   } catch (err) {
@@ -319,12 +340,18 @@ router.post("/:id/facture", async (req, res) => {
     const params = GenerateFactureParams.safeParse({ id: Number(req.params.id) });
     if (!params.success) return res.status(400).json({ error: "ID invalide" });
 
-    const [existingFacture] = await db.select().from(facturesTable).where(eq(facturesTable.consultationId, params.data.id));
+    // Garde-fou clinique
+    const [exists] = await db.select({ id: consultationsTable.id }).from(consultationsTable)
+      .where(and(eq(consultationsTable.clinicId, req.clinicId), eq(consultationsTable.id, params.data.id)));
+    if (!exists) return res.status(404).json({ error: "Consultation non trouvée" });
+
+    const [existingFacture] = await db.select().from(facturesTable)
+      .where(and(eq(facturesTable.clinicId, req.clinicId), eq(facturesTable.consultationId, params.data.id)));
 
     const actes = await db
       .select()
       .from(actesConsultationsTable)
-      .where(eq(actesConsultationsTable.consultationId, params.data.id));
+      .where(and(eq(actesConsultationsTable.clinicId, req.clinicId), eq(actesConsultationsTable.consultationId, params.data.id)));
 
     const montantHT = parseFloat(actes.reduce((acc, a) => acc + a.prixUnitaire * a.quantite, 0).toFixed(2));
     const tva = 20;
@@ -340,13 +367,16 @@ router.post("/:id/facture", async (req, res) => {
     if (existingFacture) {
       const [updated] = await db.update(facturesTable)
         .set({ montantHT, tva, montantTTC })
-        .where(eq(facturesTable.id, existingFacture.id))
+        .where(and(eq(facturesTable.clinicId, req.clinicId), eq(facturesTable.id, existingFacture.id)))
         .returning();
       return res.json({ ...updated, createdAt: updated.createdAt.toISOString() });
     }
 
     const year = new Date().getFullYear();
-    const [lastFacture] = await db.select().from(facturesTable).orderBy(sql`${facturesTable.id} DESC`).limit(1);
+    // Numérotation par clinique pour éviter collision entre tenants
+    const [lastFacture] = await db.select().from(facturesTable)
+      .where(eq(facturesTable.clinicId, req.clinicId))
+      .orderBy(sql`${facturesTable.id} DESC`).limit(1);
     const nextNum = lastFacture ? (parseInt(lastFacture.numero.split("-")[2] ?? "0") + 1) : 1;
     const numero = `FACT-${year}-${String(nextNum).padStart(4, "0")}`;
 
@@ -358,6 +388,7 @@ router.post("/:id/facture", async (req, res) => {
       montantTTC,
       statut: "en_attente",
       dateEmission: new Date().toISOString().split("T")[0],
+      clinicId: req.clinicId,
     }).returning();
 
     return res.json({ ...facture, createdAt: facture.createdAt.toISOString() });

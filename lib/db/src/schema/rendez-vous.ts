@@ -7,6 +7,7 @@ import { veterinairesTable } from "./veterinaires";
 
 export const rendezVousTable = pgTable("rendez_vous", {
   id: serial("id").primaryKey(),
+  clinicId: text("clinic_id").notNull().default("default"),
   dateHeure: text("date_heure").notNull(),
   dureeMinutes: integer("duree_minutes").notNull().default(20),
   patientId: integer("patient_id").references(() => patientsTable.id),
@@ -26,6 +27,7 @@ export const rendezVousTable = pgTable("rendez_vous", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 }, (table) => ({
+  clinicIdIdx: index("idx_clinic_id__rendez_vous").on(table.clinicId),
   dateHeureIdx: index("idx_rendez_vous_date_heure").on(table.dateHeure),
   patientIdIdx: index("idx_rendez_vous_patient_id").on(table.patientId),
   ownerIdIdx: index("idx_rendez_vous_owner_id").on(table.ownerId),

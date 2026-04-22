@@ -2,7 +2,7 @@ import { Router } from "express";
 import { db } from "@workspace/db";
 import { facturesTable, consultationsTable, patientsTable, ownersTable, actesConsultationsTable, actesTable } from "@workspace/db";
 import { GetFactureParams, UpdateFactureStatutParams, UpdateFactureStatutBody, ListFacturesQueryParams } from "@workspace/api-zod";
-import { eq, inArray } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 import { decrementerConsultationFEFO } from "../stock/ia-engine";
 
 const router = Router();
@@ -12,11 +12,12 @@ router.get("/", async (req, res) => {
     const query = ListFacturesQueryParams.safeParse(req.query);
     const { statut } = query.success ? query.data : {};
 
+    const cidEq = eq(facturesTable.clinicId, req.clinicId);
     let factures;
     if (statut) {
-      factures = await db.select().from(facturesTable).where(eq(facturesTable.statut, statut));
+      factures = await db.select().from(facturesTable).where(and(cidEq, eq(facturesTable.statut, statut)));
     } else {
-      factures = await db.select().from(facturesTable);
+      factures = await db.select().from(facturesTable).where(cidEq);
     }
 
     if (factures.length === 0) return res.json([]);
@@ -53,7 +54,7 @@ router.get("/", async (req, res) => {
         const fresh = totalsMap.get(f.consultationId)!;
         return db.update(facturesTable)
           .set({ montantHT: fresh.montantHT, montantTTC: fresh.montantTTC })
-          .where(eq(facturesTable.id, f.id));
+          .where(and(eq(facturesTable.clinicId, req.clinicId), eq(facturesTable.id, f.id)));
       })).catch(() => {});
     }
 
@@ -143,7 +144,7 @@ router.get("/by-consultation/:consultationId", async (req, res) => {
     const consultationId = parseInt(req.params.consultationId);
     if (isNaN(consultationId)) return res.status(400).json({ error: "ID invalide" });
 
-    const [facture] = await db.select().from(facturesTable).where(eq(facturesTable.consultationId, consultationId));
+    const [facture] = await db.select().from(facturesTable).where(and(eq(facturesTable.clinicId, req.clinicId), eq(facturesTable.consultationId, consultationId)));
     if (!facture) return res.status(404).json(null);
 
     return res.json({ ...facture, createdAt: facture.createdAt.toISOString() });
@@ -158,7 +159,7 @@ router.get("/:id", async (req, res) => {
     const params = GetFactureParams.safeParse({ id: Number(req.params.id) });
     if (!params.success) return res.status(400).json({ error: "ID invalide" });
 
-    const [facture] = await db.select().from(facturesTable).where(eq(facturesTable.id, params.data.id));
+    const [facture] = await db.select().from(facturesTable).where(and(eq(facturesTable.clinicId, req.clinicId), eq(facturesTable.id, params.data.id)));
     if (!facture) return res.status(404).json({ error: "Facture non trouvée" });
 
     const [consultation] = await db
@@ -240,7 +241,7 @@ router.get("/:id", async (req, res) => {
     const totalTTC = parseFloat((totalHT + totalTVA).toFixed(2));
 
     if (lignesMapped.length > 0 && (Math.abs(facture.montantHT - totalHT) > 0.005 || Math.abs(facture.montantTTC - totalTTC) > 0.005)) {
-      await db.update(facturesTable).set({ montantHT: totalHT, montantTTC: totalTTC }).where(eq(facturesTable.id, facture.id));
+      await db.update(facturesTable).set({ montantHT: totalHT, montantTTC: totalTTC }).where(and(eq(facturesTable.clinicId, req.clinicId), eq(facturesTable.id, facture.id)));
     }
 
     return res.json({
@@ -274,7 +275,7 @@ router.delete("/:id", async (req, res) => {
     const params = GetFactureParams.safeParse({ id: Number(req.params.id) });
     if (!params.success) return res.status(400).json({ error: "ID invalide" });
 
-    const [deleted] = await db.delete(facturesTable).where(eq(facturesTable.id, params.data.id)).returning();
+    const [deleted] = await db.delete(facturesTable).where(and(eq(facturesTable.clinicId, req.clinicId), eq(facturesTable.id, params.data.id))).returning();
     if (!deleted) return res.status(404).json({ error: "Facture non trouvée" });
 
     return res.json({ success: true });
@@ -309,7 +310,7 @@ router.patch("/:id", async (req, res) => {
       updateData.montantEspecesRecu = montantEspecesRecu;
     }
 
-    const [factureBefore] = await db.select().from(facturesTable).where(eq(facturesTable.id, params.data.id));
+    const [factureBefore] = await db.select().from(facturesTable).where(and(eq(facturesTable.clinicId, req.clinicId), eq(facturesTable.id, params.data.id)));
     if (!factureBefore) return res.status(404).json({ error: "Facture non trouvée" });
 
     if (body.data.statut === "payee" && Number(factureBefore.montantTTC ?? 0) === 0) {
@@ -327,7 +328,7 @@ router.patch("/:id", async (req, res) => {
       updateData.montantTTC = totalTTC;
     }
 
-    const [facture] = await db.update(facturesTable).set(updateData).where(eq(facturesTable.id, params.data.id)).returning();
+    const [facture] = await db.update(facturesTable).set(updateData).where(and(eq(facturesTable.clinicId, req.clinicId), eq(facturesTable.id, params.data.id))).returning();
     if (!facture) return res.status(404).json({ error: "Facture non trouvée" });
 
     // FEFO auto-decrement when invoice is paid for the first time

@@ -8,6 +8,7 @@ import { existsSync } from "fs";
 import pinoHttp from "pino-http";
 import { clerkMiddleware } from "@clerk/express";
 import { CLERK_PROXY_PATH, clerkProxyMiddleware } from "./middlewares/clerkProxyMiddleware";
+import { extractClinic } from "./middlewares/extractClinic";
 import router from "./routes";
 import { logger } from "./lib/logger";
 import { errorHandler } from "./middlewares/errorHandler";
@@ -75,6 +76,7 @@ app.use(clerkMiddleware());
 
 app.use("/api", apiLimiter);
 app.use("/api", responseWrapper);
+app.use("/api", extractClinic());
 app.use("/api", router);
 
 // === Servir le frontend en production (déploiement monolithique) ===

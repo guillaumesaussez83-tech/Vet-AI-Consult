@@ -5,6 +5,7 @@ import { consultationsTable } from "./consultations";
 
 export const facturesTable = pgTable("factures", {
   id: serial("id").primaryKey(),
+  clinicId: text("clinic_id").notNull().default("default"),
   consultationId: integer("consultation_id").notNull().references(() => consultationsTable.id).unique(),
   numero: text("numero").notNull().unique(),
   montantHT: real("montant_ht").notNull(),
@@ -15,14 +16,13 @@ export const facturesTable = pgTable("factures", {
   datePaiement: text("date_paiement"),
   modePaiement: text("mode_paiement"),
   montantEspecesRecu: real("montant_especes_recu"),
-  organizationId: integer("organization_id").notNull().default(1),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 }, (table) => ({
+  clinicIdIdx: index("idx_clinic_id__factures").on(table.clinicId),
   consultationIdIdx: index("idx_factures_consultation_id").on(table.consultationId),
   statutIdx: index("idx_factures_statut").on(table.statut),
   dateEmissionIdx: index("idx_factures_date_emission").on(table.dateEmission),
-  organizationIdIdx: index("idx_factures_organization_id").on(table.organizationId),
 }));
 
 export const insertFactureSchema = createInsertSchema(facturesTable).omit({ id: true, createdAt: true, updatedAt: true });

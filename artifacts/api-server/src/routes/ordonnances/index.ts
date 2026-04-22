@@ -9,7 +9,7 @@ import {
   actesTable,
   parametresCliniqueTable,
 } from "@workspace/db";
-import { eq, desc, sql } from "drizzle-orm";
+import { eq, and, desc, sql } from "drizzle-orm";
 import { AI_MODEL, AI_MAX_TOKENS } from "../../lib/constants";
 import { anthropic } from "@workspace/integrations-anthropic-ai";
 
@@ -20,23 +20,25 @@ router.get("/", async (req, res) => {
     const consultationId = req.query.consultationId ? Number(req.query.consultationId) : null;
     const patientId = req.query.patientId ? Number(req.query.patientId) : null;
 
+    const cidEq = eq(ordonnancesTable.clinicId, req.clinicId);
     let rows;
     if (consultationId) {
       rows = await db
         .select()
         .from(ordonnancesTable)
-        .where(eq(ordonnancesTable.consultationId, consultationId))
+        .where(and(cidEq, eq(ordonnancesTable.consultationId, consultationId)))
         .orderBy(desc(ordonnancesTable.createdAt));
     } else if (patientId) {
       rows = await db
         .select()
         .from(ordonnancesTable)
-        .where(eq(ordonnancesTable.patientId, patientId))
+        .where(and(cidEq, eq(ordonnancesTable.patientId, patientId)))
         .orderBy(desc(ordonnancesTable.createdAt));
     } else {
       rows = await db
         .select()
         .from(ordonnancesTable)
+        .where(cidEq)
         .orderBy(desc(ordonnancesTable.createdAt))
         .limit(50);
     }
@@ -57,7 +59,7 @@ router.get("/:id", async (req, res) => {
     const id = Number(req.params.id);
     if (!id) return res.status(400).json({ error: "ID invalide" });
 
-    const [row] = await db.select().from(ordonnancesTable).where(eq(ordonnancesTable.id, id));
+    const [row] = await db.select().from(ordonnancesTable).where(and(eq(ordonnancesTable.clinicId, req.clinicId), eq(ordonnancesTable.id, id)));
     if (!row) return res.status(404).json({ error: "Ordonnance non trouvée" });
 
     return res.json({ ...row, createdAt: row.createdAt.toISOString(), updatedAt: row.updatedAt.toISOString() });
@@ -73,11 +75,17 @@ router.post("/", async (req, res) => {
     if (!consultationId || !contenu) {
       return res.status(400).json({ error: "consultationId et contenu requis" });
     }
+    // Vérifier que la consultation appartient bien à la clinique (anti-IDOR cross-tenant)
+    const [conExists] = await db.select({ id: consultationsTable.id }).from(consultationsTable)
+      .where(and(eq(consultationsTable.clinicId, req.clinicId), eq(consultationsTable.id, Number(consultationId))));
+    if (!conExists) return res.status(400).json({ error: "Consultation introuvable" });
+
     const year = new Date().getFullYear();
+    // Numérotation par clinique
     const [lastOrd] = await db
       .select({ num: ordonnancesTable.numeroOrdonnance })
       .from(ordonnancesTable)
-      .where(sql`numero_ordonnance LIKE ${`ORD-${year}-%`}`)
+      .where(and(eq(ordonnancesTable.clinicId, req.clinicId), sql`numero_ordonnance LIKE ${`ORD-${year}-%`}`))
       .orderBy(desc(ordonnancesTable.id))
       .limit(1);
     const lastSeq = lastOrd?.num ? parseInt(lastOrd.num.split("-")[2] ?? "0") : 0;
@@ -91,6 +99,7 @@ router.post("/", async (req, res) => {
       numeroOrdonnance,
       genereIA: genereIA ?? false,
       instructionsClient: instructionsClient ?? null,
+      clinicId: req.clinicId,
     }).returning();
     return res.status(201).json({ ...row, createdAt: row.createdAt.toISOString(), updatedAt: row.updatedAt.toISOString() });
   } catch (err) {
@@ -110,7 +119,7 @@ router.patch("/:id", async (req, res) => {
     if (instructionsClient !== undefined) updateData.instructionsClient = instructionsClient;
     if (veterinaire !== undefined) updateData.veterinaire = veterinaire;
 
-    const [row] = await db.update(ordonnancesTable).set(updateData).where(eq(ordonnancesTable.id, id)).returning();
+    const [row] = await db.update(ordonnancesTable).set(updateData).where(and(eq(ordonnancesTable.clinicId, req.clinicId), eq(ordonnancesTable.id, id))).returning();
     if (!row) return res.status(404).json({ error: "Ordonnance non trouvée" });
 
     return res.json({ ...row, createdAt: row.createdAt.toISOString(), updatedAt: row.updatedAt.toISOString() });
@@ -124,7 +133,7 @@ router.delete("/:id", async (req, res) => {
   try {
     const id = Number(req.params.id);
     if (!id) return res.status(400).json({ error: "ID invalide" });
-    const [deleted] = await db.delete(ordonnancesTable).where(eq(ordonnancesTable.id, id)).returning();
+    const [deleted] = await db.delete(ordonnancesTable).where(and(eq(ordonnancesTable.clinicId, req.clinicId), eq(ordonnancesTable.id, id))).returning();
     if (!deleted) return res.status(404).json({ error: "Ordonnance non trouvée" });
     return res.json({ success: true });
   } catch (err) {
@@ -170,7 +179,7 @@ router.post("/ia/generer", async (req, res) => {
       .from(consultationsTable)
       .leftJoin(patientsTable, eq(consultationsTable.patientId, patientsTable.id))
       .leftJoin(ownersTable, eq(patientsTable.ownerId, ownersTable.id))
-      .where(eq(consultationsTable.id, Number(consultationId)));
+      .where(and(eq(consultationsTable.clinicId, req.clinicId), eq(consultationsTable.id, Number(consultationId))));
 
     if (!consultation) return res.status(404).json({ error: "Consultation non trouvée" });
 
@@ -261,7 +270,7 @@ Réponds en JSON strict (sans markdown) :
     const [lastOrdAI] = await db
       .select({ num: ordonnancesTable.numeroOrdonnance })
       .from(ordonnancesTable)
-      .where(sql`numero_ordonnance LIKE ${`ORD-${yearAI}-%`}`)
+      .where(and(eq(ordonnancesTable.clinicId, req.clinicId), sql`numero_ordonnance LIKE ${`ORD-${yearAI}-%`}`))
       .orderBy(desc(ordonnancesTable.id))
       .limit(1);
     const lastSeqAI = lastOrdAI?.num ? parseInt(lastOrdAI.num.split("-")[2] ?? "0") : 0;
@@ -275,6 +284,7 @@ Réponds en JSON strict (sans markdown) :
       numeroOrdonnance: numeroOrdonnanceAI,
       genereIA: true,
       instructionsClient: parsed.instructionsClient || null,
+      clinicId: req.clinicId,
     }).returning();
 
     return res.status(201).json({

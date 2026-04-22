@@ -5,6 +5,7 @@ import { consultationsTable } from "./consultations";
 
 export const anesthesieProtocolesTable = pgTable("anesthesie_protocoles", {
   id: serial("id").primaryKey(),
+  clinicId: text("clinic_id").notNull().default("default"),
   consultationId: integer("consultation_id").notNull().unique().references(() => consultationsTable.id),
   poids: real("poids"),
   premedication: text("premedication"),

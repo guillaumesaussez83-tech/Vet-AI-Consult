@@ -10,6 +10,7 @@ export const TYPES_MOUVEMENT = [
 
 export const mouvementsStockTable = pgTable("mouvements_stock", {
   id: serial("id").primaryKey(),
+  clinicId: text("clinic_id").notNull().default("default"),
   medicamentId: integer("medicament_id").notNull().references(() => stockMedicamentsTable.id),
   lotId: integer("lot_id"),
   typeMouvement: text("type_mouvement").notNull(),
@@ -22,6 +23,7 @@ export const mouvementsStockTable = pgTable("mouvements_stock", {
   utilisateur: text("utilisateur"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, (table) => ({
+  clinicIdIdx: index("idx_clinic_id__mouvements_stock").on(table.clinicId),
   medicamentIdIdx: index("idx_mouvements_stock_medicament_id").on(table.medicamentId),
   typeMouvementIdx: index("idx_mouvements_stock_type").on(table.typeMouvement),
   createdAtIdx: index("idx_mouvements_stock_created_at").on(table.createdAt),

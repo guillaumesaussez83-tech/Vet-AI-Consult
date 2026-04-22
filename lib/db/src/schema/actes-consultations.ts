@@ -6,6 +6,7 @@ import { consultationsTable } from "./consultations";
 
 export const actesConsultationsTable = pgTable("actes_consultations", {
   id: serial("id").primaryKey(),
+  clinicId: text("clinic_id").notNull().default("default"),
   acteId: integer("acte_id").references(() => actesTable.id),
   consultationId: integer("consultation_id").notNull().references(() => consultationsTable.id),
   quantite: integer("quantite").notNull().default(1),
@@ -13,6 +14,7 @@ export const actesConsultationsTable = pgTable("actes_consultations", {
   description: text("description"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, (table) => ({
+  clinicIdIdx: index("idx_clinic_id__actes_consultations").on(table.clinicId),
   consultationIdIdx: index("idx_actes_consultations_consultation_id").on(table.consultationId),
   acteIdIdx: index("idx_actes_consultations_acte_id").on(table.acteId),
 }));

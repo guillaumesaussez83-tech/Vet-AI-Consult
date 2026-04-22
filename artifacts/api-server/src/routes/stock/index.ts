@@ -29,7 +29,9 @@ function detectStupefiants(nom: string): boolean {
 // ──────────────────────────────────────────
 router.get("/", async (req, res) => {
   try {
-    const stock = await db.select().from(stockMedicamentsTable).orderBy(asc(stockMedicamentsTable.nom));
+    const stock = await db.select().from(stockMedicamentsTable)
+      .where(eq(stockMedicamentsTable.clinicId, req.clinicId))
+      .orderBy(asc(stockMedicamentsTable.nom));
     return res.json(stock);
   } catch (err) { req.log.error(err); return res.status(500).json({ error: "Erreur interne" }); }
 });
@@ -48,6 +50,7 @@ router.post("/", async (req, res) => {
       fournisseur, fournisseurPrincipal: fournisseurPrincipal ?? "CENTRAVET",
       delaiLivraisonJours: delaiLivraisonJours ?? 1, datePeremption, datePeremptionLot, emplacement,
       unite: unite ?? "unité", actif: actif !== false, estStupefiant: autoStu,
+      clinicId: req.clinicId,
     }).returning();
     return res.status(201).json(med);
   } catch (err) { req.log.error(err); return res.status(500).json({ error: "Erreur interne" }); }
@@ -61,7 +64,7 @@ router.patch("/:id", async (req, res) => {
     if (body.nom && body.estStupefiant === undefined) {
       body.estStupefiant = detectStupefiants(body.nom);
     }
-    const [med] = await db.update(stockMedicamentsTable).set(body).where(eq(stockMedicamentsTable.id, id)).returning();
+    const [med] = await db.update(stockMedicamentsTable).set(body).where(and(eq(stockMedicamentsTable.clinicId, req.clinicId), eq(stockMedicamentsTable.id, id))).returning();
     if (!med) return res.status(404).json({ error: "Médicament non trouvé" });
     return res.json(med);
   } catch (err) { req.log.error(err); return res.status(500).json({ error: "Erreur interne" }); }
@@ -71,7 +74,7 @@ router.delete("/:id", async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     if (isNaN(id)) return res.status(400).json({ error: "ID invalide" });
-    await db.delete(stockMedicamentsTable).where(eq(stockMedicamentsTable.id, id));
+    await db.delete(stockMedicamentsTable).where(and(eq(stockMedicamentsTable.clinicId, req.clinicId), eq(stockMedicamentsTable.id, id)));
     return res.status(204).send();
   } catch (err) { req.log.error(err); return res.status(500).json({ error: "Erreur interne" }); }
 });
@@ -82,10 +85,10 @@ router.patch("/:id/mouvement", async (req, res) => {
     if (isNaN(id)) return res.status(400).json({ error: "ID invalide" });
     const { delta, typeMouvement, motif, utilisateur } = req.body;
     if (typeof delta !== "number") return res.status(400).json({ error: "delta requis" });
-    const [current] = await db.select().from(stockMedicamentsTable).where(eq(stockMedicamentsTable.id, id));
+    const [current] = await db.select().from(stockMedicamentsTable).where(and(eq(stockMedicamentsTable.clinicId, req.clinicId), eq(stockMedicamentsTable.id, id)));
     if (!current) return res.status(404).json({ error: "Médicament non trouvé" });
     const newQty = Math.max(0, (current.quantiteStock ?? 0) + delta);
-    const [updated] = await db.update(stockMedicamentsTable).set({ quantiteStock: newQty }).where(eq(stockMedicamentsTable.id, id)).returning();
+    const [updated] = await db.update(stockMedicamentsTable).set({ quantiteStock: newQty }).where(and(eq(stockMedicamentsTable.clinicId, req.clinicId), eq(stockMedicamentsTable.id, id))).returning();
 
     // Enregistrer le mouvement
     const type = delta > 0 ? "entree_reception" : (typeMouvement ?? "ajustement_inventaire");
@@ -96,6 +99,7 @@ router.patch("/:id/mouvement", async (req, res) => {
       prixUnitaireHT: current.prixAchatHT ?? undefined,
       motif: motif ?? `Mouvement manuel: ${delta > 0 ? "+" : ""}${delta}`,
       utilisateur,
+      clinicId: req.clinicId,
     });
 
     return res.json(updated);
@@ -110,7 +114,7 @@ router.get("/:id/mouvements", async (req, res) => {
     const id = parseInt(req.params.id);
     if (isNaN(id)) return res.status(400).json({ error: "ID invalide" });
     const mvts = await db.select().from(mouvementsStockTable)
-      .where(eq(mouvementsStockTable.medicamentId, id))
+      .where(and(eq(mouvementsStockTable.clinicId, req.clinicId), eq(mouvementsStockTable.medicamentId, id)))
       .orderBy(desc(mouvementsStockTable.createdAt))
       .limit(100);
     return res.json(mvts);
@@ -123,16 +127,20 @@ router.post("/mouvements", async (req, res) => {
     if (!medicamentId || !typeMouvement || typeof quantite !== "number") {
       return res.status(400).json({ error: "medicamentId, typeMouvement, quantite requis" });
     }
+    // Vérifier que le médicament appartient à la clinique
+    const [medCheck] = await db.select().from(stockMedicamentsTable)
+      .where(and(eq(stockMedicamentsTable.clinicId, req.clinicId), eq(stockMedicamentsTable.id, parseInt(medicamentId))));
+    if (!medCheck) return res.status(404).json({ error: "Médicament non trouvé" });
+
     const [mvt] = await db.insert(mouvementsStockTable).values({
       medicamentId: parseInt(medicamentId), typeMouvement, quantite, motif, utilisateur, prixUnitaireHT,
+      clinicId: req.clinicId,
     }).returning();
 
     // Update stock quantity
-    const [med] = await db.select().from(stockMedicamentsTable).where(eq(stockMedicamentsTable.id, parseInt(medicamentId)));
-    if (med) {
-      const newQty = Math.max(0, (med.quantiteStock ?? 0) + quantite);
-      await db.update(stockMedicamentsTable).set({ quantiteStock: newQty }).where(eq(stockMedicamentsTable.id, parseInt(medicamentId)));
-    }
+    const newQty = Math.max(0, (medCheck.quantiteStock ?? 0) + quantite);
+    await db.update(stockMedicamentsTable).set({ quantiteStock: newQty })
+      .where(and(eq(stockMedicamentsTable.clinicId, req.clinicId), eq(stockMedicamentsTable.id, parseInt(medicamentId))));
 
     return res.status(201).json(mvt);
   } catch (err) { req.log.error(err); return res.status(500).json({ error: "Erreur interne" }); }
@@ -146,7 +154,7 @@ router.get("/:id/lots", async (req, res) => {
     const id = parseInt(req.params.id);
     if (isNaN(id)) return res.status(400).json({ error: "ID invalide" });
     const lots = await db.select().from(stockLotsTable)
-      .where(eq(stockLotsTable.medicamentId, id))
+      .where(and(eq(stockLotsTable.clinicId, req.clinicId), eq(stockLotsTable.medicamentId, id)))
       .orderBy(asc(stockLotsTable.datePeremption));
     return res.json(lots);
   } catch (err) { req.log.error(err); return res.status(500).json({ error: "Erreur interne" }); }
@@ -192,6 +200,7 @@ router.post("/ia/detecter-anomalies", async (req, res) => {
 router.get("/commandes", async (req, res) => {
   try {
     const commandes = await db.select().from(commandesCentravetTable)
+      .where(eq(commandesCentravetTable.clinicId, req.clinicId))
       .orderBy(desc(commandesCentravetTable.createdAt));
     return res.json(commandes);
   } catch (err) { req.log.error(err); return res.status(500).json({ error: "Erreur interne" }); }
@@ -201,7 +210,7 @@ router.get("/commandes/:id", async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     if (isNaN(id)) return res.status(400).json({ error: "ID invalide" });
-    const [commande] = await db.select().from(commandesCentravetTable).where(eq(commandesCentravetTable.id, id));
+    const [commande] = await db.select().from(commandesCentravetTable).where(and(eq(commandesCentravetTable.clinicId, req.clinicId), eq(commandesCentravetTable.id, id)));
     if (!commande) return res.status(404).json({ error: "Commande non trouvée" });
 
     const lignes = await db
@@ -222,7 +231,7 @@ router.get("/commandes/:id", async (req, res) => {
       })
       .from(lignesCommandeTable)
       .leftJoin(stockMedicamentsTable, eq(lignesCommandeTable.medicamentId, stockMedicamentsTable.id))
-      .where(eq(lignesCommandeTable.commandeId, id));
+      .where(and(eq(lignesCommandeTable.clinicId, req.clinicId), eq(lignesCommandeTable.commandeId, id)));
 
     return res.json({ ...commande, lignes });
   } catch (err) { req.log.error(err); return res.status(500).json({ error: "Erreur interne" }); }
@@ -233,8 +242,10 @@ router.post("/commandes", async (req, res) => {
     const { typeDeclenchement, dateLivraisonPrevue, notesASV, lignes } = req.body;
     const now = new Date();
     const yearMonth = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}`;
+    // Numérotation par clinique
     const existing = await db.select({ id: commandesCentravetTable.id })
-      .from(commandesCentravetTable);
+      .from(commandesCentravetTable)
+      .where(eq(commandesCentravetTable.clinicId, req.clinicId));
     const seq = String(existing.length + 1).padStart(4, "0");
     const numeroCommande = `CMD-${yearMonth}-${seq}`;
 
@@ -244,6 +255,7 @@ router.post("/commandes", async (req, res) => {
       typeDeclenchement: typeDeclenchement ?? "asv_manuel",
       dateLivraisonPrevue,
       notesASV,
+      clinicId: req.clinicId,
     }).returning();
 
     if (Array.isArray(lignes) && lignes.length > 0) {
@@ -255,6 +267,7 @@ router.post("/commandes", async (req, res) => {
           prixUnitaireHT: l.prixUnitaireHT,
           referenceCentravet: l.referenceCentravet,
           statutLigne: "en_attente",
+          clinicId: req.clinicId,
         }))
       );
     }
@@ -274,7 +287,7 @@ router.patch("/commandes/:id", async (req, res) => {
     if (dateLivraisonPrevue) updates.dateLivraisonPrevue = dateLivraisonPrevue;
     if (statut === "validee") updates.dateValidation = new Date();
     if (statut === "envoyee_centravet") updates.dateEnvoiCentravet = new Date();
-    const [updated] = await db.update(commandesCentravetTable).set(updates).where(eq(commandesCentravetTable.id, id)).returning();
+    const [updated] = await db.update(commandesCentravetTable).set(updates).where(and(eq(commandesCentravetTable.clinicId, req.clinicId), eq(commandesCentravetTable.id, id))).returning();
     return res.json(updated);
   } catch (err) { req.log.error(err); return res.status(500).json({ error: "Erreur interne" }); }
 });
@@ -290,7 +303,7 @@ router.patch("/commandes/:id/lignes/:ligneId", async (req, res) => {
     if (lotNumero !== undefined) updates.lotNumero = lotNumero;
     if (datePeremptionRecu !== undefined) updates.datePeremptionRecu = datePeremptionRecu;
     if (ecartNotes !== undefined) updates.ecartNotes = ecartNotes;
-    const [updated] = await db.update(lignesCommandeTable).set(updates).where(eq(lignesCommandeTable.id, ligneId)).returning();
+    const [updated] = await db.update(lignesCommandeTable).set(updates).where(and(eq(lignesCommandeTable.clinicId, req.clinicId), eq(lignesCommandeTable.id, ligneId))).returning();
     return res.json(updated);
   } catch (err) { req.log.error(err); return res.status(500).json({ error: "Erreur interne" }); }
 });
@@ -299,7 +312,7 @@ router.get("/commandes/:id/export-csv", async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     if (isNaN(id)) return res.status(400).json({ error: "ID invalide" });
-    const [commande] = await db.select().from(commandesCentravetTable).where(eq(commandesCentravetTable.id, id));
+    const [commande] = await db.select().from(commandesCentravetTable).where(and(eq(commandesCentravetTable.clinicId, req.clinicId), eq(commandesCentravetTable.id, id)));
     if (!commande) return res.status(404).json({ error: "Commande non trouvée" });
 
     const lignes = await db
@@ -311,7 +324,7 @@ router.get("/commandes/:id/export-csv", async (req, res) => {
       })
       .from(lignesCommandeTable)
       .leftJoin(stockMedicamentsTable, eq(lignesCommandeTable.medicamentId, stockMedicamentsTable.id))
-      .where(eq(lignesCommandeTable.commandeId, id));
+      .where(and(eq(lignesCommandeTable.clinicId, req.clinicId), eq(lignesCommandeTable.commandeId, id)));
 
     let csv = "Reference CENTRAVET;Designation;Quantite;Prix unitaire HT\n";
     for (const l of lignes) {
@@ -431,7 +444,10 @@ router.get("/alertes", async (req, res) => {
       })
       .from(alertesStockTable)
       .leftJoin(stockMedicamentsTable, eq(alertesStockTable.medicamentId, stockMedicamentsTable.id))
-      .where(traitee === "true" ? eq(alertesStockTable.estTraitee, true) : traitee === "false" ? eq(alertesStockTable.estTraitee, false) : undefined)
+      .where(and(
+        eq(alertesStockTable.clinicId, req.clinicId),
+        traitee === "true" ? eq(alertesStockTable.estTraitee, true) : traitee === "false" ? eq(alertesStockTable.estTraitee, false) : undefined,
+      ))
       .orderBy(desc(alertesStockTable.createdAt))
       .limit(200);
     return res.json(alertes);
@@ -449,7 +465,7 @@ router.patch("/alertes/:id/traiter", async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     if (isNaN(id)) return res.status(400).json({ error: "ID invalide" });
-    const [updated] = await db.update(alertesStockTable).set({ estTraitee: true }).where(eq(alertesStockTable.id, id)).returning();
+    const [updated] = await db.update(alertesStockTable).set({ estTraitee: true }).where(and(eq(alertesStockTable.clinicId, req.clinicId), eq(alertesStockTable.id, id))).returning();
     return res.json(updated);
   } catch (err) { req.log.error(err); return res.status(500).json({ error: "Erreur interne" }); }
 });

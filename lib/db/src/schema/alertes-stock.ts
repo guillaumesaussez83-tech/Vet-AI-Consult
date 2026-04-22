@@ -11,6 +11,7 @@ export const NIVEAUX_URGENCE = ["critique", "warning", "info"] as const;
 
 export const alertesStockTable = pgTable("alertes_stock", {
   id: serial("id").primaryKey(),
+  clinicId: text("clinic_id").notNull().default("default"),
   medicamentId: integer("medicament_id").references(() => stockMedicamentsTable.id),
   typeAlerte: text("type_alerte").notNull(),
   niveauUrgence: text("niveau_urgence").notNull().default("warning"),
@@ -18,6 +19,7 @@ export const alertesStockTable = pgTable("alertes_stock", {
   estTraitee: boolean("est_traitee").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, (table) => ({
+  clinicIdIdx: index("idx_clinic_id__alertes_stock").on(table.clinicId),
   medicamentIdIdx: index("idx_alertes_stock_medicament_id").on(table.medicamentId),
   traiteeIdx: index("idx_alertes_stock_traitee").on(table.estTraitee),
 }));

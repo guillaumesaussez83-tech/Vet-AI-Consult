@@ -5,6 +5,7 @@ import { ownersTable } from "./owners";
 
 export const patientsTable = pgTable("patients", {
   id: serial("id").primaryKey(),
+  clinicId: text("clinic_id").notNull().default("default"),
   nom: text("nom").notNull(),
   espece: text("espece").notNull(),
   race: text("race"),
@@ -23,14 +24,13 @@ export const patientsTable = pgTable("patients", {
   agressif: boolean("agressif").notNull().default(false),
   consentementRgpd: boolean("consentement_rgpd").notNull().default(false),
   dateConsentement: timestamp("date_consentement", { withTimezone: true }),
-  organizationId: integer("organization_id").notNull().default(1),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 }, (table) => ({
+  clinicIdIdx: index("idx_clinic_id__patients").on(table.clinicId),
   ownerIdIdx: index("idx_patients_owner_id").on(table.ownerId),
   especeIdx: index("idx_patients_espece").on(table.espece),
   nomIdx: index("idx_patients_nom").on(table.nom),
-  organizationIdIdx: index("idx_patients_organization_id").on(table.organizationId),
 }));
 
 export const insertPatientSchema = createInsertSchema(patientsTable).omit({ id: true, createdAt: true, updatedAt: true });

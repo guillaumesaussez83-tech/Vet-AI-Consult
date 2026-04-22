@@ -6,6 +6,7 @@ import { patientsTable } from "./patients";
 
 export const rappelsModelesTable = pgTable("rappels_modeles", {
   id: serial("id").primaryKey(),
+  clinicId: text("clinic_id").notNull().default("default"),
   nom: text("nom").notNull(),
   description: text("description"),
   periodiciteJours: integer("periodicite_jours").notNull().default(365),
@@ -15,6 +16,7 @@ export const rappelsModelesTable = pgTable("rappels_modeles", {
 
 export const rappelsTable = pgTable("rappels", {
   id: serial("id").primaryKey(),
+  clinicId: text("clinic_id").notNull().default("default"),
   consultationId: integer("consultation_id").references(() => consultationsTable.id, { onDelete: "set null" }),
   patientId: integer("patient_id").references(() => patientsTable.id, { onDelete: "cascade" }),
   label: text("label").notNull(),
@@ -22,13 +24,12 @@ export const rappelsTable = pgTable("rappels", {
   dateEcheance: text("date_echeance"),
   statut: text("statut").notNull().default("actif"),
   notes: text("notes"),
-  organizationId: integer("organization_id").notNull().default(1),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, (table) => ({
+  clinicIdIdx: index("idx_clinic_id__rappels").on(table.clinicId),
   consultationIdIdx: index("idx_rappels_consultation_id").on(table.consultationId),
   patientIdIdx: index("idx_rappels_patient_id").on(table.patientId),
   statutIdx: index("idx_rappels_statut").on(table.statut),
-  organizationIdIdx: index("idx_rappels_organization_id").on(table.organizationId),
 }));
 
 export const insertRappelModeleSchema = createInsertSchema(rappelsModelesTable).omit({ id: true, createdAt: true });

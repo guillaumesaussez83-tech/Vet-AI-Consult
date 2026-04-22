@@ -17,7 +17,7 @@ router.get("/", async (req, res) => {
     const limit = isNaN(rawLimit) ? PAGINATION_DEFAULT_LIMIT : Math.min(rawLimit, PAGINATION_MAX_LIMIT);
     const offset = isNaN(rawOffset) ? 0 : rawOffset;
 
-    const conditions = [];
+    const conditions = [eq(patientsTable.clinicId, req.clinicId)];
     if (ownerId) conditions.push(eq(patientsTable.ownerId, ownerId));
     if (espece) conditions.push(eq(patientsTable.espece, espece));
 
@@ -60,24 +60,22 @@ router.get("/", async (req, res) => {
     let patients;
     if (search) {
       patients = await baseQuery
-        .where(or(
-          ilike(patientsTable.nom, `%${search}%`),
-          ilike(patientsTable.espece, `%${search}%`),
-          ilike(patientsTable.race, `%${search}%`),
-          ilike(ownersTable.nom, `%${search}%`),
-          ilike(ownersTable.prenom, `%${search}%`)
+        .where(and(
+          eq(patientsTable.clinicId, req.clinicId),
+          or(
+            ilike(patientsTable.nom, `%${search}%`),
+            ilike(patientsTable.espece, `%${search}%`),
+            ilike(patientsTable.race, `%${search}%`),
+            ilike(ownersTable.nom, `%${search}%`),
+            ilike(ownersTable.prenom, `%${search}%`),
+          ),
         ))
-        .orderBy(asc(patientsTable.nom))
-        .limit(limit)
-        .offset(offset);
-    } else if (conditions.length > 0) {
-      patients = await baseQuery
-        .where(and(...conditions))
         .orderBy(asc(patientsTable.nom))
         .limit(limit)
         .offset(offset);
     } else {
       patients = await baseQuery
+        .where(and(...conditions))
         .orderBy(asc(patientsTable.nom))
         .limit(limit)
         .offset(offset);
@@ -99,7 +97,12 @@ router.post("/", async (req, res) => {
     const body = CreatePatientBody.safeParse(req.body);
     if (!body.success) return res.status(400).json({ error: "Données invalides" });
 
-    const [patient] = await db.insert(patientsTable).values(body.data).returning();
+    // Vérifier que l'owner appartient bien à la clinique (anti-IDOR cross-tenant)
+    const [own] = await db.select({ id: ownersTable.id }).from(ownersTable)
+      .where(and(eq(ownersTable.clinicId, req.clinicId), eq(ownersTable.id, body.data.ownerId)));
+    if (!own) return res.status(400).json({ error: "Propriétaire introuvable" });
+
+    const [patient] = await db.insert(patientsTable).values({ ...body.data, clinicId: req.clinicId }).returning();
     return res.status(201).json({ ...patient, createdAt: patient.createdAt.toISOString() });
   } catch (err) {
     req.log.error(err);
@@ -147,7 +150,7 @@ router.get("/:id", async (req, res) => {
       })
       .from(patientsTable)
       .leftJoin(ownersTable, eq(patientsTable.ownerId, ownersTable.id))
-      .where(eq(patientsTable.id, params.data.id));
+      .where(and(eq(patientsTable.clinicId, req.clinicId), eq(patientsTable.id, params.data.id)));
 
     if (!patient) return res.status(404).json({ error: "Patient non trouvé" });
 
@@ -170,7 +173,7 @@ router.patch("/:id", async (req, res) => {
     const body = UpdatePatientBody.safeParse(req.body);
     if (!body.success) return res.status(400).json({ error: "Données invalides" });
 
-    const [patient] = await db.update(patientsTable).set(body.data).where(eq(patientsTable.id, params.data.id)).returning();
+    const [patient] = await db.update(patientsTable).set(body.data).where(and(eq(patientsTable.clinicId, req.clinicId), eq(patientsTable.id, params.data.id))).returning();
     if (!patient) return res.status(404).json({ error: "Patient non trouvé" });
 
     return res.json({ ...patient, createdAt: patient.createdAt.toISOString() });
@@ -185,7 +188,7 @@ router.delete("/:id", async (req, res) => {
     const params = DeletePatientParams.safeParse({ id: Number(req.params.id) });
     if (!params.success) return res.status(400).json({ error: "ID invalide" });
 
-    await db.delete(patientsTable).where(eq(patientsTable.id, params.data.id));
+    await db.delete(patientsTable).where(and(eq(patientsTable.clinicId, req.clinicId), eq(patientsTable.id, params.data.id)));
     return res.status(204).send();
   } catch (err) {
     req.log.error(err);
@@ -198,7 +201,7 @@ router.get("/:id/consultations", async (req, res) => {
     const params = ListPatientConsultationsParams.safeParse({ id: Number(req.params.id) });
     if (!params.success) return res.status(400).json({ error: "ID invalide" });
 
-    const consultations = await db.select().from(consultationsTable).where(eq(consultationsTable.patientId, params.data.id));
+    const consultations = await db.select().from(consultationsTable).where(and(eq(consultationsTable.clinicId, req.clinicId), eq(consultationsTable.patientId, params.data.id)));
 
     return res.json(consultations.map(c => ({
       ...c,

@@ -5,6 +5,7 @@ import { commandesCentravetTable } from "./commandes-centravet";
 
 export const bonsLivraisonTable = pgTable("bons_livraison", {
   id: serial("id").primaryKey(),
+  clinicId: text("clinic_id").notNull().default("default"),
   commandeId: integer("commande_id").references(() => commandesCentravetTable.id),
   numeroBL: text("numero_bl"),
   dateLivraison: text("date_livraison"),
@@ -13,6 +14,7 @@ export const bonsLivraisonTable = pgTable("bons_livraison", {
   dateValidation: timestamp("date_validation", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, (table) => ({
+  clinicIdIdx: index("idx_clinic_id__bons_livraison").on(table.clinicId),
   commandeIdIdx: index("idx_bons_livraison_commande_id").on(table.commandeId),
 }));
 

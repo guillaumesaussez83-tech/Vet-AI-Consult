@@ -1,3 +1,4 @@
+export * from "./clinics";
 export * from "./owners";
 export * from "./veterinaires";
 export * from "./planning-semaine-type";

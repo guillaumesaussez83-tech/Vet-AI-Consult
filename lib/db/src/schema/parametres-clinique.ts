@@ -4,6 +4,7 @@ import { z } from "zod/v4";
 
 export const parametresCliniqueTable = pgTable("parametres_clinique", {
   id: serial("id").primaryKey(),
+  clinicId: text("clinic_id").notNull().default("default"),
   nomClinique: text("nom_clinique"),
   adresse: text("adresse"),
   codePostal: text("code_postal"),

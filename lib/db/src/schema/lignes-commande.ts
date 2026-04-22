@@ -10,6 +10,7 @@ export const STATUTS_LIGNE = [
 
 export const lignesCommandeTable = pgTable("lignes_commande", {
   id: serial("id").primaryKey(),
+  clinicId: text("clinic_id").notNull().default("default"),
   commandeId: integer("commande_id").notNull().references(() => commandesCentravetTable.id),
   medicamentId: integer("medicament_id").notNull().references(() => stockMedicamentsTable.id),
   quantiteCommandee: real("quantite_commandee").notNull(),
@@ -21,6 +22,7 @@ export const lignesCommandeTable = pgTable("lignes_commande", {
   datePeremptionRecu: text("date_peremption_recu"),
   ecartNotes: text("ecart_notes"),
 }, (table) => ({
+  clinicIdIdx: index("idx_clinic_id__lignes_commande").on(table.clinicId),
   commandeIdIdx: index("idx_lignes_commande_commande_id").on(table.commandeId),
   medicamentIdIdx: index("idx_lignes_commande_medicament_id").on(table.medicamentId),
 }));

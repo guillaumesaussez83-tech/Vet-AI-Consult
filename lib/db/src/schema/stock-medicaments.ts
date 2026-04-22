@@ -7,6 +7,7 @@ export const UNITES_STOCK = ["comprime", "flacon", "ml", "boite", "sachet", "uni
 
 export const stockMedicamentsTable = pgTable("stock_medicaments", {
   id: serial("id").primaryKey(),
+  clinicId: text("clinic_id").notNull().default("default"),
   nom: text("nom").notNull(),
   reference: text("reference"),
   referenceCentravet: text("reference_centravet"),
@@ -32,6 +33,7 @@ export const stockMedicamentsTable = pgTable("stock_medicaments", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 }, (table) => ({
+  clinicIdIdx: index("idx_clinic_id__stock_medicaments").on(table.clinicId),
   nomIdx: index("idx_stock_medicaments_nom").on(table.nom),
 }));
 

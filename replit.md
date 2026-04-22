@@ -221,3 +221,26 @@ See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and pa
 - Statistiques KPI: 0 != null (traité comme valeur valide)
 - Agenda "Sans nom": affiche motif ou "RDV libre"
 - ISO dates: formatDateFR appliqué consultations + factures
+
+## Multi-tenant Architecture (avril 2026)
+
+- **Table racine**: `clinics(id text PK, slug unique, name, createdAt)` — seed `default`
+- **Schéma**: 23 tables métier ont `clinicId text not null default 'default'` + index
+- **Middleware**: `extractClinic.ts` lit `sessionClaims.public_metadata.clinic_id` (fallback `default`), monté après `clerkMiddleware` ; skip `/health`, `/healthz`, `/portail`
+- **Type**: `Express.Request.clinicId` augmenté
+- **Routes filtrées (T003)**: `patients`, `owners`, `consultations`, `factures`, `ordonnances`, `stock` (CRUD produits + commandes + alertes + mouvements + lots)
+- **Numérotation par clinique**: `FACT-YYYY-NNNN` (factures), `ORD-YYYY-NNNNN` (ordonnances), `CMD-YYYYMM-NNNN` (commandes)
+
+### TODO multi-tenant — routes restantes
+À filtrer ultérieurement (16 routes) : `agenda`, `rappels`, `vaccinations`, `rendez-vous`, `statistiques`, `stupefiants`, `anesthesie`, `ai`, `certificats`, `encaissements`, `parametres-clinique`, `portail`, `search`, `dashboard`, `actes`, `storage`. Helpers globaux à scoper aussi : `stock/ia-engine.ts` (analyserConsommationTous, genererAlertes, decrementerConsultationFEFO, detecterAnomalies) et `stock/seeder.ts`.
+
+### Hardening multi-tenant — fait après code review
+- POST /api/patients : vérifie `ownerId ∈ clinicId` avant insert (anti-IDOR)
+- POST /api/consultations : vérifie `patientId ∈ clinicId` avant insert (anti-IDOR)
+- POST /api/ordonnances : vérifie `consultationId ∈ clinicId` avant insert (anti-IDOR)
+
+### TODO sécurité multi-tenant — sprint suivant
+- **Contraintes DB** : remplacer `unique()` global par `unique(clinicId, numero)` sur `factures.numero`, `ordonnances.numeroOrdonnance`, `commandes_centravet.numeroCommande` (sinon collision cross-tenant possible)
+- **Fallback `default`** : durcir extractClinic — refuser plutôt que fallback `default` quand l'utilisateur est authentifié sans `public_metadata.clinic_id`
+- **FK ownership restantes** : valider FK clinique sur autres routes POST (factures.consultationId, encaissements.factureId, mouvements stock.medicamentId, etc.)
+- **Stock helpers globaux** : threading `clinicId` dans `ia-engine.ts` et `seeder.ts`

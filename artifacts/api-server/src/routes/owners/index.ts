@@ -3,7 +3,7 @@ import PDFDocument from "pdfkit";
 import { db } from "@workspace/db";
 import { ownersTable, parametresCliniqueTable } from "@workspace/db";
 import { CreateOwnerBody, GetOwnerParams, UpdateOwnerBody, UpdateOwnerParams, DeleteOwnerParams, ListOwnersQueryParams } from "@workspace/api-zod";
-import { eq, ilike, or } from "drizzle-orm";
+import { eq, ilike, or, and } from "drizzle-orm";
 import { ObjectStorageService } from "../../lib/objectStorage";
 import { randomUUID } from "crypto";
 
@@ -26,15 +26,18 @@ router.get("/", async (req, res) => {
     let owners;
     if (search) {
       owners = await db.select().from(ownersTable).where(
-        or(
-          ilike(ownersTable.nom, `%${search}%`),
-          ilike(ownersTable.prenom, `%${search}%`),
-          ilike(ownersTable.telephone, `%${search}%`),
-          ilike(ownersTable.email, `%${search}%`)
-        )
+        and(
+          eq(ownersTable.clinicId, req.clinicId),
+          or(
+            ilike(ownersTable.nom, `%${search}%`),
+            ilike(ownersTable.prenom, `%${search}%`),
+            ilike(ownersTable.telephone, `%${search}%`),
+            ilike(ownersTable.email, `%${search}%`),
+          ),
+        ),
       );
     } else {
-      owners = await db.select().from(ownersTable);
+      owners = await db.select().from(ownersTable).where(eq(ownersTable.clinicId, req.clinicId));
     }
 
     return res.json(owners.map(serialize));
@@ -51,7 +54,7 @@ router.post("/", async (req, res) => {
       return res.status(400).json({ error: "Données invalides", details: body.error.issues });
     }
 
-    const [owner] = await db.insert(ownersTable).values(body.data).returning();
+    const [owner] = await db.insert(ownersTable).values({ ...body.data, clinicId: req.clinicId }).returning();
     return res.status(201).json(serialize(owner));
   } catch (err) {
     req.log.error(err);
@@ -64,7 +67,7 @@ router.get("/:id", async (req, res) => {
     const params = GetOwnerParams.safeParse({ id: Number(req.params.id) });
     if (!params.success) return res.status(400).json({ error: "ID invalide" });
 
-    const [owner] = await db.select().from(ownersTable).where(eq(ownersTable.id, params.data.id));
+    const [owner] = await db.select().from(ownersTable).where(and(eq(ownersTable.clinicId, req.clinicId), eq(ownersTable.id, params.data.id)));
     if (!owner) return res.status(404).json({ error: "Propriétaire non trouvé" });
 
     return res.json(serialize(owner));
@@ -82,7 +85,7 @@ router.patch("/:id", async (req, res) => {
     const body = UpdateOwnerBody.safeParse(req.body);
     if (!body.success) return res.status(400).json({ error: "Données invalides" });
 
-    const [owner] = await db.update(ownersTable).set(body.data).where(eq(ownersTable.id, params.data.id)).returning();
+    const [owner] = await db.update(ownersTable).set(body.data).where(and(eq(ownersTable.clinicId, req.clinicId), eq(ownersTable.id, params.data.id))).returning();
     if (!owner) return res.status(404).json({ error: "Propriétaire non trouvé" });
 
     return res.json(serialize(owner));
@@ -97,7 +100,7 @@ router.delete("/:id", async (req, res) => {
     const params = DeleteOwnerParams.safeParse({ id: Number(req.params.id) });
     if (!params.success) return res.status(400).json({ error: "ID invalide" });
 
-    await db.delete(ownersTable).where(eq(ownersTable.id, params.data.id));
+    await db.delete(ownersTable).where(and(eq(ownersTable.clinicId, req.clinicId), eq(ownersTable.id, params.data.id)));
     return res.status(204).send();
   } catch (err) {
     req.log.error(err);
@@ -248,7 +251,7 @@ router.post("/:id/rgpd/generate", async (req, res) => {
     const id = Number(req.params.id);
     if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ error: "ID invalide" });
 
-    const [owner] = await db.select().from(ownersTable).where(eq(ownersTable.id, id));
+    const [owner] = await db.select().from(ownersTable).where(and(eq(ownersTable.clinicId, req.clinicId), eq(ownersTable.id, id)));
     if (!owner) return res.status(404).json({ error: "Propriétaire non trouvé" });
 
     const pdfBuffer = await buildRgpdPdf(owner);
@@ -267,7 +270,7 @@ router.post("/:id/rgpd/generate", async (req, res) => {
         storedUrl = storage.normalizeObjectEntityPath(uploadURL);
         await db.update(ownersTable)
           .set({ rgpdDocumentUrl: storedUrl })
-          .where(eq(ownersTable.id, id));
+          .where(and(eq(ownersTable.clinicId, req.clinicId), eq(ownersTable.id, id)));
       } else {
         req.log.warn({ status: uploadRes.status }, "RGPD PDF upload failed, returning inline only");
       }
@@ -296,7 +299,7 @@ router.post("/:id/rgpd/confirm", async (req, res) => {
 
     const [owner] = await db.update(ownersTable)
       .set({ rgpdAccepted: true, rgpdAcceptedAt: new Date() })
-      .where(eq(ownersTable.id, id))
+      .where(and(eq(ownersTable.clinicId, req.clinicId), eq(ownersTable.id, id)))
       .returning();
     if (!owner) return res.status(404).json({ error: "Propriétaire non trouvé" });
 
@@ -314,7 +317,7 @@ router.post("/:id/rgpd/revoke", async (req, res) => {
 
     const [owner] = await db.update(ownersTable)
       .set({ rgpdAccepted: false, rgpdAcceptedAt: null })
-      .where(eq(ownersTable.id, id))
+      .where(and(eq(ownersTable.clinicId, req.clinicId), eq(ownersTable.id, id)))
       .returning();
     if (!owner) return res.status(404).json({ error: "Propriétaire non trouvé" });
 

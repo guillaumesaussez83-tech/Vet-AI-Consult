@@ -5,6 +5,7 @@ import { patientsTable } from "./patients";
 
 export const consultationsTable = pgTable("consultations", {
   id: serial("id").primaryKey(),
+  clinicId: text("clinic_id").notNull().default("default"),
   patientId: integer("patient_id").notNull().references(() => patientsTable.id),
   veterinaire: text("veterinaire").notNull(),
   veterinaireId: text("veterinaire_id"),
@@ -21,14 +22,13 @@ export const consultationsTable = pgTable("consultations", {
   notes: text("notes"),
   poids: real("poids"),
   temperature: real("temperature"),
-  organizationId: integer("organization_id").notNull().default(1),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 }, (table) => ({
+  clinicIdIdx: index("idx_clinic_id__consultations").on(table.clinicId),
   patientIdIdx: index("idx_consultations_patient_id").on(table.patientId),
   dateIdx: index("idx_consultations_date").on(table.date),
   statutIdx: index("idx_consultations_statut").on(table.statut),
-  organizationIdIdx: index("idx_consultations_organization_id").on(table.organizationId),
 }));
 
 export const insertConsultationSchema = createInsertSchema(consultationsTable).omit({ id: true, createdAt: true, updatedAt: true });

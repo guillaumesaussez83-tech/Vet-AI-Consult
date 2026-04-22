@@ -11,6 +11,7 @@ export const TYPE_DECLENCHEMENT = ["ia_automatique", "asv_manuel", "urgence"] as
 
 export const commandesCentravetTable = pgTable("commandes_centravet", {
   id: serial("id").primaryKey(),
+  clinicId: text("clinic_id").notNull().default("default"),
   numeroCommande: text("numero_commande").unique().notNull(),
   statut: text("statut").notNull().default("brouillon"),
   typeDeclenchement: text("type_declenchement").notNull().default("asv_manuel"),
@@ -25,6 +26,7 @@ export const commandesCentravetTable = pgTable("commandes_centravet", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 }, (table) => ({
+  clinicIdIdx: index("idx_clinic_id__commandes_centravet").on(table.clinicId),
   statutIdx: index("idx_commandes_centravet_statut").on(table.statut),
 }));
 
