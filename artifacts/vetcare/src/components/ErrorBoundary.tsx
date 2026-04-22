@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { ErrorBoundary as ReactErrorBoundary } from "react-error-boundary";
+import * as Sentry from "@sentry/react";
 import { ErrorFallback } from "./ErrorFallback";
 
 interface Props {
@@ -8,16 +8,18 @@ interface Props {
 
 export function ErrorBoundary({ children }: Props) {
   return (
-    <ReactErrorBoundary
-      FallbackComponent={ErrorFallback}
+    <Sentry.ErrorBoundary
+      fallback={(props) => (
+        <ErrorFallback
+          error={props.error as Error}
+          resetErrorBoundary={props.resetError}
+        />
+      )}
       onError={(error, info) => {
         console.error("[ErrorBoundary]", error, info.componentStack);
       }}
-      onReset={() => {
-        // Optionally clear app-level state here on retry
-      }}
     >
       {children}
-    </ReactErrorBoundary>
+    </Sentry.ErrorBoundary>
   );
 }

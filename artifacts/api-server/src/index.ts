@@ -1,3 +1,4 @@
+import "./instrument";
 import app from "./app";
 import { logger } from "./lib/logger";
 import { runStockSeeder } from "./routes/stock/seeder";

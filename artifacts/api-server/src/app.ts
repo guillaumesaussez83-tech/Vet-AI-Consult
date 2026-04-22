@@ -1,4 +1,5 @@
 import express, { type Express } from "express";
+import * as Sentry from "@sentry/node";
 import cors from "cors";
 import helmet from "helmet";
 import path from "path";
@@ -98,6 +99,10 @@ if (existsSync(frontendDist)) {
 app.use((req, res) => {
   res.status(404).json(fail("NOT_FOUND", `Route ${req.method} ${req.path} introuvable`));
 });
+
+// Sentry error handler — doit être enregistré avant tout autre error middleware
+// (s'il n'y a pas de DSN, c'est un no-op silencieux)
+Sentry.setupExpressErrorHandler(app);
 
 app.use(errorHandler);
 
