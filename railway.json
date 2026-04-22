@@ -1,7 +1,7 @@
 {
   "build": {
     "builder": "NIXPACKS",
-    "buildCommand": "pnpm install --no-frozen-lockfile && pnpm --filter ./artifacts/vetcare run build && pnpm run build:server"
+    "buildCommand": "pnpm install --no-frozen-lockfile && pnpm --filter ./artifacts/vetcare run build && pnpm --filter ./artifacts/api-server run build"
   },
   "deploy": {
     "healthcheckPath": "/api/health",
