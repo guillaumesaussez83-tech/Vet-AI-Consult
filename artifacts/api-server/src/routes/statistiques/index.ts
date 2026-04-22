@@ -1,12 +1,13 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { facturesTable, consultationsTable, actesConsultationsTable, actesTable } from "@workspace/db";
-import { eq, and, gte, lte, sql, desc, asc } from "drizzle-orm";
+import { eq, and, sql, desc } from "drizzle-orm";
 
 const router = Router();
 
 router.get("/", async (req, res) => {
   try {
+    const cid = req.clinicId;
     const today = new Date();
     const todayStr = today.toISOString().split("T")[0];
     const year = today.getFullYear();
@@ -15,17 +16,13 @@ router.get("/", async (req, res) => {
     const firstDayThisMonth = new Date(year, month, 1).toISOString().split("T")[0];
     const firstDayLastMonth = new Date(year, month - 1, 1).toISOString().split("T")[0];
     const lastDayLastMonth = new Date(year, month, 0).toISOString().split("T")[0];
-    const twelveMonthsAgo = new Date(year - 1, month + 1, 1).toISOString().split("T")[0];
 
-    const allFactures = await db.select().from(facturesTable);
-    const allConsultations = await db.select().from(consultationsTable);
+    const allFactures = await db.select().from(facturesTable).where(eq(facturesTable.clinicId, cid));
+    const allConsultations = await db.select().from(consultationsTable).where(eq(consultationsTable.clinicId, cid));
 
     const todayConsultations = allConsultations.filter(c => c.date === todayStr);
     const paidFactures = allFactures.filter(f => f.statut === "payee");
-    const totalEmis = allFactures.reduce((s, f) => s + (f.montantTTC ?? 0), 0);
-    const totalEncaisse = paidFactures.reduce((s, f) => s + (f.montantTTC ?? 0), 0);
 
-    // CA aujourd'hui = factures payées aujourd'hui (date paiement ou date émission)
     const todayPaidFactures = paidFactures.filter(f =>
       (f.datePaiement === todayStr) || (!f.datePaiement && f.dateEmission === todayStr)
     );
@@ -34,7 +31,6 @@ router.get("/", async (req, res) => {
     const facturesEmisesAujourdhui = allFactures.filter(f => f.dateEmission === todayStr).length;
     const consultationsAujourdhui = todayConsultations.length;
 
-    // Taux encaissement sur le mois en cours
     const thisMonthFactures = allFactures.filter(f =>
       f.dateEmission >= firstDayThisMonth && f.dateEmission <= todayStr
     );
@@ -43,7 +39,6 @@ router.get("/", async (req, res) => {
       ? Math.round((thisMonthPaid.length / thisMonthFactures.length) * 100)
       : 0;
 
-    // CA mensuel = factures payées dans le mois
     const caThisMonth = paidFactures
       .filter(f => (f.datePaiement ?? f.dateEmission) >= firstDayThisMonth && (f.datePaiement ?? f.dateEmission) <= todayStr)
       .reduce((s, f) => s + (f.montantTTC ?? 0), 0);
@@ -74,6 +69,8 @@ router.get("/", async (req, res) => {
       })
       .from(actesConsultationsTable)
       .leftJoin(actesTable, eq(actesConsultationsTable.acteId, actesTable.id))
+      .innerJoin(consultationsTable, eq(actesConsultationsTable.consultationId, consultationsTable.id))
+      .where(eq(consultationsTable.clinicId, cid))
       .groupBy(sql`COALESCE(${actesTable.nom}, ${actesConsultationsTable.description}, 'Acte libre')`)
       .orderBy(desc(sql`sum(${actesConsultationsTable.quantite})`))
       .limit(10);

@@ -1,12 +1,14 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { parametresCliniqueTable } from "@workspace/db";
+import { eq } from "drizzle-orm";
 
 const router = Router();
 
 router.get("/", async (req, res) => {
   try {
-    const rows = await db.select().from(parametresCliniqueTable).limit(1);
+    const rows = await db.select().from(parametresCliniqueTable)
+      .where(eq(parametresCliniqueTable.clinicId, req.clinicId)).limit(1);
     const DEFAULT_MENTIONS = "Vétérinaire inscrit à l'Ordre National des Vétérinaires. Données personnelles traitées conformément au RGPD. Document confidentiel à conserver.";
     if (rows.length === 0) {
       return res.json({
@@ -67,12 +69,14 @@ router.put("/", async (req, res) => {
       rgpdAdresseExercice: rgpdAdresseExercice ?? null,
     };
 
-    const existing = await db.select().from(parametresCliniqueTable).limit(1);
+    const existing = await db.select().from(parametresCliniqueTable)
+      .where(eq(parametresCliniqueTable.clinicId, req.clinicId)).limit(1);
     let row;
     if (existing.length === 0) {
-      [row] = await db.insert(parametresCliniqueTable).values(data).returning();
+      [row] = await db.insert(parametresCliniqueTable).values({ ...data, clinicId: req.clinicId }).returning();
     } else {
-      [row] = await db.update(parametresCliniqueTable).set(data).returning();
+      [row] = await db.update(parametresCliniqueTable).set(data)
+        .where(eq(parametresCliniqueTable.clinicId, req.clinicId)).returning();
     }
     return res.json({ ...row, createdAt: row.createdAt.toISOString(), updatedAt: row.updatedAt.toISOString() });
   } catch (err) {

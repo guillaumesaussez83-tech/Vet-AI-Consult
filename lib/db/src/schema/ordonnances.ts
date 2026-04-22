@@ -1,4 +1,4 @@
-import { pgTable, text, serial, timestamp, integer, boolean, index } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp, integer, boolean, index, uniqueIndex } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { consultationsTable } from "./consultations";
@@ -20,6 +20,7 @@ export const ordonnancesTable = pgTable("ordonnances", {
   clinicIdIdx: index("idx_clinic_id__ordonnances").on(table.clinicId),
   consultationIdIdx: index("idx_ordonnances_consultation_id").on(table.consultationId),
   patientIdIdx: index("idx_ordonnances_patient_id").on(table.patientId),
+  uniqClinicNumero: uniqueIndex("uniq_ordonnances_clinic_numero").on(table.clinicId, table.numeroOrdonnance),
 }));
 
 export const insertOrdonnanceSchema = createInsertSchema(ordonnancesTable).omit({ id: true, createdAt: true, updatedAt: true });

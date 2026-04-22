@@ -1,12 +1,12 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { facturesTable, consultationsTable, patientsTable, ownersTable } from "@workspace/db";
-import { eq, desc } from "drizzle-orm";
+import { eq, and, desc } from "drizzle-orm";
 import { ok } from "../../lib/response";
 
 const router = Router();
 
-router.get("/", async (_req, res) => {
+router.get("/", async (req, res) => {
   const rows = await db
     .select({
       id: facturesTable.id,
@@ -30,7 +30,10 @@ router.get("/", async (_req, res) => {
     .leftJoin(consultationsTable, eq(consultationsTable.id, facturesTable.consultationId))
     .leftJoin(patientsTable, eq(patientsTable.id, consultationsTable.patientId))
     .leftJoin(ownersTable, eq(ownersTable.id, patientsTable.ownerId))
-    .where(eq(facturesTable.statut, "payee"))
+    .where(and(
+      eq(facturesTable.statut, "payee"),
+      eq(facturesTable.clinicId, req.clinicId),
+    ))
     .orderBy(desc(facturesTable.datePaiement));
 
   const encaissements = rows;

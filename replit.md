@@ -239,8 +239,10 @@ See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and pa
 - POST /api/consultations : vérifie `patientId ∈ clinicId` avant insert (anti-IDOR)
 - POST /api/ordonnances : vérifie `consultationId ∈ clinicId` avant insert (anti-IDOR)
 
-### TODO sécurité multi-tenant — sprint suivant
-- **Contraintes DB** : remplacer `unique()` global par `unique(clinicId, numero)` sur `factures.numero`, `ordonnances.numeroOrdonnance`, `commandes_centravet.numeroCommande` (sinon collision cross-tenant possible)
-- **Fallback `default`** : durcir extractClinic — refuser plutôt que fallback `default` quand l'utilisateur est authentifié sans `public_metadata.clinic_id`
-- **FK ownership restantes** : valider FK clinique sur autres routes POST (factures.consultationId, encaissements.factureId, mouvements stock.medicamentId, etc.)
-- **Stock helpers globaux** : threading `clinicId` dans `ia-engine.ts` et `seeder.ts`
+### Hardening sprint — DONE (avril 2026)
+- **Contraintes DB composites** : `uniq_factures_clinic_numero`, `uniq_commandes_centravet_clinic_numero`, `uniq_ordonnances_clinic_numero`, `uniq_bons_livraison_clinic_numero`, `clinics_slug_unique` appliqués (uniqueIndex dans schema + drizzle push)
+- **extractClinic durci (strict)** : 401 `unauthenticated` si pas de session sur route privée, 403 `clinic_not_assigned` si auth sans claim `clinic_id`/`public_metadata.clinic_id`/`org_slug`. Tenant `default` réservé aux PUBLIC_PREFIXES (health, healthz, portail, ai/openapi.json) et boot seeder serveur uniquement.
+- **IDOR stock fixés** : `/reception` (vérif commande∈clinic, scope sur lignesCommande/stockMedicaments/stockLots/mouvementsStock/commandesCentravet, skip silencieux des médicaments hors clinique), `/commandes/:id/exporter-centravet` (SELECT+UPDATE scopés, lignes scopées), `/stupefiants/entree|sortie|registre` (vérif animal+médicament∈clinic, registre scopé, INSERT injectent clinicId).
+- **Filtres clinicId** : appliqués sur agenda, vaccinations, encaissements, actes, search, parametres-clinique, anesthesie, dashboard, statistiques, rappels, rendez-vous, ai/confirmer-dictee-ordonnance, ai/dictee-ordonnance, ai/generer-facture-voix
+- **Stock helpers globaux threadés** : `ia-engine.ts` (calculateStockMetrics, analyserConsommationTous, genererCommandeSuggereIA, genererAlertes, detecterAnomalies, decrementerConsultationFEFO) et `seeder.ts` (runStockSeeder) reçoivent `clinicId` en 1er paramètre. Tous les SELECT/UPDATE/DELETE filtrés, INSERT injectent `clinicId`. Callsites mis à jour : `stock/index.ts` (7 appels), `factures/index.ts:361` (FEFO auto-decrement), `api-server/src/index.ts:26` (boot seeder → "default")
+- Numérotation ORD-yyyy-N désormais scopée par clinique

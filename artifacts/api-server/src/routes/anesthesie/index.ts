@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { anesthesieProtocolesTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { anesthesieProtocolesTable, consultationsTable } from "@workspace/db";
+import { eq, and } from "drizzle-orm";
 import { anthropic } from "@workspace/integrations-anthropic-ai";
 import { AI_MODEL, AI_MAX_TOKENS } from "../../lib/constants";
 
@@ -12,7 +12,10 @@ router.get("/consultation/:consultationId", async (req, res) => {
     const consultationId = parseInt(req.params.consultationId);
     if (isNaN(consultationId)) return res.status(400).json({ error: "ID invalide" });
     const [protocole] = await db.select().from(anesthesieProtocolesTable)
-      .where(eq(anesthesieProtocolesTable.consultationId, consultationId));
+      .where(and(
+        eq(anesthesieProtocolesTable.consultationId, consultationId),
+        eq(anesthesieProtocolesTable.clinicId, req.clinicId),
+      ));
     return res.json(protocole ?? null);
   } catch (err) {
     req.log.error(err);
@@ -27,19 +30,32 @@ router.post("/", async (req, res) => {
       heureReveil, scoreReveil, complications, notes } = req.body;
     if (!consultationId) return res.status(400).json({ error: "consultationId requis" });
 
+    const consId = parseInt(consultationId);
+    // Vérifier que la consultation appartient à la clinique
+    const [cons] = await db.select({ id: consultationsTable.id }).from(consultationsTable)
+      .where(and(eq(consultationsTable.id, consId), eq(consultationsTable.clinicId, req.clinicId)));
+    if (!cons) return res.status(404).json({ error: "Consultation introuvable" });
+
     const existing = await db.select().from(anesthesieProtocolesTable)
-      .where(eq(anesthesieProtocolesTable.consultationId, parseInt(consultationId)));
+      .where(and(
+        eq(anesthesieProtocolesTable.consultationId, consId),
+        eq(anesthesieProtocolesTable.clinicId, req.clinicId),
+      ));
 
     let result;
     if (existing.length > 0) {
       [result] = await db.update(anesthesieProtocolesTable)
         .set({ poids, premedication, premedicationDose, premedicationVoie, induction, inductionDose,
           maintenance, maintenancePourcentage, monitoring, heureReveil, scoreReveil, complications, notes })
-        .where(eq(anesthesieProtocolesTable.consultationId, parseInt(consultationId)))
+        .where(and(
+          eq(anesthesieProtocolesTable.consultationId, consId),
+          eq(anesthesieProtocolesTable.clinicId, req.clinicId),
+        ))
         .returning();
     } else {
       [result] = await db.insert(anesthesieProtocolesTable).values({
-        consultationId: parseInt(consultationId), poids, premedication, premedicationDose, premedicationVoie,
+        consultationId: consId, clinicId: req.clinicId,
+        poids, premedication, premedicationDose, premedicationVoie,
         induction, inductionDose, maintenance, maintenancePourcentage, monitoring,
         heureReveil, scoreReveil, complications, notes,
       }).returning();

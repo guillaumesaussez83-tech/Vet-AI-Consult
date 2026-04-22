@@ -1,13 +1,15 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { rappelsModelesTable, rappelsTable, consultationsTable, patientsTable, ownersTable } from "@workspace/db";
-import { eq, desc } from "drizzle-orm";
+import { eq, and, desc } from "drizzle-orm";
 
 const router = Router();
 
 router.get("/modeles", async (req, res) => {
   try {
-    const modeles = await db.select().from(rappelsModelesTable).orderBy(rappelsModelesTable.nom);
+    const modeles = await db.select().from(rappelsModelesTable)
+      .where(eq(rappelsModelesTable.clinicId, req.clinicId))
+      .orderBy(rappelsModelesTable.nom);
     return res.json(modeles.map(m => ({ ...m, createdAt: m.createdAt.toISOString() })));
   } catch (err) {
     req.log.error(err);
@@ -21,6 +23,7 @@ router.post("/modeles", async (req, res) => {
     if (!nom || !periodiciteJours) return res.status(400).json({ error: "Données invalides" });
     const [modele] = await db.insert(rappelsModelesTable).values({
       nom,
+      clinicId: req.clinicId,
       description: description || null,
       periodiciteJours: parseInt(periodiciteJours),
     }).returning();
@@ -35,7 +38,10 @@ router.delete("/modeles/:id", async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     if (isNaN(id)) return res.status(400).json({ error: "ID invalide" });
-    const [deleted] = await db.delete(rappelsModelesTable).where(eq(rappelsModelesTable.id, id)).returning();
+    const [deleted] = await db.delete(rappelsModelesTable).where(and(
+      eq(rappelsModelesTable.id, id),
+      eq(rappelsModelesTable.clinicId, req.clinicId),
+    )).returning();
     if (!deleted) return res.status(404).json({ error: "Modèle non trouvé" });
     return res.json({ success: true });
   } catch (err) {
@@ -46,7 +52,11 @@ router.delete("/modeles/:id", async (req, res) => {
 
 router.get("/dus", async (req, res) => {
   try {
-    const modeles = await db.select().from(rappelsModelesTable).where(eq(rappelsModelesTable.actif, true));
+    const cid = req.clinicId;
+    const modeles = await db.select().from(rappelsModelesTable).where(and(
+      eq(rappelsModelesTable.clinicId, cid),
+      eq(rappelsModelesTable.actif, true),
+    ));
 
     const consultations = await db
       .select({
@@ -73,6 +83,7 @@ router.get("/dus", async (req, res) => {
       .from(consultationsTable)
       .leftJoin(patientsTable, eq(consultationsTable.patientId, patientsTable.id))
       .leftJoin(ownersTable, eq(patientsTable.ownerId, ownersTable.id))
+      .where(eq(consultationsTable.clinicId, cid))
       .orderBy(desc(consultationsTable.date));
 
     const today = new Date();
@@ -127,18 +138,26 @@ router.get("/dus", async (req, res) => {
 
 router.get("/", async (req, res) => {
   try {
+    const cid = req.clinicId;
     const { consultationId, patientId, statut } = req.query as Record<string, string>;
     let rows;
     if (consultationId) {
       rows = await db.select().from(rappelsTable)
-        .where(eq(rappelsTable.consultationId, parseInt(consultationId)))
+        .where(and(
+          eq(rappelsTable.clinicId, cid),
+          eq(rappelsTable.consultationId, parseInt(consultationId)),
+        ))
         .orderBy(desc(rappelsTable.createdAt));
     } else if (patientId) {
       rows = await db.select().from(rappelsTable)
-        .where(eq(rappelsTable.patientId, parseInt(patientId)))
+        .where(and(
+          eq(rappelsTable.clinicId, cid),
+          eq(rappelsTable.patientId, parseInt(patientId)),
+        ))
         .orderBy(desc(rappelsTable.createdAt));
     } else {
       rows = await db.select().from(rappelsTable)
+        .where(eq(rappelsTable.clinicId, cid))
         .orderBy(desc(rappelsTable.createdAt));
     }
     if (statut) rows = rows.filter(r => r.statut === statut);
@@ -162,6 +181,7 @@ router.post("/", async (req, res) => {
     }
 
     const [rappel] = await db.insert(rappelsTable).values({
+      clinicId: req.clinicId,
       consultationId: consultationId ? parseInt(consultationId) : null,
       patientId: patientId ? parseInt(patientId) : null,
       label,
@@ -186,7 +206,10 @@ router.patch("/:id", async (req, res) => {
     const update: Record<string, unknown> = {};
     if (statut) update.statut = statut;
     if (notes !== undefined) update.notes = notes;
-    const [rappel] = await db.update(rappelsTable).set(update).where(eq(rappelsTable.id, id)).returning();
+    const [rappel] = await db.update(rappelsTable).set(update).where(and(
+      eq(rappelsTable.id, id),
+      eq(rappelsTable.clinicId, req.clinicId),
+    )).returning();
     if (!rappel) return res.status(404).json({ error: "Rappel non trouvé" });
     return res.json({ ...rappel, createdAt: rappel.createdAt.toISOString() });
   } catch (err) {
@@ -199,7 +222,10 @@ router.delete("/:id", async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     if (isNaN(id)) return res.status(400).json({ error: "ID invalide" });
-    const [deleted] = await db.delete(rappelsTable).where(eq(rappelsTable.id, id)).returning();
+    const [deleted] = await db.delete(rappelsTable).where(and(
+      eq(rappelsTable.id, id),
+      eq(rappelsTable.clinicId, req.clinicId),
+    )).returning();
     if (!deleted) return res.status(404).json({ error: "Rappel non trouvé" });
     return res.json({ success: true });
   } catch (err) {

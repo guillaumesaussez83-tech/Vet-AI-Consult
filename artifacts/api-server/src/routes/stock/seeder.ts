@@ -1,6 +1,6 @@
 import { db } from "@workspace/db";
 import { stockMedicamentsTable, stockLotsTable, alertesStockTable, mouvementsStockTable, lignesCommandeTable } from "@workspace/db";
-import { inArray } from "drizzle-orm";
+import { inArray, eq, and } from "drizzle-orm";
 import { genererAlertes } from "./ia-engine";
 
 function cvRef(n: number): string {
@@ -81,21 +81,35 @@ const PRODUITS: Produit[] = [
   { nom: "Gants latex M (boîte 100)",          categorie: "consommable", quantiteStock: 6,  quantiteMinimum: 2, quantiteMax: 10, prixAchatHT: 8.90,  unite: "boite", expiryMonths: 36, ref: 40 },
 ];
 
-export async function runStockSeeder(force = false): Promise<{ inserted: number; lots: number; alertes: number }> {
-  const existing = await db.select({ id: stockMedicamentsTable.id }).from(stockMedicamentsTable).limit(1);
+export async function runStockSeeder(clinicId: string, force = false): Promise<{ inserted: number; lots: number; alertes: number }> {
+  const existing = await db.select({ id: stockMedicamentsTable.id }).from(stockMedicamentsTable)
+    .where(eq(stockMedicamentsTable.clinicId, clinicId)).limit(1);
   if (existing.length > 0 && !force) {
     return { inserted: 0, lots: 0, alertes: 0 };
   }
 
   if (force && existing.length > 0) {
-    // Get ALL existing IDs for proper cascade deletion
-    const allIds = (await db.select({ id: stockMedicamentsTable.id }).from(stockMedicamentsTable)).map(r => r.id);
+    // Get ALL existing IDs (scoped to clinic) for proper cascade deletion
+    const allIds = (await db.select({ id: stockMedicamentsTable.id }).from(stockMedicamentsTable)
+      .where(eq(stockMedicamentsTable.clinicId, clinicId))).map(r => r.id);
     if (allIds.length > 0) {
-      await db.delete(alertesStockTable).where(inArray(alertesStockTable.medicamentId, allIds));
-      await db.delete(mouvementsStockTable).where(inArray(mouvementsStockTable.medicamentId, allIds));
-      await db.delete(lignesCommandeTable).where(inArray(lignesCommandeTable.medicamentId, allIds));
-      await db.delete(stockLotsTable).where(inArray(stockLotsTable.medicamentId, allIds));
-      await db.delete(stockMedicamentsTable);
+      await db.delete(alertesStockTable).where(and(
+        eq(alertesStockTable.clinicId, clinicId),
+        inArray(alertesStockTable.medicamentId, allIds),
+      ));
+      await db.delete(mouvementsStockTable).where(and(
+        eq(mouvementsStockTable.clinicId, clinicId),
+        inArray(mouvementsStockTable.medicamentId, allIds),
+      ));
+      await db.delete(lignesCommandeTable).where(and(
+        eq(lignesCommandeTable.clinicId, clinicId),
+        inArray(lignesCommandeTable.medicamentId, allIds),
+      ));
+      await db.delete(stockLotsTable).where(and(
+        eq(stockLotsTable.clinicId, clinicId),
+        inArray(stockLotsTable.medicamentId, allIds),
+      ));
+      await db.delete(stockMedicamentsTable).where(eq(stockMedicamentsTable.clinicId, clinicId));
     }
   }
 
@@ -111,6 +125,7 @@ export async function runStockSeeder(force = false): Promise<{ inserted: number;
     const expiryDate = addMonths(p.expiryMonths);
 
     const [row] = await db.insert(stockMedicamentsTable).values({
+      clinicId,
       nom: p.nom,
       categorie: p.categorie,
       quantiteStock: p.quantiteStock,
@@ -139,6 +154,7 @@ export async function runStockSeeder(force = false): Promise<{ inserted: number;
     const med = first3[i]!;
     const produit = PRODUITS[i]!;
     await db.insert(stockLotsTable).values({
+      clinicId,
       medicamentId: med.id,
       numeroLot: lotNum(ym, i + 1),
       datePeremption: addMonths(produit.expiryMonths),
@@ -149,7 +165,7 @@ export async function runStockSeeder(force = false): Promise<{ inserted: number;
   }
 
   // Détecter anomalies et générer alertes
-  const nbAlertes = await genererAlertes().catch(() => 0);
+  const nbAlertes = await genererAlertes(clinicId).catch(() => 0);
 
   return { inserted: inserted.length, lots: first3.length, alertes: nbAlertes };
 }

@@ -34,15 +34,11 @@ const selectRdv = {
   },
 };
 
-function formatRdv(r: typeof selectRdv & { createdAt: Date; updatedAt: Date }) {
-  return { ...r, createdAt: r.createdAt.toISOString(), updatedAt: r.updatedAt.toISOString() };
-}
-
 router.get("/", async (req, res) => {
   try {
     const { from, to, veterinaire } = req.query;
 
-    const conditions = [];
+    const conditions = [eq(rendezVousTable.clinicId, req.clinicId)];
     if (from) conditions.push(gte(rendezVousTable.dateHeure, from as string));
     if (to) conditions.push(lte(rendezVousTable.dateHeure, to as string));
     if (veterinaire) conditions.push(eq(rendezVousTable.veterinaire, veterinaire as string));
@@ -52,7 +48,7 @@ router.get("/", async (req, res) => {
       .from(rendezVousTable)
       .leftJoin(patientsTable, eq(rendezVousTable.patientId, patientsTable.id))
       .leftJoin(ownersTable, eq(rendezVousTable.ownerId, ownersTable.id))
-      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .where(and(...conditions))
       .orderBy(asc(rendezVousTable.dateHeure));
 
     return res.json(rdvs.map(r => ({ ...r, createdAt: r.createdAt.toISOString(), updatedAt: r.updatedAt.toISOString() })));
@@ -75,6 +71,7 @@ router.get("/salle-attente", async (req, res) => {
       .leftJoin(patientsTable, eq(rendezVousTable.patientId, patientsTable.id))
       .leftJoin(ownersTable, eq(rendezVousTable.ownerId, ownersTable.id))
       .where(and(
+        eq(rendezVousTable.clinicId, req.clinicId),
         gte(rendezVousTable.dateHeure, from),
         lte(rendezVousTable.dateHeure, to),
       ))
@@ -92,6 +89,7 @@ router.post("/", async (req, res) => {
     const { dateHeure, dureeMinutes, patientId, ownerId, veterinaire, motif, statut, notes } = req.body;
     if (!dateHeure) return res.status(400).json({ error: "dateHeure est requis" });
     const [rdv] = await db.insert(rendezVousTable).values({
+      clinicId: req.clinicId,
       dateHeure,
       dureeMinutes: dureeMinutes ?? 30,
       patientId: patientId ? parseInt(patientId) : null,
@@ -120,7 +118,7 @@ router.patch("/:id/statut-salle", async (req, res) => {
     const rdvs = await db
       .update(rendezVousTable)
       .set({ statutSalle })
-      .where(eq(rendezVousTable.id, id))
+      .where(and(eq(rendezVousTable.id, id), eq(rendezVousTable.clinicId, req.clinicId)))
       .returning();
 
     if (!rdvs[0]) return res.status(404).json({ error: "RDV non trouvé" });
@@ -130,7 +128,7 @@ router.patch("/:id/statut-salle", async (req, res) => {
       .from(rendezVousTable)
       .leftJoin(patientsTable, eq(rendezVousTable.patientId, patientsTable.id))
       .leftJoin(ownersTable, eq(rendezVousTable.ownerId, ownersTable.id))
-      .where(eq(rendezVousTable.id, id))
+      .where(and(eq(rendezVousTable.id, id), eq(rendezVousTable.clinicId, req.clinicId)))
       .limit(1);
 
     return res.json(full[0] ? { ...full[0], createdAt: full[0].createdAt.toISOString(), updatedAt: full[0].updatedAt.toISOString() } : rdvs[0]);
@@ -144,7 +142,11 @@ router.patch("/:id", async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     if (isNaN(id)) return res.status(400).json({ error: "ID invalide" });
-    const [rdv] = await db.update(rendezVousTable).set(req.body).where(eq(rendezVousTable.id, id)).returning();
+    const { clinicId: _ignored, ...payload } = req.body;
+    const [rdv] = await db.update(rendezVousTable).set(payload).where(and(
+      eq(rendezVousTable.id, id),
+      eq(rendezVousTable.clinicId, req.clinicId),
+    )).returning();
     if (!rdv) return res.status(404).json({ error: "RDV non trouvé" });
     return res.json(rdv);
   } catch (err) {
@@ -157,7 +159,10 @@ router.delete("/:id", async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     if (isNaN(id)) return res.status(400).json({ error: "ID invalide" });
-    await db.delete(rendezVousTable).where(eq(rendezVousTable.id, id));
+    await db.delete(rendezVousTable).where(and(
+      eq(rendezVousTable.id, id),
+      eq(rendezVousTable.clinicId, req.clinicId),
+    ));
     return res.status(204).send();
   } catch (err) {
     req.log.error(err);

@@ -355,7 +355,7 @@ router.patch("/:id", async (req, res) => {
           .map(l => ({ nom: l.nom!, quantite: l.quantite ?? 1 }));
 
         if (medicamentLignes.length > 0) {
-          await decrementerConsultationFEFO(facture.consultationId, medicamentLignes);
+          await decrementerConsultationFEFO(req.clinicId, facture.consultationId, medicamentLignes);
         }
       } catch (fefoErr) {
         req.log.warn({ err: fefoErr }, "FEFO auto-decrement failed (non-blocking)");

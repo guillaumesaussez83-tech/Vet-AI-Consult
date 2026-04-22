@@ -2,13 +2,15 @@ import { Router } from "express";
 import { db } from "@workspace/db";
 import { actesTable } from "@workspace/db";
 import { CreateActeBody, UpdateActeParams, UpdateActeBody, DeleteActeParams } from "@workspace/api-zod";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 
 const router = Router();
 
 router.get("/", async (req, res) => {
   try {
-    const actes = await db.select().from(actesTable).orderBy(actesTable.nom);
+    const actes = await db.select().from(actesTable)
+      .where(eq(actesTable.clinicId, req.clinicId))
+      .orderBy(actesTable.nom);
     return res.json(actes);
   } catch (err) {
     req.log.error(err);
@@ -21,7 +23,7 @@ router.post("/", async (req, res) => {
     const body = CreateActeBody.safeParse(req.body);
     if (!body.success) return res.status(400).json({ error: "Données invalides" });
 
-    const [acte] = await db.insert(actesTable).values(body.data).returning();
+    const [acte] = await db.insert(actesTable).values({ ...body.data, clinicId: req.clinicId }).returning();
     return res.status(201).json(acte);
   } catch (err) {
     req.log.error(err);
@@ -37,7 +39,10 @@ router.patch("/:id", async (req, res) => {
     const body = UpdateActeBody.safeParse(req.body);
     if (!body.success) return res.status(400).json({ error: "Données invalides" });
 
-    const [acte] = await db.update(actesTable).set(body.data).where(eq(actesTable.id, params.data.id)).returning();
+    const [acte] = await db.update(actesTable).set(body.data).where(and(
+      eq(actesTable.id, params.data.id),
+      eq(actesTable.clinicId, req.clinicId),
+    )).returning();
     if (!acte) return res.status(404).json({ error: "Acte non trouvé" });
 
     return res.json(acte);
@@ -52,7 +57,10 @@ router.delete("/:id", async (req, res) => {
     const params = DeleteActeParams.safeParse({ id: Number(req.params.id) });
     if (!params.success) return res.status(400).json({ error: "ID invalide" });
 
-    await db.delete(actesTable).where(eq(actesTable.id, params.data.id));
+    await db.delete(actesTable).where(and(
+      eq(actesTable.id, params.data.id),
+      eq(actesTable.clinicId, req.clinicId),
+    ));
     return res.status(204).send();
   } catch (err) {
     req.log.error(err);

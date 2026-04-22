@@ -24,6 +24,7 @@ interface StockMetrics {
 }
 
 export async function calculateStockMetrics(
+  clinicId: string,
   medicamentId: number,
   leadTimeDays: number,
   prixAchatHT: number,
@@ -35,6 +36,7 @@ export async function calculateStockMetrics(
     .select()
     .from(mouvementsStockTable)
     .where(and(
+      eq(mouvementsStockTable.clinicId, clinicId),
       eq(mouvementsStockTable.medicamentId, medicamentId),
       gte(mouvementsStockTable.createdAt, ninetyDaysAgo),
       like(mouvementsStockTable.typeMouvement, "sortie_%"),
@@ -48,7 +50,6 @@ export async function calculateStockMetrics(
     };
   }
 
-  // Build daily consumption map
   const consoParJour: Map<string, number> = new Map();
   for (const m of mouvements) {
     const date = m.createdAt.toISOString().split("T")[0];
@@ -56,14 +57,12 @@ export async function calculateStockMetrics(
     consoParJour.set(date, (consoParJour.get(date) ?? 0) + qty);
   }
 
-  // Exponential smoothing ADC
   const dailyValues = Array.from(consoParJour.values());
   let adc = dailyValues[0] ?? 0;
   for (let i = 1; i < dailyValues.length; i++) {
     adc = ALPHA_SMOOTHING * dailyValues[i] + (1 - ALPHA_SMOOTHING) * adc;
   }
 
-  // Standard deviation over 90 days (count all days including zeros)
   const totalDays = 90;
   const allDays: number[] = Array(totalDays).fill(0);
   dailyValues.forEach((v, i) => { allDays[i] = v; });
@@ -71,13 +70,8 @@ export async function calculateStockMetrics(
   const variance = allDays.reduce((s, v) => s + Math.pow(v - mean, 2), 0) / totalDays;
   const sigma = Math.sqrt(variance);
 
-  // Safety stock (95% service level)
   const stockSecurite = Z_95 * sigma * Math.sqrt(leadTimeDays);
-
-  // Reorder point
   const pointCommande = adc * leadTimeDays + stockSecurite;
-
-  // EOQ — √(2 × annual_demand × order_cost / holding_cost_rate × unit_price)
   const annualDemand = adc * 365;
   const unitPrice = prixAchatHT || 5;
   const eoq = unitPrice > 0
@@ -100,20 +94,24 @@ export async function calculateStockMetrics(
   };
 }
 
-export async function analyserConsommationTous(): Promise<{
+export async function analyserConsommationTous(clinicId: string): Promise<{
   updated: number;
   metrics: StockMetrics[];
 }> {
   const medicaments = await db
     .select()
     .from(stockMedicamentsTable)
-    .where(eq(stockMedicamentsTable.actif, true));
+    .where(and(
+      eq(stockMedicamentsTable.clinicId, clinicId),
+      eq(stockMedicamentsTable.actif, true),
+    ));
 
   const metrics: StockMetrics[] = [];
   let updated = 0;
 
   for (const med of medicaments) {
     const m = await calculateStockMetrics(
+      clinicId,
       med.id,
       med.delaiLivraisonJours ?? 1,
       med.prixAchatHT ?? 5,
@@ -128,7 +126,10 @@ export async function analyserConsommationTous(): Promise<{
           quantiteMax: m.quantiteMax,
           quantiteCommandeOptimale: m.eoq,
         })
-        .where(eq(stockMedicamentsTable.id, med.id));
+        .where(and(
+          eq(stockMedicamentsTable.clinicId, clinicId),
+          eq(stockMedicamentsTable.id, med.id),
+        ));
       updated++;
     }
   }
@@ -136,7 +137,7 @@ export async function analyserConsommationTous(): Promise<{
   return { updated, metrics };
 }
 
-export async function genererCommandeSuggereIA(): Promise<{
+export async function genererCommandeSuggereIA(clinicId: string): Promise<{
   commandeId: number;
   numeroCommande: string;
   lignes: any[];
@@ -145,7 +146,10 @@ export async function genererCommandeSuggereIA(): Promise<{
   const medicaments = await db
     .select()
     .from(stockMedicamentsTable)
-    .where(and(eq(stockMedicamentsTable.actif, true)));
+    .where(and(
+      eq(stockMedicamentsTable.clinicId, clinicId),
+      eq(stockMedicamentsTable.actif, true),
+    ));
 
   const aCommanderRaw = medicaments.filter(m => {
     const seuil = m.pointCommande ?? m.quantiteMinimum ?? 5;
@@ -207,12 +211,14 @@ Réponds en français, de façon concise et directement actionnable pour une ASV
 
   const notesIA = message.content[0].type === "text" ? message.content[0].text.trim() : "Analyse IA indisponible";
 
-  // Generate order number
   const now = new Date();
   const yearMonth = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}`;
   const existing = await db.select({ id: commandesCentravetTable.id })
     .from(commandesCentravetTable)
-    .where(like(commandesCentravetTable.numeroCommande, `CMD-${yearMonth}-%`));
+    .where(and(
+      eq(commandesCentravetTable.clinicId, clinicId),
+      like(commandesCentravetTable.numeroCommande, `CMD-${yearMonth}-%`),
+    ));
   const seq = String(existing.length + 1).padStart(4, "0");
   const numeroCommande = `CMD-${yearMonth}-${seq}`;
 
@@ -220,6 +226,7 @@ Réponds en français, de façon concise et directement actionnable pour une ASV
   dateLivraisonPrevue.setDate(dateLivraisonPrevue.getDate() + 1);
 
   const [commande] = await db.insert(commandesCentravetTable).values({
+    clinicId,
     numeroCommande,
     statut: "brouillon",
     typeDeclenchement: "ia_automatique",
@@ -230,6 +237,7 @@ Réponds en français, de façon concise et directement actionnable pour une ASV
 
   const lignes = await db.insert(lignesCommandeTable).values(
     lignesData.map(l => ({
+      clinicId,
       commandeId: commande.id,
       medicamentId: l.medicamentId,
       quantiteCommandee: l.quantiteCommandee,
@@ -242,10 +250,11 @@ Réponds en français, de façon concise et directement actionnable pour une ASV
   return { commandeId: commande.id, numeroCommande, lignes, notesIA };
 }
 
-export async function genererAlertes(): Promise<number> {
-  const { alertesStockTable } = await import("@workspace/db");
-
-  const medicaments = await db.select().from(stockMedicamentsTable).where(eq(stockMedicamentsTable.actif, true));
+export async function genererAlertes(clinicId: string): Promise<number> {
+  const medicaments = await db.select().from(stockMedicamentsTable).where(and(
+    eq(stockMedicamentsTable.clinicId, clinicId),
+    eq(stockMedicamentsTable.actif, true),
+  ));
   const today = new Date();
   const in30Days = new Date(); in30Days.setDate(today.getDate() + 30);
   const in90Days = new Date(); in90Days.setDate(today.getDate() + 90);
@@ -258,9 +267,9 @@ export async function genererAlertes(): Promise<number> {
     const pointCmd = m.pointCommande ?? min;
     const max = m.quantiteMax ?? min * 3;
 
-    // Rupture
     if (stock === 0) {
       await db.insert(alertesStockTable).values({
+        clinicId,
         medicamentId: m.id,
         typeAlerte: "rupture",
         niveauUrgence: "critique",
@@ -270,6 +279,7 @@ export async function genererAlertes(): Promise<number> {
       count++;
     } else if (stock <= pointCmd) {
       await db.insert(alertesStockTable).values({
+        clinicId,
         medicamentId: m.id,
         typeAlerte: "stock_bas",
         niveauUrgence: stock <= min ? "critique" : "warning",
@@ -279,9 +289,9 @@ export async function genererAlertes(): Promise<number> {
       count++;
     }
 
-    // Surstockage
     if (max && stock > max * 1.5) {
       await db.insert(alertesStockTable).values({
+        clinicId,
         medicamentId: m.id,
         typeAlerte: "surstockage",
         niveauUrgence: "info",
@@ -291,12 +301,12 @@ export async function genererAlertes(): Promise<number> {
       count++;
     }
 
-    // Peremption
     const datePerem = m.datePeremptionLot ?? m.datePeremption;
     if (datePerem) {
       const dPerem = new Date(datePerem);
       if (dPerem <= in30Days) {
         await db.insert(alertesStockTable).values({
+          clinicId,
           medicamentId: m.id,
           typeAlerte: "peremption_30j",
           niveauUrgence: dPerem <= today ? "critique" : "warning",
@@ -306,6 +316,7 @@ export async function genererAlertes(): Promise<number> {
         count++;
       } else if (dPerem <= in90Days) {
         await db.insert(alertesStockTable).values({
+          clinicId,
           medicamentId: m.id,
           typeAlerte: "peremption_proche",
           niveauUrgence: "warning",
@@ -320,9 +331,6 @@ export async function genererAlertes(): Promise<number> {
   return count;
 }
 
-// ──────────────────────────────────────────────────────────
-// DÉTECTION D'ANOMALIES IA
-// ──────────────────────────────────────────────────────────
 export interface Anomalie {
   medicamentId?: number;
   nomMedicament?: string;
@@ -333,9 +341,10 @@ export interface Anomalie {
   valeurReference?: number;
 }
 
-export async function detecterAnomalies(): Promise<Anomalie[]> {
+export async function detecterAnomalies(clinicId: string): Promise<Anomalie[]> {
   const anomalies: Anomalie[] = [];
-  const medicaments = await db.select().from(stockMedicamentsTable);
+  const medicaments = await db.select().from(stockMedicamentsTable)
+    .where(eq(stockMedicamentsTable.clinicId, clinicId));
   const today = new Date();
   const in30Days = new Date(); in30Days.setDate(today.getDate() + 30);
   const avant60Jours = new Date(); avant60Jours.setDate(today.getDate() - 60);
@@ -343,7 +352,6 @@ export async function detecterAnomalies(): Promise<Anomalie[]> {
   const avant90Jours = new Date(); avant90Jours.setDate(today.getDate() - 90);
 
   for (const m of medicaments) {
-    // 1. Stock négatif (erreur de données)
     if ((m.quantiteStock ?? 0) < 0) {
       const a: Anomalie = {
         medicamentId: m.id, nomMedicament: m.nom, typeAnomalie: "stock_negatif",
@@ -353,16 +361,17 @@ export async function detecterAnomalies(): Promise<Anomalie[]> {
       };
       anomalies.push(a);
       await db.insert(alertesStockTable).values({
+        clinicId,
         medicamentId: m.id, typeAlerte: "rupture", niveauUrgence: "critique",
         message: `ANOMALIE : Stock négatif (${m.quantiteStock}) pour ${m.nom} — correction requise`,
         estTraitee: false,
       });
     }
 
-    // 2. Pic de consommation >300% de la moyenne
     const mvts7j = await db.select({ qte: sql<number>`ABS(SUM(${mouvementsStockTable.quantite}))` })
       .from(mouvementsStockTable)
       .where(and(
+        eq(mouvementsStockTable.clinicId, clinicId),
         eq(mouvementsStockTable.medicamentId, m.id),
         gte(mouvementsStockTable.createdAt, avant7Jours),
         like(mouvementsStockTable.typeMouvement, "sortie_%"),
@@ -370,6 +379,7 @@ export async function detecterAnomalies(): Promise<Anomalie[]> {
     const mvts90j = await db.select({ qte: sql<number>`ABS(SUM(${mouvementsStockTable.quantite}))` })
       .from(mouvementsStockTable)
       .where(and(
+        eq(mouvementsStockTable.clinicId, clinicId),
         eq(mouvementsStockTable.medicamentId, m.id),
         gte(mouvementsStockTable.createdAt, avant90Jours),
         like(mouvementsStockTable.typeMouvement, "sortie_%"),
@@ -385,13 +395,13 @@ export async function detecterAnomalies(): Promise<Anomalie[]> {
       };
       anomalies.push(a);
       await db.insert(alertesStockTable).values({
+        clinicId,
         medicamentId: m.id, typeAlerte: "commande_suggeree", niveauUrgence: "warning",
         message: `Pic de consommation : ${m.nom} — ${conso7j.toFixed(0)} unités/7j vs moyenne ${moy7jSur90.toFixed(0)}`,
         estTraitee: false,
       });
     }
 
-    // 3. Péremption <30j avec stock élevé (>15j de stock restant)
     const datePerem = m.datePeremptionLot ?? m.datePeremption;
     if (datePerem) {
       const dPerem = new Date(datePerem);
@@ -406,6 +416,7 @@ export async function detecterAnomalies(): Promise<Anomalie[]> {
         };
         anomalies.push(a);
         await db.insert(alertesStockTable).values({
+          clinicId,
           medicamentId: m.id, typeAlerte: "peremption_30j", niveauUrgence: "warning",
           message: `Risque de perte : ${m.nom} expire dans ${joursRestants}j avec ${m.quantiteStock} ${m.unite ?? "unités"} en stock`,
           estTraitee: false,
@@ -413,10 +424,12 @@ export async function detecterAnomalies(): Promise<Anomalie[]> {
       }
     }
 
-    // 4. Stock mort — aucun mouvement depuis >60 jours
     const dernierMvt = await db.select({ date: mouvementsStockTable.createdAt })
       .from(mouvementsStockTable)
-      .where(eq(mouvementsStockTable.medicamentId, m.id))
+      .where(and(
+        eq(mouvementsStockTable.clinicId, clinicId),
+        eq(mouvementsStockTable.medicamentId, m.id),
+      ))
       .orderBy(desc(mouvementsStockTable.createdAt))
       .limit(1);
 
@@ -434,6 +447,7 @@ export async function detecterAnomalies(): Promise<Anomalie[]> {
       };
       anomalies.push(a);
       await db.insert(alertesStockTable).values({
+        clinicId,
         medicamentId: m.id, typeAlerte: "surstockage", niveauUrgence: "info",
         message: `Stock mort : ${m.nom} — ${stockActuel} ${m.unite ?? "unités"} immobiles depuis ${joursInactif}j`,
         estTraitee: false,
@@ -444,10 +458,8 @@ export async function detecterAnomalies(): Promise<Anomalie[]> {
   return anomalies;
 }
 
-// ──────────────────────────────────────────────────────────
-// FEFO DECREMENT — sortie stock consultation
-// ──────────────────────────────────────────────────────────
 export async function decrementerConsultationFEFO(
+  clinicId: string,
   consultationId: number,
   factureLignes: Array<{ nom: string; quantite: number; ean?: string }>,
 ): Promise<Array<{ nom: string; medicamentId?: number; qtePrise: number; alerteCreee: boolean; notFound?: boolean }>> {
@@ -459,8 +471,8 @@ export async function decrementerConsultationFEFO(
     let qtePrise = 0;
     let alerteCreee = false;
 
-    // Find medicament by name (case-insensitive) or EAN
-    const meds = await db.select().from(stockMedicamentsTable);
+    const meds = await db.select().from(stockMedicamentsTable)
+      .where(eq(stockMedicamentsTable.clinicId, clinicId));
     const med = meds.find(m =>
       m.nom.toLowerCase().includes(nom.toLowerCase()) ||
       (ean && m.codeEan === ean)
@@ -473,9 +485,9 @@ export async function decrementerConsultationFEFO(
 
     let qteRestante = quantite;
 
-    // FEFO: consommer par ordre d'expiration croissante
     const lots = await db.select().from(stockLotsTable)
       .where(and(
+        eq(stockLotsTable.clinicId, clinicId),
         eq(stockLotsTable.medicamentId, med.id),
         sql`${stockLotsTable.quantiteRestante} > 0`,
       ))
@@ -488,23 +500,27 @@ export async function decrementerConsultationFEFO(
 
       await db.update(stockLotsTable)
         .set({ quantiteRestante: dispo - prise })
-        .where(eq(stockLotsTable.id, lot.id));
+        .where(and(
+          eq(stockLotsTable.clinicId, clinicId),
+          eq(stockLotsTable.id, lot.id),
+        ));
 
       qteRestante -= prise;
       qtePrise += prise;
     }
 
-    // Si pas assez de lots, prendre sur stock global
     if (qteRestante > 0) qtePrise += qteRestante;
 
-    // Décrémenter stock global
     const newQty = Math.max(0, (med.quantiteStock ?? 0) - quantite);
     await db.update(stockMedicamentsTable)
       .set({ quantiteStock: newQty })
-      .where(eq(stockMedicamentsTable.id, med.id));
+      .where(and(
+        eq(stockMedicamentsTable.clinicId, clinicId),
+        eq(stockMedicamentsTable.id, med.id),
+      ));
 
-    // Enregistrer mouvement
     await db.insert(mouvementsStockTable).values({
+      clinicId,
       medicamentId: med.id,
       typeMouvement: "sortie_consultation",
       quantite: -quantite,
@@ -513,9 +529,9 @@ export async function decrementerConsultationFEFO(
       motif: `Consultation #${consultationId} — FEFO`,
     });
 
-    // Mise à jour datePeremptionLot (prochain lot non vide)
     const lotsRestants = await db.select().from(stockLotsTable)
       .where(and(
+        eq(stockLotsTable.clinicId, clinicId),
         eq(stockLotsTable.medicamentId, med.id),
         sql`${stockLotsTable.quantiteRestante} > 0`,
       ))
@@ -525,12 +541,15 @@ export async function decrementerConsultationFEFO(
     if (lotsRestants.length > 0) {
       await db.update(stockMedicamentsTable)
         .set({ datePeremptionLot: lotsRestants[0].datePeremption })
-        .where(eq(stockMedicamentsTable.id, med.id));
+        .where(and(
+          eq(stockMedicamentsTable.clinicId, clinicId),
+          eq(stockMedicamentsTable.id, med.id),
+        ));
     }
 
-    // Alerte si stock sous le point de commande
     if (newQty <= (med.pointCommande ?? med.quantiteMinimum ?? 5)) {
       await db.insert(alertesStockTable).values({
+        clinicId,
         medicamentId: med.id,
         typeAlerte: newQty === 0 ? "rupture" : "stock_bas",
         niveauUrgence: newQty === 0 ? "critique" : "warning",

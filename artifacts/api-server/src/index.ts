@@ -20,7 +20,7 @@ app.listen(port, (err) => {
   logger.info({ port }, "Server listening");
 
   // Auto-seed stock demo data if stock is empty
-  runStockSeeder()
+  runStockSeeder("default")
     .then(result => {
       if (result.inserted > 0) {
         logger.info(result, "Stock initialisé automatiquement avec les données démo");

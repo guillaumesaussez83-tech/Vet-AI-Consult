@@ -1,0 +1,48 @@
+Tu es un développeur senior travaillant sur un SaaS vétérinaire multi-tenant (VétoAI).
+Le Sprint H a posé les bases de l'isolation par clinicId mais il reste 4 TODOs critiques.
+Implémente-les tous dans cet ordre :
+
+## TODO 1 — Contraintes DB unique(clinicId, numero)
+
+Dans lib/db/src/schema (Drizzle ORM), ajoute des unique constraints composites sur :
+- Table patients : unique(clinicId, numero) — le numéro de patient doit être unique par clinique
+- Table animals : unique(clinicId, numero) — idem pour les animaux
+- Table consultations : s'il y a un champ "numero", idem
+
+Génère la migration Drizzle correspondante.
+
+## TODO 2 — Durcir le fallback extractClinic
+
+Dans le middleware extractClinic (artifacts/api-server/src/middleware/ ou similaire) :
+- Si la requête est authentifiée (token Clerk valide) MAIS qu'aucun clinicId n'est dans les claims → rejeter avec 403 "Accès refusé : clinique non déterminée"
+- Ne jamais utiliser un clinicId par défaut (fallback 'default' ou hardcodé) pour une requête authentifiée
+- Logguer un warning Sentry/console avec userId + path pour audit
+
+## TODO 3 — Étendre les filtres clinicId aux routes restantes
+
+Les routes suivantes n'ont PAS encore le filtre .where(eq(table.clinicId, clinicId)) :
+- GET/POST /api/agenda (rendez-vous)
+- GET/POST /api/vaccinations
+- GET/POST /api/statistiques (ou /stats)
+- GET/POST /api/stupéfiants (ou /narcotics)
+- Toutes autres routes GET qui lisent des données sans filtre clinicId
+
+Pour chaque route : ajoute le filtre WHERE clinicId = extractedClinicId sur TOUS les SELECT et DELETE.
+Pattern à suivre (déjà en place sur patients/animals) :
+  const { clinicId } = req.clinic; // injecté par middleware
+  .where(eq(schema.table.clinicId, clinicId))
+
+## TODO 4 — Thread clinicId dans stock/ia-engine.ts et stock/seeder.ts
+
+Dans artifacts/api-server/src/stock/ia-engine.ts :
+- Toutes les fonctions qui créent/lisent des entrées de stock doivent recevoir clinicId en paramètre
+- Ajouter .where(eq(stock.clinicId, clinicId)) sur les SELECT
+
+Dans artifacts/api-server/src/stock/seeder.ts :
+- Le seeder doit accepter un clinicId en paramètre
+- Toutes les insertions doivent inclure clinicId
+
+## Validation finale
+Après chaque TODO : vérifie qu'aucun SELECT ne manque de filtre clinicId dans les routes API.
+Fais un commit git par TODO avec message clair : "fix(H-bis): TODO1 - unique constraints DB" etc.
+À la fin, résume les fichiers modifiés et les routes qui ont été sécurisées.

@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { patientsTable, ownersTable, consultationsTable } from "@workspace/db";
-import { ilike, or } from "drizzle-orm";
+import { ilike, or, and, eq } from "drizzle-orm";
 
 const router = Router();
 
@@ -12,6 +12,7 @@ router.get("/", async (req, res) => {
   }
 
   const term = `%${q}%`;
+  const cid = req.clinicId;
 
   try {
     const [patients, owners, consultations] = await Promise.all([
@@ -23,7 +24,7 @@ router.get("/", async (req, res) => {
           race: patientsTable.race,
         })
         .from(patientsTable)
-        .where(ilike(patientsTable.nom, term))
+        .where(and(eq(patientsTable.clinicId, cid), ilike(patientsTable.nom, term)))
         .limit(5),
 
       db
@@ -35,7 +36,10 @@ router.get("/", async (req, res) => {
           email: ownersTable.email,
         })
         .from(ownersTable)
-        .where(or(ilike(ownersTable.nom, term), ilike(ownersTable.prenom, term)))
+        .where(and(
+          eq(ownersTable.clinicId, cid),
+          or(ilike(ownersTable.nom, term), ilike(ownersTable.prenom, term)),
+        ))
         .limit(5),
 
       db
@@ -48,13 +52,14 @@ router.get("/", async (req, res) => {
           diagnostic: consultationsTable.diagnostic,
         })
         .from(consultationsTable)
-        .where(
+        .where(and(
+          eq(consultationsTable.clinicId, cid),
           or(
             ilike(consultationsTable.motif, term),
             ilike(consultationsTable.anamnese, term),
-            ilike(consultationsTable.diagnostic, term)
-          )
-        )
+            ilike(consultationsTable.diagnostic, term),
+          ),
+        ))
         .orderBy(consultationsTable.date)
         .limit(5),
     ]);

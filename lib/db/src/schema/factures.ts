@@ -1,4 +1,4 @@
-import { pgTable, text, serial, timestamp, integer, real, index } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp, integer, real, index, uniqueIndex } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { consultationsTable } from "./consultations";
@@ -7,7 +7,7 @@ export const facturesTable = pgTable("factures", {
   id: serial("id").primaryKey(),
   clinicId: text("clinic_id").notNull().default("default"),
   consultationId: integer("consultation_id").notNull().references(() => consultationsTable.id).unique(),
-  numero: text("numero").notNull().unique(),
+  numero: text("numero").notNull(),
   montantHT: real("montant_ht").notNull(),
   tva: real("tva").notNull().default(20),
   montantTTC: real("montant_ttc").notNull(),
@@ -23,6 +23,7 @@ export const facturesTable = pgTable("factures", {
   consultationIdIdx: index("idx_factures_consultation_id").on(table.consultationId),
   statutIdx: index("idx_factures_statut").on(table.statut),
   dateEmissionIdx: index("idx_factures_date_emission").on(table.dateEmission),
+  numeroClinicUnique: uniqueIndex("uniq_factures_clinic_numero").on(table.clinicId, table.numero),
 }));
 
 export const insertFactureSchema = createInsertSchema(facturesTable).omit({ id: true, createdAt: true, updatedAt: true });

@@ -165,7 +165,7 @@ router.get("/:id/lots", async (req, res) => {
 // ──────────────────────────────────────────
 router.post("/ia/analyser-consommation", async (req, res) => {
   try {
-    const result = await analyserConsommationTous();
+    const result = await analyserConsommationTous(req.clinicId);
     return res.json(result);
   } catch (err) {
     req.log.error(err);
@@ -175,7 +175,7 @@ router.post("/ia/analyser-consommation", async (req, res) => {
 
 router.post("/ia/generer-commande-suggeree", async (req, res) => {
   try {
-    const result = await genererCommandeSuggereIA();
+    const result = await genererCommandeSuggereIA(req.clinicId);
     return res.json(result);
   } catch (err: any) {
     req.log.error(err);
@@ -186,7 +186,7 @@ router.post("/ia/generer-commande-suggeree", async (req, res) => {
 
 router.post("/ia/detecter-anomalies", async (req, res) => {
   try {
-    const anomalies = await detecterAnomalies();
+    const anomalies = await detecterAnomalies(req.clinicId);
     return res.json({ count: anomalies.length, anomalies });
   } catch (err) {
     req.log.error(err);
@@ -347,12 +347,20 @@ router.post("/reception", async (req, res) => {
       return res.status(400).json({ error: "commandeId et lignes requis" });
     }
 
+    const cmdId = parseInt(commandeId);
+    // Vérifier que la commande appartient à la clinique
+    const [cmdCheck] = await db.select({ id: commandesCentravetTable.id })
+      .from(commandesCentravetTable)
+      .where(and(eq(commandesCentravetTable.clinicId, req.clinicId), eq(commandesCentravetTable.id, cmdId)));
+    if (!cmdCheck) return res.status(404).json({ error: "Commande non trouvée" });
+
     const [bl] = await db.insert(bonsLivraisonTable).values({
-      commandeId: parseInt(commandeId),
+      commandeId: cmdId,
       numeroBL,
       dateLivraison: dateLivraison ?? new Date().toISOString().split("T")[0],
       statut: "a_valider",
       validePar,
+      clinicId: req.clinicId,
     }).returning();
 
     for (const ligne of lignes) {
@@ -363,11 +371,16 @@ router.post("/reception", async (req, res) => {
           quantiteRecue, lotNumero,
           datePeremptionRecu: datePeremption,
           statutLigne: statutLigne ?? (quantiteRecue > 0 ? "recue_complete" : "manquante"),
-        }).where(eq(lignesCommandeTable.id, parseInt(ligneId)));
+        }).where(and(eq(lignesCommandeTable.clinicId, req.clinicId), eq(lignesCommandeTable.id, parseInt(ligneId))));
       }
 
       if (quantiteRecue > 0 && medicamentId) {
         const medId = parseInt(medicamentId);
+        // Vérifier que le médicament appartient à la clinique avant tout INSERT/UPDATE
+        const [med] = await db.select().from(stockMedicamentsTable)
+          .where(and(eq(stockMedicamentsTable.clinicId, req.clinicId), eq(stockMedicamentsTable.id, medId)));
+        if (!med) continue; // skip silently — médicament hors clinique
+
         // Create lot
         if (datePeremption) {
           await db.insert(stockLotsTable).values({
@@ -378,47 +391,47 @@ router.post("/reception", async (req, res) => {
             quantiteRestante: quantiteRecue,
             dateReception: dateLivraison ?? new Date().toISOString().split("T")[0],
             bonLivraisonId: bl.id,
+            clinicId: req.clinicId,
           });
 
-          // Update nearest expiry on product
+          // Update nearest expiry on product (scopé clinique)
           const lots = await db.select().from(stockLotsTable)
-            .where(and(eq(stockLotsTable.medicamentId, medId)))
+            .where(and(eq(stockLotsTable.clinicId, req.clinicId), eq(stockLotsTable.medicamentId, medId)))
             .orderBy(asc(stockLotsTable.datePeremption));
           if (lots.length > 0) {
             await db.update(stockMedicamentsTable)
               .set({ datePeremptionLot: lots[0].datePeremption })
-              .where(eq(stockMedicamentsTable.id, medId));
+              .where(and(eq(stockMedicamentsTable.clinicId, req.clinicId), eq(stockMedicamentsTable.id, medId)));
           }
         }
 
         // Record movement + update stock
-        const [med] = await db.select().from(stockMedicamentsTable).where(eq(stockMedicamentsTable.id, medId));
-        if (med) {
-          await db.insert(mouvementsStockTable).values({
-            medicamentId: medId,
-            typeMouvement: "entree_reception",
-            quantite: quantiteRecue,
-            bonLivraisonId: bl.id,
-            prixUnitaireHT: med.prixAchatHT ?? undefined,
-            motif: `Réception BL ${numeroBL ?? bl.id} - lot ${lotNumero ?? ""}`,
-            utilisateur: validePar,
-          });
-          await db.update(stockMedicamentsTable)
-            .set({ quantiteStock: (med.quantiteStock ?? 0) + quantiteRecue })
-            .where(eq(stockMedicamentsTable.id, medId));
-        }
+        await db.insert(mouvementsStockTable).values({
+          medicamentId: medId,
+          typeMouvement: "entree_reception",
+          quantite: quantiteRecue,
+          bonLivraisonId: bl.id,
+          prixUnitaireHT: med.prixAchatHT ?? undefined,
+          motif: `Réception BL ${numeroBL ?? bl.id} - lot ${lotNumero ?? ""}`,
+          utilisateur: validePar,
+          clinicId: req.clinicId,
+        });
+        await db.update(stockMedicamentsTable)
+          .set({ quantiteStock: (med.quantiteStock ?? 0) + quantiteRecue })
+          .where(and(eq(stockMedicamentsTable.clinicId, req.clinicId), eq(stockMedicamentsTable.id, medId)));
       }
     }
 
-    // Check if all lines received → update order status
-    const allLignes = await db.select().from(lignesCommandeTable).where(eq(lignesCommandeTable.commandeId, parseInt(commandeId)));
+    // Check if all lines received → update order status (scopé clinique)
+    const allLignes = await db.select().from(lignesCommandeTable)
+      .where(and(eq(lignesCommandeTable.clinicId, req.clinicId), eq(lignesCommandeTable.commandeId, cmdId)));
     const allDone = allLignes.every(l => l.statutLigne !== "en_attente");
     const anyPartial = allLignes.some(l => l.statutLigne === "recue_partielle" || l.statutLigne === "manquante");
 
     if (allDone) {
       await db.update(commandesCentravetTable)
         .set({ statut: anyPartial ? "livree_partielle" : "livree_complete" })
-        .where(eq(commandesCentravetTable.id, parseInt(commandeId)));
+        .where(and(eq(commandesCentravetTable.clinicId, req.clinicId), eq(commandesCentravetTable.id, cmdId)));
     }
 
     return res.status(201).json({ bonLivraison: bl });
@@ -456,7 +469,7 @@ router.get("/alertes", async (req, res) => {
 
 router.post("/alertes/generer", async (req, res) => {
   try {
-    const count = await genererAlertes();
+    const count = await genererAlertes(req.clinicId);
     return res.json({ count, message: `${count} alertes générées` });
   } catch (err) { req.log.error(err); return res.status(500).json({ error: "Erreur interne" }); }
 });
@@ -479,7 +492,7 @@ router.post("/decrementer-consultation", async (req, res) => {
     if (!consultationId || !Array.isArray(factureLignes) || factureLignes.length === 0) {
       return res.status(400).json({ error: "consultationId et factureLignes requis" });
     }
-    const resultats = await decrementerConsultationFEFO(parseInt(consultationId), factureLignes);
+    const resultats = await decrementerConsultationFEFO(req.clinicId, parseInt(consultationId), factureLignes);
     const nonTrouves = resultats.filter(r => r.notFound).map(r => r.nom);
     return res.json({
       resultats,
@@ -541,7 +554,7 @@ Règles :
     }
 
     // Step 2 — FEFO decrement
-    const resultats = await decrementerConsultationFEFO(parseInt(consultationId), parsed);
+    const resultats = await decrementerConsultationFEFO(req.clinicId, parseInt(consultationId), parsed);
     const trouves = resultats.filter(r => !r.notFound);
     const nonTrouves = resultats.filter(r => r.notFound).map(r => r.nom);
 
@@ -564,7 +577,7 @@ Règles :
 router.post("/seeder/demo", async (req, res) => {
   try {
     const force = req.query.force === "1" || req.body.force === true;
-    const result = await runStockSeeder(force);
+    const result = await runStockSeeder(req.clinicId, force);
     if (result.inserted === 0) {
       return res.json({ message: "Stock déjà initialisé — aucune donnée insérée.", ...result });
     }
@@ -586,7 +599,8 @@ router.post("/commandes/:id/exporter-centravet", async (req, res) => {
     const id = parseInt(req.params.id);
     if (isNaN(id)) return res.status(400).json({ error: "ID invalide" });
 
-    const [commande] = await db.select().from(commandesCentravetTable).where(eq(commandesCentravetTable.id, id));
+    const [commande] = await db.select().from(commandesCentravetTable)
+      .where(and(eq(commandesCentravetTable.clinicId, req.clinicId), eq(commandesCentravetTable.id, id)));
     if (!commande) return res.status(404).json({ error: "Commande non trouvée" });
 
     const lignes = await db
@@ -600,7 +614,7 @@ router.post("/commandes/:id/exporter-centravet", async (req, res) => {
       })
       .from(lignesCommandeTable)
       .leftJoin(stockMedicamentsTable, eq(lignesCommandeTable.medicamentId, stockMedicamentsTable.id))
-      .where(eq(lignesCommandeTable.commandeId, id));
+      .where(and(eq(lignesCommandeTable.clinicId, req.clinicId), eq(lignesCommandeTable.commandeId, id)));
 
     // Format TransNet CENTRAVET — semicolon CSV, UTF-8 BOM
     const dateExport = new Date().toLocaleDateString("fr-FR");
@@ -617,10 +631,10 @@ router.post("/commandes/:id/exporter-centravet", async (req, res) => {
     }
     csv += `\nTotal lignes;${lignes.length};Montant total HT;${commande.montantTotalHT?.toFixed(2).replace(".", ",") ?? ""};\n`;
 
-    // Mark as sent to CENTRAVET
+    // Mark as sent to CENTRAVET (scopé clinique)
     await db.update(commandesCentravetTable)
       .set({ statut: "envoyee_centravet", dateEnvoiCentravet: new Date() })
-      .where(eq(commandesCentravetTable.id, id));
+      .where(and(eq(commandesCentravetTable.clinicId, req.clinicId), eq(commandesCentravetTable.id, id)));
 
     res.setHeader("Content-Type", "text/csv; charset=utf-8");
     res.setHeader("Content-Disposition", `attachment; filename="TransNet-${commande.numeroCommande}.csv"`);
@@ -635,13 +649,13 @@ router.post("/stupefiants/entree", async (req, res) => {
       return res.status(400).json({ error: "stockMedicamentId, quantite, numeroLot et veterinaire sont requis" });
     }
     const [med] = await db.select({ id: stockMedicamentsTable.id, nom: stockMedicamentsTable.nom, quantiteStock: stockMedicamentsTable.quantiteStock, estStupefiant: stockMedicamentsTable.estStupefiant, unite: stockMedicamentsTable.unite })
-      .from(stockMedicamentsTable).where(eq(stockMedicamentsTable.id, Number(stockMedicamentId)));
+      .from(stockMedicamentsTable).where(and(eq(stockMedicamentsTable.clinicId, req.clinicId), eq(stockMedicamentsTable.id, Number(stockMedicamentId))));
     if (!med) return res.status(404).json({ error: "Médicament non trouvé" });
     if (!med.estStupefiant) return res.status(400).json({ error: "Ce médicament n'est pas classé stupéfiant" });
 
     const [lastEntry] = await db.select({ solde: registreStupefiantsTable.soldeApres })
       .from(registreStupefiantsTable)
-      .where(eq(registreStupefiantsTable.stockMedicamentId, Number(stockMedicamentId)))
+      .where(and(eq(registreStupefiantsTable.clinicId, req.clinicId), eq(registreStupefiantsTable.stockMedicamentId, Number(stockMedicamentId))))
       .orderBy(desc(registreStupefiantsTable.createdAt)).limit(1);
     const soldeActuel = lastEntry?.solde ?? 0;
     const soldeApres = parseFloat((soldeActuel + Number(quantite)).toFixed(3));
@@ -656,11 +670,12 @@ router.post("/stupefiants/entree", async (req, res) => {
       veterinaire,
       motif: motif ?? "Entrée stock",
       soldeApres,
+      clinicId: req.clinicId,
     }).returning();
 
     await db.update(stockMedicamentsTable)
       .set({ quantiteStock: drizzleSql`quantite_stock + ${Number(quantite)}` })
-      .where(eq(stockMedicamentsTable.id, Number(stockMedicamentId)));
+      .where(and(eq(stockMedicamentsTable.clinicId, req.clinicId), eq(stockMedicamentsTable.id, Number(stockMedicamentId))));
 
     return res.status(201).json({ ...entry, soldeApres });
   } catch (err) {
@@ -676,14 +691,19 @@ router.post("/stupefiants/sortie", async (req, res) => {
       return res.status(400).json({ error: "stockMedicamentId, quantite, numeroLot, animalId et veterinaire sont obligatoires pour les stupéfiants" });
     }
     const [med] = await db.select({ id: stockMedicamentsTable.id, nom: stockMedicamentsTable.nom, quantiteStock: stockMedicamentsTable.quantiteStock, estStupefiant: stockMedicamentsTable.estStupefiant, unite: stockMedicamentsTable.unite })
-      .from(stockMedicamentsTable).where(eq(stockMedicamentsTable.id, Number(stockMedicamentId)));
+      .from(stockMedicamentsTable).where(and(eq(stockMedicamentsTable.clinicId, req.clinicId), eq(stockMedicamentsTable.id, Number(stockMedicamentId))));
     if (!med) return res.status(404).json({ error: "Médicament non trouvé" });
     if (!med.estStupefiant) return res.status(400).json({ error: "Ce médicament n'est pas classé stupéfiant" });
     if ((med.quantiteStock ?? 0) < Number(quantite)) return res.status(400).json({ error: "Stock insuffisant" });
 
+    // animalId doit appartenir à la clinique
+    const [animalCheck] = await db.select({ id: patientsTable.id }).from(patientsTable)
+      .where(and(eq(patientsTable.clinicId, req.clinicId), eq(patientsTable.id, Number(animalId))));
+    if (!animalCheck) return res.status(404).json({ error: "Animal non trouvé" });
+
     const [lastEntry] = await db.select({ solde: registreStupefiantsTable.soldeApres })
       .from(registreStupefiantsTable)
-      .where(eq(registreStupefiantsTable.stockMedicamentId, Number(stockMedicamentId)))
+      .where(and(eq(registreStupefiantsTable.clinicId, req.clinicId), eq(registreStupefiantsTable.stockMedicamentId, Number(stockMedicamentId))))
       .orderBy(desc(registreStupefiantsTable.createdAt)).limit(1);
     const soldeActuel = lastEntry?.solde ?? (med.quantiteStock ?? 0);
     const soldeApres = parseFloat((soldeActuel - Number(quantite)).toFixed(3));
@@ -699,11 +719,12 @@ router.post("/stupefiants/sortie", async (req, res) => {
       motif: motif ?? "Utilisation clinique",
       soldeApres,
       ordonnanceId: ordonnanceId ? Number(ordonnanceId) : null,
+      clinicId: req.clinicId,
     }).returning();
 
     await db.update(stockMedicamentsTable)
       .set({ quantiteStock: drizzleSql`quantite_stock - ${Number(quantite)}` })
-      .where(eq(stockMedicamentsTable.id, Number(stockMedicamentId)));
+      .where(and(eq(stockMedicamentsTable.clinicId, req.clinicId), eq(stockMedicamentsTable.id, Number(stockMedicamentId))));
 
     return res.status(201).json({ ...entry, soldeApres });
   } catch (err) {
@@ -718,72 +739,41 @@ router.get("/stupefiants/registre", async (req, res) => {
     const stupefiants = await db
       .select({ id: stockMedicamentsTable.id, nom: stockMedicamentsTable.nom, quantiteStock: stockMedicamentsTable.quantiteStock, unite: stockMedicamentsTable.unite })
       .from(stockMedicamentsTable)
-      .where(eq(stockMedicamentsTable.estStupefiant, true));
+      .where(and(eq(stockMedicamentsTable.clinicId, req.clinicId), eq(stockMedicamentsTable.estStupefiant, true)));
 
     if (stupefiants.length === 0) return res.json({ stupefiants: [], lignes: [] });
 
-    let query = db
-      .select({
-        id: registreStupefiantsTable.id,
-        stockMedicamentId: registreStupefiantsTable.stockMedicamentId,
-        dateMouvement: registreStupefiantsTable.dateMouvement,
-        typeMouvement: registreStupefiantsTable.typeMouvement,
-        quantite: registreStupefiantsTable.quantite,
-        unite: registreStupefiantsTable.unite,
-        numeroLot: registreStupefiantsTable.numeroLot,
-        animalId: registreStupefiantsTable.animalId,
-        veterinaire: registreStupefiantsTable.veterinaire,
-        motif: registreStupefiantsTable.motif,
-        soldeApres: registreStupefiantsTable.soldeApres,
-        nomAnimal: patientsTable.nom,
-        espece: patientsTable.espece,
-      })
-      .from(registreStupefiantsTable)
-      .leftJoin(patientsTable, eq(registreStupefiantsTable.animalId, patientsTable.id))
-      .orderBy(asc(registreStupefiantsTable.dateMouvement));
+    const projection = {
+      id: registreStupefiantsTable.id,
+      stockMedicamentId: registreStupefiantsTable.stockMedicamentId,
+      dateMouvement: registreStupefiantsTable.dateMouvement,
+      typeMouvement: registreStupefiantsTable.typeMouvement,
+      quantite: registreStupefiantsTable.quantite,
+      unite: registreStupefiantsTable.unite,
+      numeroLot: registreStupefiantsTable.numeroLot,
+      animalId: registreStupefiantsTable.animalId,
+      veterinaire: registreStupefiantsTable.veterinaire,
+      motif: registreStupefiantsTable.motif,
+      soldeApres: registreStupefiantsTable.soldeApres,
+      nomAnimal: patientsTable.nom,
+      espece: patientsTable.espece,
+    };
 
-    const { inArray } = await import("drizzle-orm");
-    const ids = produitId ? [Number(produitId)] : stupefiants.map(s => s.id);
-    const lignes = await (produitId
-      ? db.select({
-          id: registreStupefiantsTable.id,
-          stockMedicamentId: registreStupefiantsTable.stockMedicamentId,
-          dateMouvement: registreStupefiantsTable.dateMouvement,
-          typeMouvement: registreStupefiantsTable.typeMouvement,
-          quantite: registreStupefiantsTable.quantite,
-          unite: registreStupefiantsTable.unite,
-          numeroLot: registreStupefiantsTable.numeroLot,
-          animalId: registreStupefiantsTable.animalId,
-          veterinaire: registreStupefiantsTable.veterinaire,
-          motif: registreStupefiantsTable.motif,
-          soldeApres: registreStupefiantsTable.soldeApres,
-          nomAnimal: patientsTable.nom,
-          espece: patientsTable.espece,
-        })
+    const lignes = produitId
+      // Filtre clinic + produit (le produit a déjà été validé via stupefiants ⇒ scope clinic OK)
+      ? await db.select(projection)
         .from(registreStupefiantsTable)
         .leftJoin(patientsTable, eq(registreStupefiantsTable.animalId, patientsTable.id))
-        .where(eq(registreStupefiantsTable.stockMedicamentId, Number(produitId)))
+        .where(and(
+          eq(registreStupefiantsTable.clinicId, req.clinicId),
+          eq(registreStupefiantsTable.stockMedicamentId, Number(produitId)),
+        ))
         .orderBy(asc(registreStupefiantsTable.dateMouvement))
-      : db.select({
-          id: registreStupefiantsTable.id,
-          stockMedicamentId: registreStupefiantsTable.stockMedicamentId,
-          dateMouvement: registreStupefiantsTable.dateMouvement,
-          typeMouvement: registreStupefiantsTable.typeMouvement,
-          quantite: registreStupefiantsTable.quantite,
-          unite: registreStupefiantsTable.unite,
-          numeroLot: registreStupefiantsTable.numeroLot,
-          animalId: registreStupefiantsTable.animalId,
-          veterinaire: registreStupefiantsTable.veterinaire,
-          motif: registreStupefiantsTable.motif,
-          soldeApres: registreStupefiantsTable.soldeApres,
-          nomAnimal: patientsTable.nom,
-          espece: patientsTable.espece,
-        })
+      : await db.select(projection)
         .from(registreStupefiantsTable)
         .leftJoin(patientsTable, eq(registreStupefiantsTable.animalId, patientsTable.id))
-        .where(inArray(registreStupefiantsTable.stockMedicamentId, ids))
-        .orderBy(asc(registreStupefiantsTable.dateMouvement))
-    );
+        .where(eq(registreStupefiantsTable.clinicId, req.clinicId))
+        .orderBy(asc(registreStupefiantsTable.dateMouvement));
 
     const nomById: Record<number, string> = {};
     for (const s of stupefiants) nomById[s.id] = s.nom;

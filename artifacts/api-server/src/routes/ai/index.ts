@@ -1,7 +1,7 @@
 import { Router } from "express";
-import { db, actesTable, stockMedicamentsTable, ordonnancesTable, facturesTable, mouvementsStockTable } from "@workspace/db"; // actesTable used by generer-facture-voix
+import { db, actesTable, stockMedicamentsTable, ordonnancesTable, facturesTable, mouvementsStockTable, consultationsTable } from "@workspace/db"; // actesTable used by generer-facture-voix
 import { GetDiagnosticIABody } from "@workspace/api-zod";
-import { eq, ilike, desc, sql as drizzleSql } from "drizzle-orm";
+import { eq, and, ilike, desc, sql as drizzleSql } from "drizzle-orm";
 import { ObjectStorageService } from "../../lib/objectStorage";
 import {
   reformulerAnamnese,
@@ -98,7 +98,7 @@ router.post("/generer-facture-voix", async (req, res) => {
       return res.status(400).json({ error: "Le transcript est requis" });
     }
 
-    const actes = await db.select().from(actesTable);
+    const actes = await db.select().from(actesTable).where(eq(actesTable.clinicId, req.clinicId));
     const result = await genererFactureVoix(transcript, actes.map(a => ({
       id: a.id,
       nom: a.nom,
@@ -270,7 +270,10 @@ Texte de la dictée : "${transcription}"`
         const [found] = await db
           .select({ id: stockMedicamentsTable.id, nom: stockMedicamentsTable.nom, prixVenteTTC: stockMedicamentsTable.prixVenteTTC, quantiteStock: stockMedicamentsTable.quantiteStock, unite: stockMedicamentsTable.unite })
           .from(stockMedicamentsTable)
-          .where(ilike(stockMedicamentsTable.nom, `%${mot}%`))
+          .where(and(
+            eq(stockMedicamentsTable.clinicId, req.clinicId),
+            ilike(stockMedicamentsTable.nom, `%${mot}%`),
+          ))
           .limit(1);
         if (found) { match = found; break; }
       }
@@ -291,11 +294,20 @@ router.post("/confirmer-dictee-ordonnance", async (req, res) => {
       return res.status(400).json({ error: "consultationId et prescriptions requis" });
     }
 
+    // Vérifier que la consultation appartient à la clinique
+    const consId = Number(consultationId);
+    const [cons] = await db.select({ id: consultationsTable.id }).from(consultationsTable)
+      .where(and(eq(consultationsTable.id, consId), eq(consultationsTable.clinicId, req.clinicId)));
+    if (!cons) return res.status(404).json({ error: "Consultation introuvable" });
+
     const year = new Date().getFullYear();
     const [lastOrd] = await db
       .select({ num: ordonnancesTable.numeroOrdonnance })
       .from(ordonnancesTable)
-      .where(drizzleSql`numero_ordonnance LIKE ${"ORD-" + year + "-%"}`)
+      .where(and(
+        eq(ordonnancesTable.clinicId, req.clinicId),
+        drizzleSql`numero_ordonnance LIKE ${"ORD-" + year + "-%"}`,
+      ))
       .orderBy(desc(ordonnancesTable.id))
       .limit(1);
     const lastSeq = lastOrd?.num ? parseInt(lastOrd.num.split("-")[2] ?? "0") : 0;
@@ -333,7 +345,8 @@ router.post("/confirmer-dictee-ordonnance", async (req, res) => {
     }).join("\n");
 
     const [ordonnance] = await db.insert(ordonnancesTable).values({
-      consultationId: Number(consultationId),
+      clinicId: req.clinicId,
+      consultationId: consId,
       patientId: patientId ? Number(patientId) : null,
       veterinaire: veterinaire ?? null,
       contenu,
@@ -344,17 +357,21 @@ router.post("/confirmer-dictee-ordonnance", async (req, res) => {
     const [existingFacture] = await db
       .select({ id: facturesTable.id })
       .from(facturesTable)
-      .where(eq(facturesTable.consultationId, Number(consultationId)));
+      .where(and(
+        eq(facturesTable.clinicId, req.clinicId),
+        eq(facturesTable.consultationId, consId),
+      ));
 
     for (const p of prescriptions) {
       if (!p.stockMatch?.id) continue;
       const quantite = Math.max(1, Math.round(p.quantite_a_delivrer ?? 1));
 
       await db.insert(mouvementsStockTable).values({
+        clinicId: req.clinicId,
         medicamentId: p.stockMatch.id,
         typeMouvement: "sortie_consultation",
         quantite: -quantite,
-        consultationId: Number(consultationId),
+        consultationId: consId,
         factureId: existingFacture?.id ?? null,
         motif: `Ordonnance ${numeroOrdonnance} — ${p.nom_medicament}`,
         utilisateur: veterinaire ?? "Système",
@@ -362,7 +379,10 @@ router.post("/confirmer-dictee-ordonnance", async (req, res) => {
 
       await db.update(stockMedicamentsTable)
         .set({ quantiteStock: drizzleSql`quantite_stock - ${quantite}` })
-        .where(eq(stockMedicamentsTable.id, p.stockMatch.id));
+        .where(and(
+          eq(stockMedicamentsTable.clinicId, req.clinicId),
+          eq(stockMedicamentsTable.id, p.stockMatch.id),
+        ));
     }
 
     return res.status(201).json({

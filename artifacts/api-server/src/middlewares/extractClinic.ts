@@ -42,20 +42,39 @@ export function extractClinic() {
         | { clinic_id?: string; public_metadata?: { clinic_id?: string }; org_slug?: string }
         | undefined;
 
-      const clinicId =
+      const explicitClaim =
         claims?.clinic_id ??
         claims?.public_metadata?.clinic_id ??
         claims?.org_slug ??
-        DEFAULT_CLINIC_ID;
+        null;
 
-      req.clinicId = clinicId;
-
-      if (clinicId === DEFAULT_CLINIC_ID && auth?.userId) {
-        // User authentifié mais sans claim de clinique → log warn (config Clerk à faire)
-        logger.debug({ userId: auth.userId, path: req.path }, "Clinic claim missing, using default");
+      // Durcissement strict : sur toute route privée on EXIGE un claim clinique.
+      //  - non authentifié  → 401 (pas de fallback "default" silencieux)
+      //  - authentifié sans claim → 403 clinic_not_assigned
+      // Le tenant "default" est réservé aux PUBLIC_PREFIXES traités plus haut
+      // et au boot seeder côté serveur.
+      if (!explicitClaim) {
+        if (!auth?.userId) {
+          return _res.status(401).json({
+            error: "unauthenticated",
+            message: "Authentification requise.",
+          });
+        }
+        logger.warn(
+          { userId: auth.userId, path: req.path },
+          "Authenticated user without clinic_id claim — denying access",
+        );
+        return _res.status(403).json({
+          error: "clinic_not_assigned",
+          message:
+            "Votre compte n'est associé à aucune clinique. Contactez l'administrateur.",
+        });
       }
-    } catch {
-      req.clinicId = DEFAULT_CLINIC_ID;
+
+      req.clinicId = explicitClaim;
+    } catch (err) {
+      logger.warn({ err, path: req.path }, "extractClinic: auth resolution failed");
+      return _res.status(401).json({ error: "unauthenticated", message: "Authentification requise." });
     }
 
     next();

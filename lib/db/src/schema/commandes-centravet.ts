@@ -1,4 +1,4 @@
-import { pgTable, text, serial, timestamp, real, index } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp, real, index, uniqueIndex } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -12,7 +12,7 @@ export const TYPE_DECLENCHEMENT = ["ia_automatique", "asv_manuel", "urgence"] as
 export const commandesCentravetTable = pgTable("commandes_centravet", {
   id: serial("id").primaryKey(),
   clinicId: text("clinic_id").notNull().default("default"),
-  numeroCommande: text("numero_commande").unique().notNull(),
+  numeroCommande: text("numero_commande").notNull(),
   statut: text("statut").notNull().default("brouillon"),
   typeDeclenchement: text("type_declenchement").notNull().default("asv_manuel"),
   dateCreation: timestamp("date_creation", { withTimezone: true }).notNull().defaultNow(),
@@ -28,6 +28,7 @@ export const commandesCentravetTable = pgTable("commandes_centravet", {
 }, (table) => ({
   clinicIdIdx: index("idx_clinic_id__commandes_centravet").on(table.clinicId),
   statutIdx: index("idx_commandes_centravet_statut").on(table.statut),
+  numeroClinicUnique: uniqueIndex("uniq_commandes_centravet_clinic_numero").on(table.clinicId, table.numeroCommande),
 }));
 
 export const insertCommandeCentravetSchema = createInsertSchema(commandesCentravetTable).omit({ id: true, createdAt: true, updatedAt: true, dateCreation: true });

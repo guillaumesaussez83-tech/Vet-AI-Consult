@@ -7,21 +7,29 @@ const router = Router();
 
 router.get("/stats", async (req, res) => {
   try {
+    const cid = req.clinicId;
     const today = new Date().toISOString().split("T")[0];
     const firstOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split("T")[0];
 
-    const [{ count: totalPatients }] = await db.select({ count: sql<number>`count(*)` }).from(patientsTable);
-    const [{ count: totalConsultations }] = await db.select({ count: sql<number>`count(*)` }).from(consultationsTable);
-    const [{ count: totalProprietaires }] = await db.select({ count: sql<number>`count(*)` }).from(ownersTable);
+    const [{ count: totalPatients }] = await db.select({ count: sql<number>`count(*)` })
+      .from(patientsTable).where(eq(patientsTable.clinicId, cid));
+    const [{ count: totalConsultations }] = await db.select({ count: sql<number>`count(*)` })
+      .from(consultationsTable).where(eq(consultationsTable.clinicId, cid));
+    const [{ count: totalProprietaires }] = await db.select({ count: sql<number>`count(*)` })
+      .from(ownersTable).where(eq(ownersTable.clinicId, cid));
 
-    const consultationsAujourdhui = await db.select().from(consultationsTable).where(eq(consultationsTable.date, today));
-    const consultationsEnCours = await db.select().from(consultationsTable).where(eq(consultationsTable.statut, "en_cours"));
+    const consultationsAujourdhui = await db.select().from(consultationsTable)
+      .where(and(eq(consultationsTable.clinicId, cid), eq(consultationsTable.date, today)));
+    const consultationsEnCours = await db.select().from(consultationsTable)
+      .where(and(eq(consultationsTable.clinicId, cid), eq(consultationsTable.statut, "en_cours")));
 
-    const facturesImpayees = await db.select().from(facturesTable).where(eq(facturesTable.statut, "en_attente"));
+    const facturesImpayees = await db.select().from(facturesTable)
+      .where(and(eq(facturesTable.clinicId, cid), eq(facturesTable.statut, "en_attente")));
 
-    const facturesMois = await db.select().from(facturesTable).where(
-      gte(facturesTable.dateEmission, firstOfMonth)
-    );
+    const facturesMois = await db.select().from(facturesTable).where(and(
+      eq(facturesTable.clinicId, cid),
+      gte(facturesTable.dateEmission, firstOfMonth),
+    ));
     const chiffreAffaireMois = facturesMois.reduce((acc, f) => acc + f.montantTTC, 0);
 
     return res.json({
@@ -87,6 +95,7 @@ router.get("/consultations-recentes", async (req, res) => {
       .from(consultationsTable)
       .leftJoin(patientsTable, eq(consultationsTable.patientId, patientsTable.id))
       .leftJoin(ownersTable, eq(patientsTable.ownerId, ownersTable.id))
+      .where(eq(consultationsTable.clinicId, req.clinicId))
       .orderBy(sql`${consultationsTable.createdAt} DESC`)
       .limit(10);
 
@@ -137,6 +146,7 @@ router.get("/rappels-vaccins", async (req, res) => {
       .leftJoin(ownersTable, eq(patientsTable.ownerId, ownersTable.id))
       .where(
         and(
+          eq(vaccinationsTable.clinicId, req.clinicId),
           isNotNull(vaccinationsTable.dateRappel),
           gte(vaccinationsTable.dateRappel, ago),
           lte(vaccinationsTable.dateRappel, ahead)

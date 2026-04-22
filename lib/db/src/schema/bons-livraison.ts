@@ -1,4 +1,4 @@
-import { pgTable, text, serial, timestamp, integer, index } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp, integer, index, uniqueIndex } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { commandesCentravetTable } from "./commandes-centravet";
@@ -16,6 +16,7 @@ export const bonsLivraisonTable = pgTable("bons_livraison", {
 }, (table) => ({
   clinicIdIdx: index("idx_clinic_id__bons_livraison").on(table.clinicId),
   commandeIdIdx: index("idx_bons_livraison_commande_id").on(table.commandeId),
+  uniqClinicNumero: uniqueIndex("uniq_bons_livraison_clinic_numero").on(table.clinicId, table.numeroBL),
 }));
 
 export const insertBonLivraisonSchema = createInsertSchema(bonsLivraisonTable).omit({ id: true, createdAt: true });
