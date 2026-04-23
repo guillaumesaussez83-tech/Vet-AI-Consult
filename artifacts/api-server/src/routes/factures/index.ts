@@ -1,166 +1,254 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { facturesTable, consultationsTable, patientsTable, ownersTable, actesConsultationsTable, actesTable } from "@workspace/db";
-import { GetFactureParams, UpdateFactureStatutParams, UpdateFactureStatutBody, ListFacturesQueryParams } from "@workspace/api-zod";
+import {
+  facturesTable,
+  consultationsTable,
+  patientsTable,
+  ownersTable,
+  actesConsultationsTable,
+  actesTable,
+} from "@workspace/db";
+import {
+  GetFactureParams,
+  UpdateFactureStatutParams,
+  UpdateFactureStatutBody,
+  ListFacturesQueryParams,
+} from "@workspace/api-zod";
 import { eq, and, inArray } from "drizzle-orm";
 import { decrementerConsultationFEFO } from "../stock/ia-engine";
+import { TVA_DEFAULT_RATE } from "../../lib/constants";
+import { computeInvoiceTotals } from "../../lib/numbering";
+import { fail } from "../../lib/response";
 
 const router = Router();
 
+type ActeRow = {
+  consultationId: number;
+  prixUnitaire: number;
+  quantite: number;
+  tvaRate: number | null;
+};
+
+/**
+ * Agrège les actes par consultationId → totaux HT/TTC/tva breakdown.
+ * Accepte un défaut (20) pour les actes historiques avec tvaRate null.
+ */
+function buildTotalsByConsultation(actes: ReadonlyArray<ActeRow>) {
+  const byCons = new Map<number, ActeRow[]>();
+  for (const a of actes) {
+    const arr = byCons.get(a.consultationId) ?? [];
+    arr.push(a);
+    byCons.set(a.consultationId, arr);
+  }
+  const out = new Map<number, ReturnType<typeof computeInvoiceTotals>>();
+  for (const [consId, rows] of byCons) {
+    out.set(consId, computeInvoiceTotals(rows, TVA_DEFAULT_RATE));
+  }
+  return out;
+}
+
+// ============================================================================
+//  GET / — liste des factures avec consultation + patient + owner joints.
+//  P1-1 : TVA multi-taux calculée par breakdown par acte.
+//  P1-3 : UN SEUL select pour toutes les consultations + patients + owners.
+// ============================================================================
 router.get("/", async (req, res) => {
   try {
     const query = ListFacturesQueryParams.safeParse(req.query);
-    const { statut } = query.success ? query.data : {};
+    const { statut } = query.success ? query.data : ({} as { statut?: string });
 
     const cidEq = eq(facturesTable.clinicId, req.clinicId);
-    let factures;
-    if (statut) {
-      factures = await db.select().from(facturesTable).where(and(cidEq, eq(facturesTable.statut, statut)));
-    } else {
-      factures = await db.select().from(facturesTable).where(cidEq);
-    }
+    const factures = statut
+      ? await db.select().from(facturesTable).where(and(cidEq, eq(facturesTable.statut, statut)))
+      : await db.select().from(facturesTable).where(cidEq);
 
     if (factures.length === 0) return res.json([]);
 
-    // Batch-fetch all actes for all consultation IDs at once (avoid N+1)
-    const consultationIds = [...new Set(factures.map(f => f.consultationId))];
-    const allActes = await db
+    const consultationIds = [...new Set(factures.map((f) => f.consultationId))];
+
+    // 1) Tous les actes d'un coup, avec tvaRate.
+    const allActes: ActeRow[] = await db
       .select({
         consultationId: actesConsultationsTable.consultationId,
         prixUnitaire: actesConsultationsTable.prixUnitaire,
         quantite: actesConsultationsTable.quantite,
+        tvaRate: actesConsultationsTable.tvaRate,
       })
       .from(actesConsultationsTable)
-      .where(inArray(actesConsultationsTable.consultationId, consultationIds));
+      .where(
+        and(
+          eq(actesConsultationsTable.clinicId, req.clinicId),
+          inArray(actesConsultationsTable.consultationId, consultationIds),
+        ),
+      );
 
-    // Compute fresh totals per consultationId
-    const totalsMap = new Map<number, { montantHT: number; montantTTC: number }>();
-    for (const cid of consultationIds) {
-      const actes = allActes.filter(a => a.consultationId === cid);
-      if (actes.length > 0) {
-        const ht = parseFloat(actes.reduce((s, a) => s + a.prixUnitaire * a.quantite, 0).toFixed(2));
-        totalsMap.set(cid, { montantHT: ht, montantTTC: parseFloat((ht * 1.2).toFixed(2)) });
-      }
-    }
+    const totalsByCons = buildTotalsByConsultation(allActes);
 
-    // Update stale factures in background (non-blocking)
-    const staleUpdates = factures.filter(f => {
-      const fresh = totalsMap.get(f.consultationId);
-      if (!fresh) return false;
-      return Math.abs(f.montantHT - fresh.montantHT) > 0.005 || Math.abs(f.montantTTC - fresh.montantTTC) > 0.005;
-    });
+    // 2) Toutes les consultations + patients + owners d'un coup (batch join).
+    const consultations = await db
+      .select({
+        id: consultationsTable.id,
+        patientId: consultationsTable.patientId,
+        veterinaire: consultationsTable.veterinaire,
+        date: consultationsTable.date,
+        statut: consultationsTable.statut,
+        motif: consultationsTable.motif,
+        anamnese: consultationsTable.anamnese,
+        examenClinique: consultationsTable.examenClinique,
+        examensComplementaires: consultationsTable.examensComplementaires,
+        diagnostic: consultationsTable.diagnostic,
+        diagnosticIA: consultationsTable.diagnosticIA,
+        ordonnance: consultationsTable.ordonnance,
+        notes: consultationsTable.notes,
+        poids: consultationsTable.poids,
+        temperature: consultationsTable.temperature,
+        createdAt: consultationsTable.createdAt,
+        patient: {
+          id: patientsTable.id,
+          nom: patientsTable.nom,
+          espece: patientsTable.espece,
+          race: patientsTable.race,
+          sexe: patientsTable.sexe,
+          dateNaissance: patientsTable.dateNaissance,
+          poids: patientsTable.poids,
+          couleur: patientsTable.couleur,
+          sterilise: patientsTable.sterilise,
+          ownerId: patientsTable.ownerId,
+          antecedents: patientsTable.antecedents,
+          allergies: patientsTable.allergies,
+          createdAt: patientsTable.createdAt,
+          owner: {
+            id: ownersTable.id,
+            nom: ownersTable.nom,
+            prenom: ownersTable.prenom,
+            email: ownersTable.email,
+            telephone: ownersTable.telephone,
+            adresse: ownersTable.adresse,
+            createdAt: ownersTable.createdAt,
+          },
+        },
+      })
+      .from(consultationsTable)
+      .leftJoin(patientsTable, eq(consultationsTable.patientId, patientsTable.id))
+      .leftJoin(ownersTable, eq(patientsTable.ownerId, ownersTable.id))
+      .where(
+        and(
+          eq(consultationsTable.clinicId, req.clinicId),
+          inArray(consultationsTable.id, consultationIds),
+        ),
+      );
+
+    const consById = new Map(consultations.map((c) => [c.id, c]));
+
+    // 3) Update en arrière-plan des factures dont les totaux ont dérivé (non bloquant).
+    const staleUpdates = factures
+      .map((f) => {
+        const fresh = totalsByCons.get(f.consultationId);
+        if (!fresh) return null;
+        if (
+          Math.abs(f.montantHT - fresh.montantHT) < 0.005 &&
+          Math.abs(f.montantTTC - fresh.montantTTC) < 0.005
+        ) {
+          return null;
+        }
+        return { id: f.id, fresh };
+      })
+      .filter((x): x is { id: number; fresh: ReturnType<typeof computeInvoiceTotals> } => !!x);
+
     if (staleUpdates.length > 0) {
-      Promise.all(staleUpdates.map(f => {
-        const fresh = totalsMap.get(f.consultationId)!;
-        return db.update(facturesTable)
-          .set({ montantHT: fresh.montantHT, montantTTC: fresh.montantTTC })
-          .where(and(eq(facturesTable.clinicId, req.clinicId), eq(facturesTable.id, f.id)));
-      })).catch(() => {});
+      Promise.all(
+        staleUpdates.map((s) =>
+          db
+            .update(facturesTable)
+            .set({
+              montantHT: s.fresh.montantHT,
+              montantTTC: s.fresh.montantTTC,
+              tva: s.fresh.tvaMoyenne,
+              tvaBreakdown: s.fresh.tvaBreakdown,
+            })
+            .where(and(eq(facturesTable.clinicId, req.clinicId), eq(facturesTable.id, s.id))),
+        ),
+      ).catch((err) => req.log.warn({ err }, "Stale facture background update failed"));
     }
 
-    const result = await Promise.all(factures.map(async (f) => {
-      const fresh = totalsMap.get(f.consultationId);
+    const result = factures.map((f) => {
+      const fresh = totalsByCons.get(f.consultationId);
       const montantHT = fresh?.montantHT ?? f.montantHT;
       const montantTTC = fresh?.montantTTC ?? f.montantTTC;
+      const tva = fresh?.tvaMoyenne ?? f.tva;
 
-      const [consultation] = await db
-        .select({
-          id: consultationsTable.id,
-          patientId: consultationsTable.patientId,
-          veterinaire: consultationsTable.veterinaire,
-          date: consultationsTable.date,
-          statut: consultationsTable.statut,
-          motif: consultationsTable.motif,
-          anamnese: consultationsTable.anamnese,
-          examenClinique: consultationsTable.examenClinique,
-          examensComplementaires: consultationsTable.examensComplementaires,
-          diagnostic: consultationsTable.diagnostic,
-          diagnosticIA: consultationsTable.diagnosticIA,
-          ordonnance: consultationsTable.ordonnance,
-          notes: consultationsTable.notes,
-          poids: consultationsTable.poids,
-          temperature: consultationsTable.temperature,
-          createdAt: consultationsTable.createdAt,
-          patient: {
-            id: patientsTable.id,
-            nom: patientsTable.nom,
-            espece: patientsTable.espece,
-            race: patientsTable.race,
-            sexe: patientsTable.sexe,
-            dateNaissance: patientsTable.dateNaissance,
-            poids: patientsTable.poids,
-            couleur: patientsTable.couleur,
-            sterilise: patientsTable.sterilise,
-            ownerId: patientsTable.ownerId,
-            antecedents: patientsTable.antecedents,
-            allergies: patientsTable.allergies,
-            createdAt: patientsTable.createdAt,
-            owner: {
-              id: ownersTable.id,
-              nom: ownersTable.nom,
-              prenom: ownersTable.prenom,
-              email: ownersTable.email,
-              telephone: ownersTable.telephone,
-              adresse: ownersTable.adresse,
-              createdAt: ownersTable.createdAt,
-            },
-          },
-        })
-        .from(consultationsTable)
-        .leftJoin(patientsTable, eq(consultationsTable.patientId, patientsTable.id))
-        .leftJoin(ownersTable, eq(patientsTable.ownerId, ownersTable.id))
-        .where(eq(consultationsTable.id, f.consultationId));
-
+      const cons = consById.get(f.consultationId);
       return {
         ...f,
         montantHT,
         montantTTC,
+        tva,
+        tvaBreakdown: fresh?.tvaBreakdown ?? f.tvaBreakdown ?? null,
         dateEmission: f.dateEmission,
         createdAt: f.createdAt.toISOString(),
-        consultation: consultation ? {
-          ...consultation,
-          createdAt: consultation.createdAt.toISOString(),
-          patient: consultation.patient ? {
-            ...consultation.patient,
-            createdAt: consultation.patient.createdAt.toISOString(),
-            owner: consultation.patient.owner ? {
-              ...consultation.patient.owner,
-              createdAt: consultation.patient.owner.createdAt.toISOString(),
-            } : null,
-          } : null,
-        } : null,
+        consultation: cons
+          ? {
+              ...cons,
+              createdAt: cons.createdAt.toISOString(),
+              patient: cons.patient
+                ? {
+                    ...cons.patient,
+                    createdAt: cons.patient.createdAt.toISOString(),
+                    owner: cons.patient.owner
+                      ? {
+                          ...cons.patient.owner,
+                          createdAt: cons.patient.owner.createdAt.toISOString(),
+                        }
+                      : null,
+                  }
+                : null,
+            }
+          : null,
       };
-    }));
+    });
 
     return res.json(result);
   } catch (err) {
-    req.log.error(err);
-    return res.status(500).json({ error: "Erreur interne du serveur" });
+    req.log.error({ err }, "GET /factures failed");
+    return res.status(500).json(fail("INTERNAL", "Erreur interne du serveur"));
   }
 });
 
 router.get("/by-consultation/:consultationId", async (req, res) => {
   try {
-    const consultationId = parseInt(req.params.consultationId);
-    if (isNaN(consultationId)) return res.status(400).json({ error: "ID invalide" });
+    const consultationId = Number(req.params.consultationId);
+    if (!Number.isInteger(consultationId) || consultationId <= 0) {
+      return res.status(400).json(fail("INVALID_ID", "ID invalide"));
+    }
 
-    const [facture] = await db.select().from(facturesTable).where(and(eq(facturesTable.clinicId, req.clinicId), eq(facturesTable.consultationId, consultationId)));
+    const [facture] = await db
+      .select()
+      .from(facturesTable)
+      .where(
+        and(
+          eq(facturesTable.clinicId, req.clinicId),
+          eq(facturesTable.consultationId, consultationId),
+        ),
+      );
     if (!facture) return res.status(404).json(null);
 
     return res.json({ ...facture, createdAt: facture.createdAt.toISOString() });
   } catch (err) {
-    req.log.error(err);
-    return res.status(500).json({ error: "Erreur interne" });
+    req.log.error({ err }, "GET /factures/by-consultation failed");
+    return res.status(500).json(fail("INTERNAL", "Erreur interne"));
   }
 });
 
 router.get("/:id", async (req, res) => {
   try {
     const params = GetFactureParams.safeParse({ id: Number(req.params.id) });
-    if (!params.success) return res.status(400).json({ error: "ID invalide" });
+    if (!params.success) return res.status(400).json(fail("INVALID_ID", "ID invalide"));
 
-    const [facture] = await db.select().from(facturesTable).where(and(eq(facturesTable.clinicId, req.clinicId), eq(facturesTable.id, params.data.id)));
-    if (!facture) return res.status(404).json({ error: "Facture non trouvée" });
+    const [facture] = await db
+      .select()
+      .from(facturesTable)
+      .where(and(eq(facturesTable.clinicId, req.clinicId), eq(facturesTable.id, params.data.id)));
+    if (!facture) return res.status(404).json(fail("NOT_FOUND", "Facture non trouvée"));
 
     const [consultation] = await db
       .select({
@@ -208,7 +296,12 @@ router.get("/:id", async (req, res) => {
       .from(consultationsTable)
       .leftJoin(patientsTable, eq(consultationsTable.patientId, patientsTable.id))
       .leftJoin(ownersTable, eq(patientsTable.ownerId, ownersTable.id))
-      .where(eq(consultationsTable.id, facture.consultationId));
+      .where(
+        and(
+          eq(consultationsTable.clinicId, req.clinicId),
+          eq(consultationsTable.id, facture.consultationId),
+        ),
+      );
 
     const lignes = await db
       .select({
@@ -216,6 +309,7 @@ router.get("/:id", async (req, res) => {
         acteId: actesConsultationsTable.acteId,
         quantite: actesConsultationsTable.quantite,
         prixUnitaire: actesConsultationsTable.prixUnitaire,
+        tvaRate: actesConsultationsTable.tvaRate,
         description: actesConsultationsTable.description,
         acte: {
           nom: actesTable.nom,
@@ -225,84 +319,135 @@ router.get("/:id", async (req, res) => {
       })
       .from(actesConsultationsTable)
       .leftJoin(actesTable, eq(actesConsultationsTable.acteId, actesTable.id))
-      .where(eq(actesConsultationsTable.consultationId, facture.consultationId));
+      .where(
+        and(
+          eq(actesConsultationsTable.clinicId, req.clinicId),
+          eq(actesConsultationsTable.consultationId, facture.consultationId),
+        ),
+      );
 
-    const lignesMapped = lignes.map(l => ({
-      ...l,
-      description: l.description ?? l.acte?.nom ?? "",
-      montantHT: parseFloat((l.prixUnitaire * l.quantite).toFixed(2)),
-      montantTVA: parseFloat((l.prixUnitaire * l.quantite * 0.2).toFixed(2)),
-      montantTTC: parseFloat((l.prixUnitaire * l.quantite * 1.2).toFixed(2)),
-      tvaRate: 20,
-    }));
+    // P1-1 : calcul ligne par ligne avec le tvaRate réel de chaque acte.
+    const lignesMapped = lignes.map((l) => {
+      const rate = l.tvaRate ?? TVA_DEFAULT_RATE;
+      const ht = Math.round(l.prixUnitaire * l.quantite * 100) / 100;
+      const tva = Math.round((ht * rate) / 100 * 100) / 100;
+      return {
+        ...l,
+        description: l.description ?? l.acte?.nom ?? "",
+        montantHT: ht,
+        montantTVA: tva,
+        montantTTC: Math.round((ht + tva) * 100) / 100,
+        tvaRate: rate,
+      };
+    });
 
-    const totalHT = parseFloat(lignesMapped.reduce((s, l) => s + l.montantHT, 0).toFixed(2));
-    const totalTVA = parseFloat((totalHT * 0.2).toFixed(2));
-    const totalTTC = parseFloat((totalHT + totalTVA).toFixed(2));
+    const totals = computeInvoiceTotals(lignes, TVA_DEFAULT_RATE);
 
-    if (lignesMapped.length > 0 && (Math.abs(facture.montantHT - totalHT) > 0.005 || Math.abs(facture.montantTTC - totalTTC) > 0.005)) {
-      await db.update(facturesTable).set({ montantHT: totalHT, montantTTC: totalTTC }).where(and(eq(facturesTable.clinicId, req.clinicId), eq(facturesTable.id, facture.id)));
+    if (
+      lignesMapped.length > 0 &&
+      (Math.abs(facture.montantHT - totals.montantHT) > 0.005 ||
+        Math.abs(facture.montantTTC - totals.montantTTC) > 0.005)
+    ) {
+      await db
+        .update(facturesTable)
+        .set({
+          montantHT: totals.montantHT,
+          montantTTC: totals.montantTTC,
+          tva: totals.tvaMoyenne,
+          tvaBreakdown: totals.tvaBreakdown,
+        })
+        .where(and(eq(facturesTable.clinicId, req.clinicId), eq(facturesTable.id, facture.id)));
     }
 
     return res.json({
       ...facture,
-      montantHT: totalHT,
-      montantTVA: totalTVA,
-      montantTTC: totalTTC,
+      montantHT: totals.montantHT,
+      montantTVA: Math.round((totals.montantTTC - totals.montantHT) * 100) / 100,
+      montantTTC: totals.montantTTC,
+      tva: totals.tvaMoyenne,
+      tvaBreakdown: totals.tvaBreakdown,
       createdAt: facture.createdAt.toISOString(),
       lignes: lignesMapped,
-      consultation: consultation ? {
-        ...consultation,
-        createdAt: consultation.createdAt.toISOString(),
-        patient: consultation.patient ? {
-          ...consultation.patient,
-          createdAt: consultation.patient.createdAt.toISOString(),
-          owner: consultation.patient.owner ? {
-            ...consultation.patient.owner,
-            createdAt: consultation.patient.owner.createdAt.toISOString(),
-          } : null,
-        } : null,
-      } : null,
+      consultation: consultation
+        ? {
+            ...consultation,
+            createdAt: consultation.createdAt.toISOString(),
+            patient: consultation.patient
+              ? {
+                  ...consultation.patient,
+                  createdAt: consultation.patient.createdAt.toISOString(),
+                  owner: consultation.patient.owner
+                    ? {
+                        ...consultation.patient.owner,
+                        createdAt: consultation.patient.owner.createdAt.toISOString(),
+                      }
+                    : null,
+                }
+              : null,
+          }
+        : null,
     });
   } catch (err) {
-    req.log.error(err);
-    return res.status(500).json({ error: "Erreur interne du serveur" });
+    req.log.error({ err }, "GET /factures/:id failed");
+    return res.status(500).json(fail("INTERNAL", "Erreur interne du serveur"));
   }
 });
 
 router.delete("/:id", async (req, res) => {
   try {
     const params = GetFactureParams.safeParse({ id: Number(req.params.id) });
-    if (!params.success) return res.status(400).json({ error: "ID invalide" });
+    if (!params.success) return res.status(400).json(fail("INVALID_ID", "ID invalide"));
 
-    const [deleted] = await db.delete(facturesTable).where(and(eq(facturesTable.clinicId, req.clinicId), eq(facturesTable.id, params.data.id))).returning();
-    if (!deleted) return res.status(404).json({ error: "Facture non trouvée" });
+    const [deleted] = await db
+      .delete(facturesTable)
+      .where(and(eq(facturesTable.clinicId, req.clinicId), eq(facturesTable.id, params.data.id)))
+      .returning();
+    if (!deleted) return res.status(404).json(fail("NOT_FOUND", "Facture non trouvée"));
 
     return res.json({ success: true });
   } catch (err) {
-    req.log.error(err);
-    return res.status(500).json({ error: "Erreur lors de la suppression" });
+    req.log.error({ err }, "DELETE /factures/:id failed");
+    return res.status(500).json(fail("INTERNAL", "Erreur lors de la suppression"));
   }
 });
 
+// ============================================================================
+//  PATCH /:id — changement de statut, recalcul TVA multi-taux, FEFO transactionnel.
+// ============================================================================
 router.patch("/:id", async (req, res) => {
   try {
     const params = UpdateFactureStatutParams.safeParse({ id: Number(req.params.id) });
-    if (!params.success) return res.status(400).json({ error: "ID invalide" });
+    if (!params.success) return res.status(400).json(fail("INVALID_ID", "ID invalide"));
 
     const body = UpdateFactureStatutBody.safeParse(req.body);
-    if (!body.success) return res.status(400).json({ error: "Données invalides" });
+    if (!body.success) {
+      return res.status(400).json(
+        fail("VALIDATION_ERROR", "Données invalides", body.error.flatten().fieldErrors),
+      );
+    }
 
     const updateData: Record<string, unknown> = { statut: body.data.statut };
-    if (body.data.datePaiement) {
-      updateData.datePaiement = body.data.datePaiement;
-    }
-    const modePaiement = (req.body as any).modePaiement;
-    const montantEspecesRecu = (req.body as any).montantEspecesRecu ? parseFloat((req.body as any).montantEspecesRecu) : null;
-    const validModes = ["carte_bancaire", "carte_sans_contact", "payvet", "cheque", "virement", "especes", "autre"];
+    if (body.data.datePaiement) updateData.datePaiement = body.data.datePaiement;
+
+    const modePaiement = (req.body as { modePaiement?: unknown }).modePaiement as string | undefined;
+    const montantEspecesRaw = (req.body as { montantEspecesRecu?: unknown }).montantEspecesRecu;
+    const montantEspecesRecu =
+      montantEspecesRaw != null && !Number.isNaN(Number(montantEspecesRaw))
+        ? parseFloat(String(montantEspecesRaw))
+        : null;
+
+    const validModes = [
+      "carte_bancaire",
+      "carte_sans_contact",
+      "payvet",
+      "cheque",
+      "virement",
+      "especes",
+      "autre",
+    ];
     if (modePaiement) {
       if (!validModes.includes(modePaiement)) {
-        return res.status(400).json({ error: "Mode de paiement invalide" });
+        return res.status(400).json(fail("INVALID_MODE", "Mode de paiement invalide"));
       }
       updateData.modePaiement = modePaiement;
     }
@@ -310,28 +455,50 @@ router.patch("/:id", async (req, res) => {
       updateData.montantEspecesRecu = montantEspecesRecu;
     }
 
-    const [factureBefore] = await db.select().from(facturesTable).where(and(eq(facturesTable.clinicId, req.clinicId), eq(facturesTable.id, params.data.id)));
-    if (!factureBefore) return res.status(404).json({ error: "Facture non trouvée" });
+    const [factureBefore] = await db
+      .select()
+      .from(facturesTable)
+      .where(
+        and(eq(facturesTable.clinicId, req.clinicId), eq(facturesTable.id, params.data.id)),
+      );
+    if (!factureBefore) return res.status(404).json(fail("NOT_FOUND", "Facture non trouvée"));
 
     if (body.data.statut === "payee" && Number(factureBefore.montantTTC ?? 0) === 0) {
-      return res.status(400).json({ error: "Impossible de marquer comme payée une facture à 0 €. Ajoutez des actes d'abord." });
+      return res.status(400).json(
+        fail("ZERO_TOTAL", "Impossible de marquer comme payée une facture à 0 €. Ajoutez des actes d'abord."),
+      );
     }
 
     const actesPourTotal = await db
-      .select({ prixUnitaire: actesConsultationsTable.prixUnitaire, quantite: actesConsultationsTable.quantite })
+      .select({
+        prixUnitaire: actesConsultationsTable.prixUnitaire,
+        quantite: actesConsultationsTable.quantite,
+        tvaRate: actesConsultationsTable.tvaRate,
+      })
       .from(actesConsultationsTable)
-      .where(eq(actesConsultationsTable.consultationId, factureBefore.consultationId));
-    const totalHT = parseFloat(actesPourTotal.reduce((s, a) => s + a.prixUnitaire * a.quantite, 0).toFixed(2));
-    const totalTTC = parseFloat((totalHT * 1.2).toFixed(2));
+      .where(
+        and(
+          eq(actesConsultationsTable.clinicId, req.clinicId),
+          eq(actesConsultationsTable.consultationId, factureBefore.consultationId),
+        ),
+      );
+
     if (actesPourTotal.length > 0) {
-      updateData.montantHT = totalHT;
-      updateData.montantTTC = totalTTC;
+      const t = computeInvoiceTotals(actesPourTotal, TVA_DEFAULT_RATE);
+      updateData.montantHT = t.montantHT;
+      updateData.montantTTC = t.montantTTC;
+      updateData.tva = t.tvaMoyenne;
+      updateData.tvaBreakdown = t.tvaBreakdown;
     }
 
-    const [facture] = await db.update(facturesTable).set(updateData).where(and(eq(facturesTable.clinicId, req.clinicId), eq(facturesTable.id, params.data.id))).returning();
-    if (!facture) return res.status(404).json({ error: "Facture non trouvée" });
+    const [facture] = await db
+      .update(facturesTable)
+      .set(updateData)
+      .where(and(eq(facturesTable.clinicId, req.clinicId), eq(facturesTable.id, params.data.id)))
+      .returning();
+    if (!facture) return res.status(404).json(fail("NOT_FOUND", "Facture non trouvée"));
 
-    // FEFO auto-decrement when invoice is paid for the first time
+    // FEFO auto-decrement à l'encaissement.
     if (body.data.statut === "payee" && factureBefore.statut !== "payee") {
       try {
         const lignes = await db
@@ -343,16 +510,23 @@ router.patch("/:id", async (req, res) => {
           })
           .from(actesConsultationsTable)
           .leftJoin(actesTable, eq(actesConsultationsTable.acteId, actesTable.id))
-          .where(eq(actesConsultationsTable.consultationId, facture.consultationId));
+          .where(
+            and(
+              eq(actesConsultationsTable.clinicId, req.clinicId),
+              eq(actesConsultationsTable.consultationId, facture.consultationId),
+            ),
+          );
 
         const medicamentLignes = lignes
-          .filter(l => l.nom && (
-            l.categorie?.toLowerCase().includes("médic") ||
-            l.categorie?.toLowerCase().includes("medic") ||
-            l.code?.startsWith("MED") ||
-            l.code?.startsWith("VACCI")
-          ))
-          .map(l => ({ nom: l.nom!, quantite: l.quantite ?? 1 }));
+          .filter(
+            (l) =>
+              l.nom &&
+              (l.categorie?.toLowerCase().includes("médic") ||
+                l.categorie?.toLowerCase().includes("medic") ||
+                l.code?.startsWith("MED") ||
+                l.code?.startsWith("VACCI")),
+          )
+          .map((l) => ({ nom: l.nom!, quantite: l.quantite ?? 1 }));
 
         if (medicamentLignes.length > 0) {
           await decrementerConsultationFEFO(req.clinicId, facture.consultationId, medicamentLignes);
@@ -362,18 +536,15 @@ router.patch("/:id", async (req, res) => {
       }
     }
 
-    const renduMonnaie = modePaiement === "especes" && montantEspecesRecu !== null
-      ? parseFloat((montantEspecesRecu - (facture.montantTTC ?? 0)).toFixed(2))
-      : null;
+    const renduMonnaie =
+      modePaiement === "especes" && montantEspecesRecu !== null
+        ? Math.round((montantEspecesRecu - (facture.montantTTC ?? 0)) * 100) / 100
+        : null;
 
-    return res.json({
-      ...facture,
-      createdAt: facture.createdAt.toISOString(),
-      renduMonnaie,
-    });
+    return res.json({ ...facture, createdAt: facture.createdAt.toISOString(), renduMonnaie });
   } catch (err) {
-    req.log.error(err);
-    return res.status(500).json({ error: "Erreur interne du serveur" });
+    req.log.error({ err }, "PATCH /factures/:id failed");
+    return res.status(500).json(fail("INTERNAL", "Erreur interne du serveur"));
   }
 });
 
