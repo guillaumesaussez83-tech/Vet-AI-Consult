@@ -1,0 +1,50 @@
+version: 2
+updates:
+  # === Dépendances pnpm (racine + workspace packages) ===
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "07:00"
+      timezone: "Europe/Paris"
+    open-pull-requests-limit: 5
+    versioning-strategy: "increase"
+    # Grouper les patches ensemble — moins de bruit PR, plus vite mergé.
+    groups:
+      patch-updates:
+        patterns:
+          - "*"
+        update-types:
+          - "patch"
+      minor-non-major:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+    ignore:
+      # Tailwind CSS v4 : attendre quelques mois avant de bump (API change).
+      - dependency-name: "tailwindcss"
+        versions: [">=5.0.0"]
+      # React : ne pas bumper en majeure auto.
+      - dependency-name: "react"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "react-dom"
+        update-types: ["version-update:semver-major"]
+    labels:
+      - "dependencies"
+      - "automated"
+    commit-message:
+      prefix: "chore(deps)"
+      include: "scope"
+
+  # === GitHub Actions ===
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+      - "ci"
+    commit-message:
+      prefix: "chore(ci)"
