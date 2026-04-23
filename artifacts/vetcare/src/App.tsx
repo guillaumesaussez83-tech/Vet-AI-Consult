@@ -1,8 +1,9 @@
-import { Switch, Route, Redirect } from "wouter";
+import { Switch, Route, Redirect, useLocation, Router as WouterRouter } from "wouter";
 import { QueryClientProvider } from "@tanstack/react-query";
-import { ClerkProvider, Show, useClerk } from "@clerk/react";
-import { useEffect, useRef } from "react";
-import { queryClient } from "./lib/queryClient";
+import { ClerkProvider, Show, useClerk, useUser } from "@clerk/react";
+import { useEffect, useRef, useState } from "react";
+import * as Sentry from "@sentry/react";
+import { queryClient, setOn401 } from "./lib/queryClient";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
@@ -40,14 +41,28 @@ import IaDisclaimerModal from "./components/IaDisclaimerModal";
 import { CommandPalette } from "./components/CommandPalette";
 import NotFound from "@/pages/not-found";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
-import { useState } from "react";
 
 const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 const clerkProxyUrl = import.meta.env.VITE_CLERK_PROXY_URL;
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 
-if (!clerkPubKey) {
-  throw new Error("Missing VITE_CLERK_PUBLISHABLE_KEY in .env file");
+/**
+ * F-P0-3 : si la clé Clerk manque, on AFFICHE un écran propre au lieu de
+ * laisser un throw crasher avant le mount ErrorBoundary.
+ */
+function MissingConfigScreen({ reason }: { reason: string }) {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-6">
+      <div className="max-w-md text-center space-y-3">
+        <h1 className="text-2xl font-bold">Configuration manquante</h1>
+        <p className="text-gray-600">{reason}</p>
+        <p className="text-sm text-gray-400">
+          Si vous êtes administrateur, vérifiez les variables d'environnement du
+          déploiement. Sinon, contactez votre support.
+        </p>
+      </div>
+    </div>
+  );
 }
 
 function stripBase(path: string): string {
@@ -56,23 +71,58 @@ function stripBase(path: string): string {
     : path;
 }
 
-function ClerkQueryClientCacheInvalidator() {
+/**
+ * F-P1-4 + F-P2-8 : observe les changements d'identité Clerk pour
+ *  1. Purger le cache React Query quand l'user change (sécu multi-tenant
+ *     côté navigateur — évite qu'un user qui se logout/login voit les
+ *     caches de l'ancien user).
+ *  2. Populer Sentry.setUser pour attacher l'user context aux erreurs.
+ */
+function ClerkSideEffects() {
   const { addListener } = useClerk();
+  const { user } = useUser();
   const prevUserIdRef = useRef<string | null | undefined>(undefined);
 
   useEffect(() => {
-    const unsubscribe = addListener(({ user }) => {
-      const userId = user?.id ?? null;
-      if (
-        prevUserIdRef.current !== undefined &&
-        prevUserIdRef.current !== userId
-      ) {
+    const unsubscribe = addListener(({ user: u }) => {
+      const userId = u?.id ?? null;
+      if (prevUserIdRef.current !== undefined && prevUserIdRef.current !== userId) {
         queryClient.clear();
       }
       prevUserIdRef.current = userId;
     });
     return unsubscribe;
   }, [addListener]);
+
+  useEffect(() => {
+    if (user) {
+      Sentry.setUser({
+        id: user.id,
+        email: user.primaryEmailAddress?.emailAddress,
+      });
+    } else {
+      Sentry.setUser(null);
+    }
+  }, [user]);
+
+  return null;
+}
+
+/**
+ * F-P1-3 : handler 401 global branché sur le queryClient.
+ * Quand le backend renvoie 401 (token Clerk expiré), on signOut l'utilisateur
+ * et on le redirige vers /sign-in. Plus efficace qu'un toast d'erreur perdu.
+ */
+function On401Redirect() {
+  const { signOut } = useClerk();
+  const [, setLocation] = useLocation();
+
+  useEffect(() => {
+    setOn401(() => {
+      void signOut(() => setLocation("/sign-in"));
+    });
+    return () => setOn401(() => {});
+  }, [signOut, setLocation]);
 
   return null;
 }
@@ -90,13 +140,20 @@ function HomeRedirect() {
   );
 }
 
+/**
+ * F-P1-5 : chaque route protégée est wrappée dans un ErrorBoundary local.
+ * Un crash d'un composant enfant montre un fallback plus granulaire, sans
+ * tuer la nav.
+ */
 function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
   return (
     <>
       <Show when="signed-in">
         <AppLayout>
-          <IaDisclaimerModal />
-          <Component />
+          <ErrorBoundary>
+            <IaDisclaimerModal />
+            <Component />
+          </ErrorBoundary>
         </AppLayout>
       </Show>
       <Show when="signed-out">
@@ -159,8 +216,6 @@ function Router() {
   );
 }
 
-import { useLocation, Router as WouterRouter } from "wouter";
-
 function ClerkProviderWithRoutes() {
   const [, setLocation] = useLocation();
   const [cmdOpen, setCmdOpen] = useState(false);
@@ -173,10 +228,9 @@ function ClerkProviderWithRoutes() {
 
       if ((e.ctrlKey || e.metaKey) && e.key === "k") {
         e.preventDefault();
-        setCmdOpen(prev => !prev);
+        setCmdOpen((prev) => !prev);
         return;
       }
-
       if (inInput || e.ctrlKey || e.metaKey || e.altKey) return;
 
       if (e.key === "n") { e.preventDefault(); setLocation("/consultations/nouvelle"); }
@@ -190,28 +244,39 @@ function ClerkProviderWithRoutes() {
 
   return (
     <ClerkProvider
-      publishableKey={clerkPubKey}
+      publishableKey={clerkPubKey!}
       proxyUrl={clerkProxyUrl}
       routerPush={(to) => setLocation(stripBase(to))}
       routerReplace={(to) => setLocation(stripBase(to), { replace: true })}
     >
-      <QueryClientProvider client={queryClient}>
-        <ClerkQueryClientCacheInvalidator />
-        <Router />
-        <CommandPalette open={cmdOpen} onOpenChange={setCmdOpen} />
-      </QueryClientProvider>
+      <ClerkSideEffects />
+      <On401Redirect />
+      <Router />
+      <CommandPalette open={cmdOpen} onOpenChange={setCmdOpen} />
     </ClerkProvider>
   );
 }
 
 function App() {
+  // F-P0-3 : check config avant de monter quoi que ce soit.
+  if (!clerkPubKey) {
+    return (
+      <MissingConfigScreen reason="La clé Clerk (VITE_CLERK_PUBLISHABLE_KEY) est introuvable." />
+    );
+  }
+
   return (
     <ErrorBoundary>
       <TooltipProvider>
-        <WouterRouter base={basePath}>
-          <ClerkProviderWithRoutes />
-        </WouterRouter>
-        <Toaster />
+        {/* F-P1-1 : QueryClientProvider MONTE AVANT ClerkProvider pour
+            survivre aux changements de session et garantir que les toasters
+            reçoivent bien leur cache. */}
+        <QueryClientProvider client={queryClient}>
+          <WouterRouter base={basePath}>
+            <ClerkProviderWithRoutes />
+          </WouterRouter>
+          <Toaster />
+        </QueryClientProvider>
       </TooltipProvider>
     </ErrorBoundary>
   );

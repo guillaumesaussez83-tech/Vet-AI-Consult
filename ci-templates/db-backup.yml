@@ -1,0 +1,38 @@
+name: DB backup (daily)
+
+# Backup offsite quotidien en complément des snapshots Railway.
+# Stocke le dump chiffré dans un bucket GCS dédié, garde 30 jours.
+
+on:
+  schedule:
+    # Tous les jours à 03:00 UTC (04:00 ou 05:00 Europe/Paris selon DST)
+    - cron: "0 3 * * *"
+  workflow_dispatch: # exécution manuelle depuis le dashboard
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup gcloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_BACKUP_SA_JSON }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: Installer Postgres client 15
+        run: |
+          sudo sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
+          curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/pgdg.gpg
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client-15
+
+      - name: Run backup script
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL_READONLY }}
+          BACKUP_BUCKET: ${{ secrets.BACKUP_BUCKET }}
+          BACKUP_GPG_PASSPHRASE: ${{ secrets.BACKUP_GPG_PASSPHRASE }}
+        run: ./scripts/backup-db.sh

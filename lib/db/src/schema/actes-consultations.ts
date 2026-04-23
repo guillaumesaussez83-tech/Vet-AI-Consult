@@ -11,6 +11,7 @@ export const actesConsultationsTable = pgTable("actes_consultations", {
   consultationId: integer("consultation_id").notNull().references(() => consultationsTable.id),
   quantite: integer("quantite").notNull().default(1),
   prixUnitaire: real("prix_unitaire").notNull(),
+  tvaRate: real("tva_rate").notNull().default(20),
   description: text("description"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, (table) => ({

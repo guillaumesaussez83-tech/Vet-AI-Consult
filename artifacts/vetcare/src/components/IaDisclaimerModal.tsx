@@ -1,59 +1,88 @@
 import { useState, useEffect } from "react";
 import { useUser } from "@clerk/react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { AlertTriangle } from "lucide-react";
 
+/**
+ * F-P1-7 : disclaimer IA obligatoire (déontologie vétérinaire + RGPD).
+ *
+ * Clé localStorage scopée PAR USER ID Clerk pour que sur un poste partagé
+ * en clinique, chaque user voie bien le disclaimer à sa première connexion.
+ * Ancienne version utilisait une clé globale → un nouveau user ne le voyait
+ * jamais.
+ */
+const BASE_KEY = "vetoai-ia-disclaimer-v1";
+
 export default function IaDisclaimerModal() {
-  const { user } = useUser();
+  const { user, isLoaded } = useUser();
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
-    if (!user?.id) return;
-    const key = `ia_disclaimer_accepted_${user.id}`;
-    const accepted = localStorage.getItem(key);
-    if (!accepted) {
+    if (!isLoaded || !user) return;
+    const key = `${BASE_KEY}:${user.id}`;
+    try {
+      const accepted = localStorage.getItem(key);
+      if (!accepted) setOpen(true);
+    } catch {
+      // Safari en mode privé peut throw → on ouvre quand même le modal.
       setOpen(true);
     }
-  }, [user?.id]);
+  }, [isLoaded, user]);
 
-  const handleAccept = () => {
-    if (!user?.id) return;
-    const key = `ia_disclaimer_accepted_${user.id}`;
-    localStorage.setItem(key, new Date().toISOString());
+  function handleAccept() {
+    if (!user) return;
+    const key = `${BASE_KEY}:${user.id}`;
+    try {
+      localStorage.setItem(key, new Date().toISOString());
+    } catch {
+      // Même logique : fail silencieux. La session reste fonctionnelle.
+    }
     setOpen(false);
-  };
+  }
+
+  if (!isLoaded || !user) return null;
 
   return (
-    <Dialog open={open} onOpenChange={() => {}}>
-      <DialogContent className="max-w-lg" onPointerDownOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
+    <Dialog open={open} onOpenChange={(v) => !v && handleAccept()}>
+      <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-amber-700">
-            <AlertTriangle className="h-5 w-5" />
-            Aide à la décision clinique — Information importante
-          </DialogTitle>
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="h-5 w-5 text-amber-500" />
+            <DialogTitle>Utilisation de l'IA — Important</DialogTitle>
+          </div>
+          <DialogDescription className="pt-4 text-left space-y-3 text-sm">
+            <p>
+              VétoAI utilise l'intelligence artificielle pour vous assister dans
+              l'élaboration de diagnostics différentiels, ordonnances et résumés.
+            </p>
+            <p className="font-medium text-gray-900">
+              L'IA est un outil d'aide à la décision. Le vétérinaire reste
+              seul responsable des actes, diagnostics et prescriptions qu'il
+              valide.
+            </p>
+            <ul className="list-disc pl-5 space-y-1 text-gray-600">
+              <li>Vérifiez systématiquement les suggestions IA avant validation.</li>
+              <li>Les données transmises à l'IA sont anonymisées côté serveur.</li>
+              <li>
+                Aucune donnée identifiante propriétaire n'est envoyée aux
+                prestataires d'IA (Anthropic).
+              </li>
+            </ul>
+          </DialogDescription>
         </DialogHeader>
-        <div className="space-y-4 text-sm text-muted-foreground">
-          <p>
-            Les suggestions diagnostiques et les ordonnances générées par l'intelligence artificielle sont
-            des <strong className="text-foreground">outils d'aide à la décision</strong>.
-          </p>
-          <p>
-            Elles <strong className="text-foreground">ne remplacent en aucun cas</strong> le jugement clinique du
-            vétérinaire et doivent être systématiquement vérifiées et validées par un professionnel qualifié.
-          </p>
-          <p>
-            En continuant, vous acceptez d'assumer la <strong className="text-foreground">responsabilité
-            professionnelle</strong> de toute décision clinique prise dans le cadre de votre exercice.
-          </p>
-          <p className="text-xs border-t pt-3">
-            Cette information est affichée conformément aux recommandations de l'Ordre National des Vétérinaires
-            concernant l'usage des outils d'intelligence artificielle en médecine vétérinaire.
-          </p>
-        </div>
-        <Button className="w-full mt-2" onClick={handleAccept}>
-          Je comprends et j'accepte
-        </Button>
+        <DialogFooter>
+          <Button onClick={handleAccept} className="w-full">
+            J'ai compris et j'accepte
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
