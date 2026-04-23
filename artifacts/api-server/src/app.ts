@@ -17,7 +17,7 @@ import { responseWrapper } from "./middlewares/responseWrapper";
 import { fail } from "./lib/response";
 
 const app: Express = express();
-
+app.set("trust proxy", 1);
 app.use(
   helmet({
     contentSecurityPolicy: {
