@@ -63,14 +63,44 @@ app.use(
         };
       },
     },
+    // Empêcher la fuite de headers sensibles dans les logs.
+    redact: {
+      paths: [
+        'req.headers.authorization',
+        'req.headers.cookie',
+        'req.headers["set-cookie"]',
+        'req.headers["x-api-key"]',
+      ],
+      remove: true,
+    },
   }),
 );
 
 app.use(CLERK_PROXY_PATH, clerkProxyMiddleware());
 
-app.use(cors({ credentials: true, origin: true }));
-app.use(express.json({ limit: "10mb" }));
-app.use(express.urlencoded({ extended: true }));
+// =============== CORS strict — whitelist pilotée par env ===============
+// En prod, CORS_ALLOWED_ORIGINS="https://app.vetoai.fr".
+// Plusieurs origines séparées par virgule, ex: "https://app.vetoai.fr,https://staging.vetoai.fr".
+const ALLOWED_ORIGINS = (process.env["CORS_ALLOWED_ORIGINS"] ?? "https://app.vetoai.fr")
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
+
+app.use(
+  cors({
+    credentials: true,
+    origin: (origin, cb) => {
+      // Pas d'Origin → appel same-origin (navigation directe, Postman, curl). OK.
+      if (!origin) return cb(null, true);
+      if (ALLOWED_ORIGINS.includes(origin)) return cb(null, true);
+      logger.warn({ origin }, "CORS blocked");
+      return cb(new Error(`CORS blocked: ${origin}`));
+    },
+  }),
+);
+
+app.use(express.json({ limit: "1mb" }));
+app.use(express.urlencoded({ extended: true, limit: "1mb" }));
 
 app.use(clerkMiddleware());
 
@@ -103,7 +133,6 @@ app.use((req, res) => {
 });
 
 // Sentry error handler — doit être enregistré avant tout autre error middleware
-// (s'il n'y a pas de DSN, c'est un no-op silencieux)
 Sentry.setupExpressErrorHandler(app);
 
 app.use(errorHandler);
