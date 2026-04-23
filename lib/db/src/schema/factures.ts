@@ -1,4 +1,4 @@
-import { pgTable, text, serial, timestamp, integer, real, index, uniqueIndex } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp, integer, real, index, uniqueIndex, jsonb } from "drizzle-orm/pg-core"; // jsonb added for tvaBreakdown
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { consultationsTable } from "./consultations";
@@ -10,6 +10,7 @@ export const facturesTable = pgTable("factures", {
   numero: text("numero").notNull(),
   montantHT: real("montant_ht").notNull(),
   tva: real("tva").notNull().default(20),
+  tvaBreakdown: jsonb("tva_breakdown"),
   montantTTC: real("montant_ttc").notNull(),
   statut: text("statut").notNull().default("en_attente"),
   dateEmission: text("date_emission").notNull(),
