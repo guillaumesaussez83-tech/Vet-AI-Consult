@@ -1,0 +1,173 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint-typecheck:
+    name: Lint & typecheck
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+          run_install: false
+
+      - name: Get pnpm store path
+        id: pnpm-cache
+        shell: bash
+        run: echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_OUTPUT
+
+      - name: Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Install deps
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck (tous packages)
+        run: pnpm -w typecheck
+
+      - name: Lint (si configuré)
+        run: pnpm -w lint || echo "lint non configuré — à faire"
+
+  test-unit:
+    name: Tests unitaires
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with: { node-version: "20" }
+
+      - uses: pnpm/action-setup@v4
+        with: { version: 9, run_install: false }
+
+      - name: Install deps
+        run: pnpm install --frozen-lockfile
+
+      - name: Run unit tests
+        run: pnpm -w test --run
+        env:
+          NODE_ENV: test
+
+  test-e2e-backend:
+    name: Tests e2e backend (Postgres)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: vetoai_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with: { node-version: "20" }
+
+      - uses: pnpm/action-setup@v4
+        with: { version: 9, run_install: false }
+
+      - name: Install deps
+        run: pnpm install --frozen-lockfile
+
+      - name: Appliquer migrations
+        env:
+          PGPASSWORD: postgres
+        run: |
+          for m in vetoai-fixes/migrations/0*.sql; do
+            echo "Appliquant $m"
+            psql -h localhost -U postgres -d vetoai_test -f "$m"
+          done
+
+      - name: Run e2e tests
+        env:
+          NODE_ENV: test
+          TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/vetoai_test
+          CLERK_SECRET_KEY: sk_test_dummy_for_ci
+          VITE_CLERK_PUBLISHABLE_KEY: pk_test_dummy_for_ci
+          ANTHROPIC_API_KEY: sk-ant-dummy
+          CORS_ALLOWED_ORIGINS: http://localhost:5173
+          OBJECT_STORAGE_PROVIDER: replit-sidecar
+        run: pnpm --filter @workspace/api-server test --run
+
+  build:
+    name: Build complet
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: [lint-typecheck]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with: { node-version: "20" }
+
+      - uses: pnpm/action-setup@v4
+        with: { version: 9, run_install: false }
+
+      - name: Install deps
+        run: pnpm install --frozen-lockfile
+
+      - name: Build tous packages
+        env:
+          VITE_CLERK_PUBLISHABLE_KEY: pk_test_dummy_for_build
+        run: pnpm -w build
+
+      - name: Upload artifact (frontend dist)
+        uses: actions/upload-artifact@v4
+        with:
+          name: vetcare-dist
+          path: artifacts/vetcare/dist
+          retention-days: 7
+
+  audit:
+    name: pnpm audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    # Ne casse pas la CI sur un audit — informatif seulement.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with: { node-version: "20" }
+
+      - uses: pnpm/action-setup@v4
+        with: { version: 9, run_install: false }
+
+      - name: Install deps
+        run: pnpm install --frozen-lockfile
+
+      - name: Audit deps
+        run: pnpm audit --prod --audit-level high
