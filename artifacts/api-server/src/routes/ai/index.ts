@@ -3,6 +3,7 @@ import { db, actesTable, stockMedicamentsTable, ordonnancesTable, facturesTable,
 import { GetDiagnosticIABody } from "@workspace/api-zod";
 import { eq, and, ilike, desc, sql as drizzleSql } from "drizzle-orm";
 import { ObjectStorageService } from "../../lib/objectStorage";
+import { aiLimiter } from "../../middlewares/aiRateLimiter";
 import {
   reformulerAnamnese,
   structurerExamenClinique,
@@ -13,6 +14,7 @@ import {
 } from "../../lib/aiService";
 
 const router = Router();
+router.use(aiLimiter);
 const storage = new ObjectStorageService();
 
 router.post("/diagnostic", async (req, res) => {
