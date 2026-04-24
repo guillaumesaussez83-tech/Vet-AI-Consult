@@ -1,0 +1,65 @@
+name: E2E Playwright
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      browser:
+        description: 'Browser to test'
+        required: false
+        default: 'chromium'
+        type: choice
+        options:
+          - chromium
+          - firefox
+          - webkit
+
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  playwright:
+    timeout-minutes: 30
+    runs-on: ubuntu-latest
+    env:
+      VETOAI_TEST_EMAIL: ${{ secrets.VETOAI_TEST_EMAIL }}
+      VETOAI_TEST_PASSWORD: ${{ secrets.VETOAI_TEST_PASSWORD }}
+      BASE_URL: ${{ secrets.E2E_BASE_URL || 'https://app.vetoai.fr' }}
+      CI: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        working-directory: ./artifacts/vetcare
+        run: npm ci
+
+      - name: Install Playwright browsers
+        working-directory: ./artifacts/vetcare
+        run: npx playwright install --with-deps ${{ github.event.inputs.browser || 'chromium' }}
+
+      - name: Run Playwright tests
+        working-directory: ./artifacts/vetcare
+        run: npx playwright test --project=${{ github.event.inputs.browser || 'chromium' }}
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-${{ github.event.inputs.browser || 'chromium' }}
+          path: artifacts/vetcare/playwright-report/
+          retention-days: 7
+
+      - name: Upload test results
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ github.event.inputs.browser || 'chromium' }}
+          path: artifacts/vetcare/test-results/
+          retention-days: 7

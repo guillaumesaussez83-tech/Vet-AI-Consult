@@ -1,0 +1,63 @@
+name: Uptime check — app.vetoai.fr
+
+# Ping toutes les 5 minutes app.vetoai.fr/api/healthz
+# Échoue si != 200, trigger une alerte GitHub (notification maintainers)
+# Alternative long-terme : Better Uptime / UptimeRobot / Healthchecks.io (hors GitHub)
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"   # toutes les 5 min
+  workflow_dispatch:
+
+concurrency:
+  group: uptime-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Check /api/healthz
+        id: ping
+        run: |
+          set -e
+          url="${UPTIME_URL:-https://app.vetoai.fr/api/healthz}"
+          echo "Pinging $url"
+          code=$(curl -sS -o /tmp/body -w "%{http_code}" --max-time 10 "$url" || echo "000")
+          echo "status_code=$code" >> "$GITHUB_OUTPUT"
+          echo "Status: $code"
+          head -c 500 /tmp/body || true
+          if [ "$code" != "200" ]; then
+            echo "::error::Uptime check FAILED with status $code"
+            exit 1
+          fi
+          echo "OK"
+        env:
+          UPTIME_URL: ${{ vars.UPTIME_URL }}
+
+      - name: Notify on failure
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = `🔴 Uptime FAIL: app.vetoai.fr returned ${{ steps.ping.outputs.status_code }}`;
+            const body = [
+              `Run: ${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`,
+              `Time: ${new Date().toISOString()}`,
+              `Check Railway logs et Sentry.`,
+              ``,
+              `⚠️ Auto-created by uptime.yml — ferme cette Issue quand l'incident est résolu.`
+            ].join('\n');
+
+            // Vérifier qu'il n'y a pas déjà une issue ouverte pour éviter le flood
+            const open = await github.rest.issues.listForRepo({
+              owner: context.repo.owner, repo: context.repo.repo,
+              state: 'open', labels: 'uptime-alert'
+            });
+            if (open.data.length > 0) return;
+
+            await github.rest.issues.create({
+              owner: context.repo.owner, repo: context.repo.repo,
+              title, body, labels: ['uptime-alert', 'P0'],
+            });
