@@ -29,15 +29,19 @@ app.use(
           "'unsafe-eval'",
           "https://clerk.com",
           "https://*.clerk.accounts.dev",
+          "https://clerk.vetoai.fr",
+          "https://*.vetoai.fr",
         ],
         connectSrc: [
           "'self'",
           "https://api.clerk.com",
           "https://*.clerk.accounts.dev",
+          "https://clerk.vetoai.fr",
+          "https://*.vetoai.fr",
           "https://api.anthropic.com",
         ],
         imgSrc: ["'self'", "data:", "https:", "blob:"],
-        frameSrc: ["'self'", "https://clerk.com", "https://*.clerk.accounts.dev"],
+        frameSrc: ["'self'", "https://clerk.com", "https://*.clerk.accounts.dev", "https://clerk.vetoai.fr", "https://*.vetoai.fr"],
         fontSrc: ["'self'", "https:", "data:"],
         styleSrc: ["'self'", "'unsafe-inline'", "https:"],
       },
@@ -86,7 +90,7 @@ const ALLOWED_ORIGINS = (process.env["CORS_ALLOWED_ORIGINS"] ?? "https://app.vet
   .map((s) => s.trim())
   .filter(Boolean);
 
-app.use(
+app.use("/api",
   cors({
     credentials: true,
     origin: (origin, cb) => {
