@@ -31,6 +31,7 @@ app.use(
           "https://*.clerk.accounts.dev",
           "https://clerk.vetoai.fr",
           "https://*.vetoai.fr",
+                    "https://unpkg.com",
         ],
         connectSrc: [
           "'self'",
@@ -39,6 +40,7 @@ app.use(
           "https://clerk.vetoai.fr",
           "https://*.vetoai.fr",
           "https://api.anthropic.com",
+                    "https://unpkg.com",
         ],
         imgSrc: ["'self'", "data:", "https:", "blob:"],
         frameSrc: ["'self'", "https://clerk.com", "https://*.clerk.accounts.dev", "https://clerk.vetoai.fr", "https://*.vetoai.fr"],
