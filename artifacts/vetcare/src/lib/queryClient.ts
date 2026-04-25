@@ -134,6 +134,7 @@ export async function apiJson<T = unknown>(
     if (token) headers.set('Authorization', `Bearer ${token}`);
     const response = await fetch(input, { ...init, headers });
     return handleResponse<T>(response);
+}
 
 /**
  * Variante pour les sites qui ont déjà un objet `Response` en main.
