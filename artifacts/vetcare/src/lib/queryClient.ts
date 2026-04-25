@@ -7,7 +7,7 @@ import { QueryClient } from "@tanstack/react-query";
  *  - queries : 2 retries avec backoff exponentiel (1s, 2s, 4s max).
  *             Pas de retry sur les erreurs 4xx sauf 408/429 (timeout / rate limit).
  *  - mutations : 0 retry.
- *             Une mutation (POST/PATCH/DELETE) qui a "peut-être" touché le serveur
+ *             Une mutation (POST/PATCH/DEhLETE) qui a "peut-être" touché le serveur
  *             ne doit JAMAIS être rejouée automatiquement — risque de double
  *             paiement, double facture, double ordonnance.
  */
@@ -122,9 +122,18 @@ export async function apiJson<T = unknown>(
   input: RequestInfo | URL,
   init?: RequestInit,
 ): Promise<T> {
-  const response = await fetch(input, init);
-  return handleResponse<T>(response);
-}
+  // Inject Clerk Bearer token on every request
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let token: string | null = null;
+    try {
+          token = await (window as any).Clerk?.session?.getToken?.() ?? null;
+    } catch {
+          // Clerk unavailable — proceed without auth header
+    }
+    const headers = new Headers(init?.headers);
+    if (token) headers.set('Authorization', `Bearer ${token}`);
+    const response = await fetch(input, { ...init, headers });
+    return handleResponse<T>(response);
 
 /**
  * Variante pour les sites qui ont déjà un objet `Response` en main.
