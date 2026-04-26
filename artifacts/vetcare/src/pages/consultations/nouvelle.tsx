@@ -22,6 +22,15 @@ import { PatientBarre } from "@/components/PatientBarre";
 import { VoiceRecorder } from "@/components/VoiceRecorder";
 import DicteeOrdonnanceDialog, { PrescriptionConfirmee } from "@/components/DicteeOrdonnanceDialog";
 
+
+/** Fetch authentifié : injecte le Bearer token Clerk sur toutes les requêtes /api/* */
+async function authFetch(input: RequestInfo, init?: RequestInit): Promise<Response> {
+  const token = await (window as any).Clerk?.session?.getToken();
+  const headers = new Headers(init?.headers);
+  if (token) headers.set("authorization", `Bearer ${token}`);
+  return fetch(input, { ...init, headers });
+}
+
 const ETAPES = [
   { id: 1, label: "Patient & Contexte" },
   { id: 2, label: "Anamnèse" },
@@ -106,7 +115,7 @@ export default function NouvelleConsultationPage() {
         objectPaths: uploadedFiles.map(f => f.objectPath),
       };
 
-      const response = await fetch(endpoint, {
+      const response = await authFetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
@@ -161,7 +170,7 @@ export default function NouvelleConsultationPage() {
       });
 
       if (pendingPrescriptions.length > 0) {
-        await fetch("/api/ai/confirmer-dictee-ordonnance", {
+        await authFetch("/api/ai/confirmer-dictee-ordonnance", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -570,7 +579,7 @@ function Step2Anamnese({
   const { toast } = useToast();
 
   const handleReformuler = async (transcript: string) => {
-    const res = await fetch("/api/ai/reformuler-anamnese", {
+    const res = await authFetch("/api/ai/reformuler-anamnese", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ transcript }),
@@ -623,7 +632,7 @@ function Step3ExamenClinique({
   const [isUploading, setIsUploading] = useState(false);
 
   const handleStructurer = async (transcript: string) => {
-    const res = await fetch("/api/ai/structurer-examen-clinique", {
+    const res = await authFetch("/api/ai/structurer-examen-clinique", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ transcript }),
@@ -640,7 +649,7 @@ function Step3ExamenClinique({
     setIsUploading(true);
     try {
       for (const file of files) {
-        const urlRes = await fetch("/api/storage/uploads/request-url", {
+        const urlRes = await authFetch("/api/storage/uploads/request-url", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ name: file.name, size: file.size, contentType: file.type }),
@@ -806,7 +815,7 @@ function ResumeClientBlock({
     }
     setIsGenerating(true);
     try {
-      const res = await fetch("/api/ai/resume-client", {
+      const res = await authFetch("/api/ai/resume-client", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ diagnostic, ordonnance, notes, espece, nomAnimal, nomProprietaire }),
