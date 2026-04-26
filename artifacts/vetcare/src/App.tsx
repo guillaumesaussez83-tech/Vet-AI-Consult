@@ -1,12 +1,12 @@
 import { Switch, Route, Redirect, useLocation, Router as WouterRouter } from "wouter";
 import { QueryClientProvider } from "@tanstack/react-query";
-import { ClerkProvider, Show, useClerk, useUser } from "@clerk/react";
+import { ClerkProvider, Show, useClerk, useUser, useSession } from "@clerk/react";
 import { useEffect, useRef, useState } from "react";
 import * as Sentry from "@sentry/react";
+import { setAuthTokenGetter } from "@workspace/api-client-react";
 import { queryClient, setOn401 } from "./lib/queryClient";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-
 import Home from "./pages/home";
 import SignInPage from "./pages/auth/sign-in";
 import SignUpPage from "./pages/auth/sign-up";
@@ -56,8 +56,8 @@ function MissingConfigScreen({ reason }: { reason: string }) {
         <h1 className="text-2xl font-bold">Configuration manquante</h1>
         <p className="text-gray-600">{reason}</p>
         <p className="text-sm text-gray-400">
-          Si vous êtes administrateur, vérifiez les variables d'environnement du
-          déploiement. Sinon, contactez votre support.
+          Si vous êtes administrateur, vérifiez les variables d'environnement du déploiement.
+          Sinon, contactez votre support.
         </p>
       </div>
     </div>
@@ -72,10 +72,10 @@ function stripBase(path: string): string {
 
 /**
  * F-P1-4 + F-P2-8 : observe les changements d'identité Clerk pour
- *  1. Purger le cache React Query quand l'user change (sécu multi-tenant
- *     côté navigateur — évite qu'un user qui se logout/login voit les
- *     caches de l'ancien user).
- *  2. Populer Sentry.setUser pour attacher l'user context aux erreurs.
+ * 1. Purger le cache React Query quand l'user change (sécu multi-tenant
+ *    côté navigateur — évite qu'un user qui se logout/login voit les
+ *    caches de l'ancien user).
+ * 2. Populer Sentry.setUser pour attacher l'user context aux erreurs.
  */
 function ClerkSideEffects() {
   const { addListener } = useClerk();
@@ -126,6 +126,20 @@ function On401Redirect() {
   return null;
 }
 
+/**
+ * Branche le getter de token Clerk sur le client API auto-généré (Orval).
+ * Sans ça, tous les hooks React Query générés font leurs requêtes sans
+ * Authorization header → 401 systématique sur toutes les listes.
+ */
+function ClerkTokenSync() {
+  const { session } = useSession();
+  useEffect(() => {
+    setAuthTokenGetter(session ? () => session.getToken() : null);
+    return () => setAuthTokenGetter(null);
+  }, [session]);
+  return null;
+}
+
 function HomeRedirect() {
   return (
     <>
@@ -168,17 +182,13 @@ function Router() {
       <Route path="/" component={HomeRedirect} />
       <Route path="/sign-in/*?" component={SignInPage} />
       <Route path="/sign-up/*?" component={SignUpPage} />
-
       <Route path="/dashboard" component={() => <ProtectedRoute component={Dashboard} />} />
-
       <Route path="/patients/nouveau" component={() => <ProtectedRoute component={NouveauPatientPage} />} />
       <Route path="/patients/:id" component={() => <ProtectedRoute component={PatientDetailPage} />} />
       <Route path="/patients" component={() => <ProtectedRoute component={PatientsPage} />} />
-
       <Route path="/consultations/nouvelle" component={() => <ProtectedRoute component={NouvelleConsultationPage} />} />
       <Route path="/consultations/:id" component={() => <ProtectedRoute component={ConsultationDetailPage} />} />
       <Route path="/consultations" component={() => <ProtectedRoute component={ConsultationsPage} />} />
-
       <Route path="/factures/:id/imprimer" component={() => (
         <>
           <Show when="signed-in"><FactureImprimerPage /></Show>
@@ -187,7 +197,6 @@ function Router() {
       )} />
       <Route path="/factures/:id" component={() => <ProtectedRoute component={FactureDetailPage} />} />
       <Route path="/factures" component={() => <ProtectedRoute component={FacturesPage} />} />
-
       <Route path="/actes" component={() => <ProtectedRoute component={ActesPage} />} />
       <Route path="/encaissements" component={() => <ProtectedRoute component={EncaissementsPage} />} />
       <Route path="/rappels" component={() => <ProtectedRoute component={RappelsPage} />} />
@@ -209,7 +218,6 @@ function Router() {
       <Route path="/portail/:token" component={PortailPage} />
       <Route path="/confidentialite" component={ConfidentialitePage} />
       <Route path="/legal" component={LegalPage} />
-
       <Route component={NotFound} />
     </Switch>
   );
@@ -224,18 +232,25 @@ function ClerkProviderWithRoutes() {
       const tag = (e.target as HTMLElement)?.tagName ?? "";
       const editable = (e.target as HTMLElement)?.isContentEditable;
       const inInput = ["INPUT", "TEXTAREA", "SELECT"].includes(tag) || editable;
-
       if ((e.ctrlKey || e.metaKey) && e.key === "k") {
         e.preventDefault();
         setCmdOpen((prev) => !prev);
         return;
       }
       if (inInput || e.ctrlKey || e.metaKey || e.altKey) return;
-
-      if (e.key === "n") { e.preventDefault(); setLocation("/consultations/nouvelle"); }
-      else if (e.key === "p") { e.preventDefault(); setLocation("/patients/nouveau"); }
-      else if (e.key === "f") { e.preventDefault(); setLocation("/factures"); }
-      else if (e.key === "?") { e.preventDefault(); setCmdOpen(true); }
+      if (e.key === "n") {
+        e.preventDefault();
+        setLocation("/consultations/nouvelle");
+      } else if (e.key === "p") {
+        e.preventDefault();
+        setLocation("/patients/nouveau");
+      } else if (e.key === "f") {
+        e.preventDefault();
+        setLocation("/factures");
+      } else if (e.key === "?") {
+        e.preventDefault();
+        setCmdOpen(true);
+      }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
@@ -246,11 +261,12 @@ function ClerkProviderWithRoutes() {
       publishableKey={clerkPubKey!}
       routerPush={(to) => setLocation(stripBase(to))}
       routerReplace={(to) => setLocation(stripBase(to), { replace: true })}
-            clerkJSUrl="https://unpkg.com/@clerk/clerk-js@6/dist/clerk.browser.js"
-                  proxyUrl={window.location.origin + '/api/__clerk'}
+      clerkJSUrl="https://unpkg.com/@clerk/clerk-js@6/dist/clerk.browser.js"
+      proxyUrl={window.location.origin + '/api/__clerk'}
     >
       <ClerkSideEffects />
       <On401Redirect />
+      <ClerkTokenSync />
       <Router />
       <CommandPalette open={cmdOpen} onOpenChange={setCmdOpen} />
     </ClerkProvider>
@@ -264,13 +280,11 @@ function App() {
       <MissingConfigScreen reason="La clé Clerk (VITE_CLERK_PUBLISHABLE_KEY) est introuvable." />
     );
   }
-
   return (
     <ErrorBoundary>
       <TooltipProvider>
-        {/* F-P1-1 : QueryClientProvider MONTE AVANT ClerkProvider pour
-            survivre aux changements de session et garantir que les toasters
-            reçoivent bien leur cache. */}
+        {/* F-P1-1 : QueryClientProvider MONTE AVANT ClerkProvider pour survivre aux
+            changements de session et garantir que les toasters reçoivent bien leur cache. */}
         <QueryClientProvider client={queryClient}>
           <WouterRouter base={basePath}>
             <ClerkProviderWithRoutes />
