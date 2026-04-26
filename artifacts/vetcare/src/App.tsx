@@ -262,11 +262,10 @@ function ClerkProviderWithRoutes() {
       routerPush={(to) => setLocation(stripBase(to))}
       routerReplace={(to) => setLocation(stripBase(to), { replace: true })}
       clerkJSUrl="https://unpkg.com/@clerk/clerk-js@6/dist/clerk.browser.js"
-      proxyUrl={window.location.origin + '/api/__clerk'}
     >
       <ClerkSideEffects />
       <On401Redirect />
-      <ClerkTokenSync />
+    
       <Router />
       <CommandPalette open={cmdOpen} onOpenChange={setCmdOpen} />
     </ClerkProvider>
