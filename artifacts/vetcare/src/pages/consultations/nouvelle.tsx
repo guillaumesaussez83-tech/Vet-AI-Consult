@@ -121,7 +121,8 @@ export default function NouvelleConsultationPage() {
         body: JSON.stringify(body),
       });
       if (!response.ok) throw new Error();
-      const res = await response.json();
+      const json = await response.json();
+    const res = json.data ?? json;
 
       setStep4Result({
         diagnostics: res.diagnostics as DiagnosticItem[],
@@ -585,8 +586,8 @@ function Step2Anamnese({
       body: JSON.stringify({ transcript }),
     });
     if (!res.ok) throw new Error("Erreur lors de la reformulation");
-    const data = await res.json();
-    setAnamnese(data.anamnese);
+    const json = await res.json();
+    setAnamnese((json.data ?? json).anamnese);
     toast({ title: "Anamnèse reformulée par Claude" });
   };
 
@@ -638,8 +639,8 @@ function Step3ExamenClinique({
       body: JSON.stringify({ transcript }),
     });
     if (!res.ok) throw new Error("Erreur lors de la structuration");
-    const data = await res.json();
-    setStep3(f => ({ ...f, examenClinique: data.examenClinique }));
+    const json = await res.json();
+    setStep3(f => ({ ...f, examenClinique: (json.data ?? json).examenClinique }));
     toast({ title: "Examen clinique structuré par Claude" });
   };
 
@@ -821,8 +822,8 @@ function ResumeClientBlock({
         body: JSON.stringify({ diagnostic, ordonnance, notes, espece, nomAnimal, nomProprietaire }),
       });
       if (!res.ok) throw new Error();
-      const data = await res.json();
-      setResume(data.resume);
+      const json = await res.json();
+      setResume((json.data ?? json).resume);
     } catch {
       toast({ title: "Erreur lors de la génération du résumé", variant: "destructive" });
     } finally {
