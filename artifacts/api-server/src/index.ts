@@ -3,6 +3,7 @@ import app from "./app";
 import { logger } from "./lib/logger";
 import { runStockSeeder } from "./routes/stock/seeder";
 import { startSyncJob } from "./jobs/syncSalleAttente";
+import { startRappelsJob } from "./jobs/sendRappels";
 
 const rawPort = process.env["PORT"] ?? "3000";
 const port = Number(rawPort);
