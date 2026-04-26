@@ -13,13 +13,13 @@ import type { RequestHandler } from "express";
  * quota.
  *
  * Configurable via env :
- *   AI_RATE_LIMIT_PER_MIN (défaut 20)
+ *   AI_RATE_LIMIT_PER_MIN (défaut 30)
  */
-const PER_MIN = Number(process.env["AI_RATE_LIMIT_PER_MIN"] ?? "20");
+const PER_MIN = Number(process.env["AI_RATE_LIMIT_PER_MIN"] ?? "30");
 
 export const aiLimiter: RequestHandler = rateLimit({
   windowMs: 60_000,
-  limit: Number.isFinite(PER_MIN) && PER_MIN > 0 ? PER_MIN : 20,
+  limit: Number.isFinite(PER_MIN) && PER_MIN > 0 ? PER_MIN : 30,
   standardHeaders: "draft-7",
   legacyHeaders: false,
   keyGenerator: (req) => {
