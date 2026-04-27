@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
-import { FileText, Printer, Sparkles, Search, Calendar, User } from "lucide-react";
+import { FileText, Printer, Sparkles, Search, Calendar, User } from "luchide-react";
 import { formatDateFR } from "@/lib/utils";
 
 const API_BASE = "/api";
@@ -26,7 +26,8 @@ async function fetchOrdonnances(search?: string): Promise<Ordonnance[]> {
   const url = `${API_BASE}/ordonnances${search ? `?q=${encodeURIComponent(search)}` : ""}`;
   const r = await fetch(url);
   if (!r.ok) throw new Error("Erreur serveur");
-  return r.json();
+  const json = await r.json();
+  return json.data ?? json;
 }
 
 const DASH_RE = /^[—\-–]+$/;
