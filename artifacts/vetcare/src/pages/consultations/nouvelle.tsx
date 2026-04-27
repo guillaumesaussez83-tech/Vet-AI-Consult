@@ -58,11 +58,16 @@ export default function NouvelleConsultationPage() {
   const [etape, setEtape] = useState(1);
 
   const [step1, setStep1] = useState({
-    patientId: preSelectedPatientId,
+    patientId: "",
     veterinaire: "",
     date: new Date().toISOString().split("T")[0],
     motif: "",
   });
+    useEffect(() => {
+          if (patients?.length && preSelectedPatientId) {
+                  setStep1(s => ({ ...s, patientId: preSelectedPatientId }));
+          }
+    }, [patients, preSelectedPatientId]);
   const [step2, setStep2] = useState({ anamnese: "" });
   const [step3, setStep3] = useState({
     poids: "",
