@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 
 interface UseSpeechRecognitionReturn {
   isListening: boolean;
@@ -16,6 +16,14 @@ export function useSpeechRecognition(lang = "fr-FR"): UseSpeechRecognitionReturn
   const [transcript, setTranscript] = useState("");
   const [liveText, setLiveText] = useState("");
   const recognitionRef = useRef<any>(null);
+    useEffect(() => {
+          return () => {
+                  if (recognitionRef.current) {
+                            recognitionRef.current.stop();
+                            recognitionRef.current = null;
+                  }
+          };
+    }, []);
 
   const isSupported =
     typeof window !== "undefined" &&
