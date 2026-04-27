@@ -522,7 +522,7 @@ function RdvDialog({ open, onClose, vets, initialDate, initialHeure, initialVetI
         if (res.status === 409 && d.prochains) {
           throw new Error(`Créneau pris. Prochains disponibles: ${d.prochains.map((s: Slot) => s.heure).join(", ")}`);
         }
-        throw new Error(d.error ?? "Erreur");
+        throw new Error(typeof d.error === "string" ? d.error : d.message ?? "Erreur lors de la création du RDV");
       }
       return res.json();
     },
