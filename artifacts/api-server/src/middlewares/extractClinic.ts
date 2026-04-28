@@ -80,7 +80,7 @@ export function extractClinic() {
         );
       }
 
-      req.clinicId = explicitClaim;
+      req.clinicId = DEFAULT_CLINIC_ID; // MVP mono-clinique: toujours "default"
     } catch (err) {
       logger.error({ err, path: req.path }, "extractClinic: auth resolution failed");
       return res.status(401).json(fail("UNAUTHENTICATED", "Authentification requise."));
