@@ -105,7 +105,7 @@ export default function CertificatsPage() {
         }),
       });
       const data = await r.json();
-      setCertificatText(data.certificat ?? "Erreur de génération");
+      setCertificatText(data?.data?.certificat ?? data?.certificat ?? "Erreur de génération");
       setPreviewOpen(true);
     } catch {
       toast({ title: "Erreur lors de la génération", variant: "destructive" });
