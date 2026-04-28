@@ -60,7 +60,8 @@ export default function ConsultationDetailPage() {
     queryFn: async () => {
       const res = await fetch(`/api/factures/by-consultation/${id}`);
       if (!res.ok) return null;
-      return res.json();
+      const json = await res.json();
+      return json?.data ?? json;
     },
     enabled: !!id,
     refetchInterval: false,
