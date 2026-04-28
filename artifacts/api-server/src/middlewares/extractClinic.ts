@@ -1,4 +1,4 @@
-import type { Request, Response, NextFunction } from "express";
+—import type { Request, Response, NextFunction } from "express";
 import { getAuth } from "@clerk/express";
 import { logger } from "../lib/logger";
 import { fail } from "../lib/response";
@@ -80,7 +80,7 @@ export function extractClinic() {
         );
       }
 
-      req.clinicId = DEFAULT_CLINIC_ID; // MVP mono-clinique: toujours "default"
+  req.clinicId = explicitClaim;
     } catch (err) {
       logger.error({ err, path: req.path }, "extractClinic: auth resolution failed");
       return res.status(401).json(fail("UNAUTHENTICATED", "Authentification requise."));
