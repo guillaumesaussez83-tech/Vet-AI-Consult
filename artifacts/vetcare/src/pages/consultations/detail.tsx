@@ -258,7 +258,7 @@ export default function ConsultationDetailPage() {
             Consultation — {patient?.nom ?? "Patient"}
           </h1>
           <p className="text-muted-foreground text-sm">
-            Dr. {consultation.veterinaire} • {formatDateLong(consultation.date)}
+            {consultation.veterinaire?.startsWith('Dr.') ? consultation.veterinaire : `Dr. ${consultation.veterinaire}`} • {formatDateLong(consultation.date)}
             {patient?.owner && ` • ${patient.owner.prenom} ${patient.owner.nom}`}
           </p>
         </div>
