@@ -20,6 +20,8 @@ import { TVA_DEFAULT_RATE } from "../../lib/constants";
 import { computeInvoiceTotals } from "../../lib/numbering";
 import { fail } from "../../lib/response";
 
+import { FactureService } from "../../services/factureService";
+
 const router = Router();
 
 type ActeRow = {
@@ -230,7 +232,7 @@ router.get("/by-consultation/:consultationId", async (req, res) => {
           eq(facturesTable.consultationId, consultationId),
         ),
       );
-    if (!facture) return res.status(404).json(null);
+    if (!facture) return res.json({ success: true, data: null });
 
     return res.json({ ...facture, createdAt: facture.createdAt.toISOString() });
   } catch (err) {
@@ -390,6 +392,41 @@ router.get("/:id", async (req, res) => {
   } catch (err) {
     req.log.error({ err }, "GET /factures/:id failed");
     return res.status(500).json(fail("INTERNAL", "Erreur interne du serveur"));
+  }
+});
+
+
+// POST /api/factures — Créer une facture depuis les actes d'une consultation
+router.post("/", async (req, res) => {
+  try {
+    const consultationId = Number(req.body?.consultationId);
+    if (!Number.isInteger(consultationId) || consultationId <= 0) {
+      return res.status(400).json(fail("VALIDATION_ERROR", "consultationId invalide"));
+    }
+    const [existing] = await db
+      .select()
+      .from(facturesTable)
+      .where(and(eq(facturesTable.clinicId, req.clinicId), eq(facturesTable.consultationId, consultationId)));
+    if (existing) {
+      return res.status(409).json({ success: false, error: { code: "ALREADY_EXISTS", message: "Facture déjà créée pour cette consultation" } });
+    }
+    const montants = await FactureService.recalculerDepuisActes(consultationId);
+    const numero = await FactureService.genererNumero();
+    const today = new Date().toISOString().split("T")[0];
+    const [facture] = await db.insert(facturesTable).values({
+      clinicId: req.clinicId,
+      consultationId,
+      numero,
+      montantHT: montants.montantHT,
+      tva: TVA_DEFAULT_RATE,
+      montantTTC: montants.montantTTC,
+      statut: "en_attente",
+      dateEmission: today,
+    }).returning();
+    return res.json({ success: true, data: facture });
+  } catch (err) {
+    req.log.error(err);
+    return res.status(500).json(fail("INTERNAL_ERROR", "Erreur interne du serveur"));
   }
 });
 
