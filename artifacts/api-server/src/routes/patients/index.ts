@@ -1,7 +1,15 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { patientsTable, ownersTable, consultationsTable } from "@workspace/db";
-import { CreatePatientBody, GetPatientParams, UpdatePatientBody, UpdatePatientParams, DeletePatientParams, ListPatientsQueryParams, ListPatientConsultationsParams } from "@workspace/api-zod";
+import {
+  CreatePatientBody,
+  GetPatientParams,
+  UpdatePatientBody,
+  UpdatePatientParams,
+  DeletePatientParams,
+  ListPatientsQueryParams,
+  ListPatientConsultationsParams,
+} from "@workspace/api-zod";
 import { eq, ilike, or, and, asc } from "drizzle-orm";
 import { PAGINATION_DEFAULT_LIMIT, PAGINATION_MAX_LIMIT } from "../../lib/constants";
 
@@ -11,7 +19,6 @@ router.get("/", async (req, res) => {
   try {
     const query = ListPatientsQueryParams.safeParse(req.query);
     const { search, ownerId, espece } = query.success ? query.data : {};
-
     const rawLimit = parseInt(req.query.limit as string || "");
     const rawOffset = parseInt(req.query.offset as string || "0");
     const limit = isNaN(rawLimit) ? PAGINATION_DEFAULT_LIMIT : Math.min(rawLimit, PAGINATION_MAX_LIMIT);
@@ -96,12 +103,9 @@ router.post("/", async (req, res) => {
   try {
     const body = CreatePatientBody.safeParse(req.body);
     if (!body.success) return res.status(400).json({ error: "Données invalides" });
-
-    // Vérifier que l'owner appartient bien à la clinique (anti-IDOR cross-tenant)
     const [own] = await db.select({ id: ownersTable.id }).from(ownersTable)
       .where(and(eq(ownersTable.clinicId, req.clinicId), eq(ownersTable.id, body.data.ownerId)));
     if (!own) return res.status(400).json({ error: "Propriétaire introuvable" });
-
     const [patient] = await db.insert(patientsTable).values({ ...body.data, clinicId: req.clinicId }).returning();
     return res.status(201).json({ ...patient, createdAt: patient.createdAt.toISOString() });
   } catch (err) {
@@ -114,7 +118,6 @@ router.get("/:id", async (req, res) => {
   try {
     const params = GetPatientParams.safeParse({ id: Number(req.params.id) });
     if (!params.success) return res.status(400).json({ error: "ID invalide" });
-
     const [patient] = await db
       .select({
         id: patientsTable.id,
@@ -151,9 +154,7 @@ router.get("/:id", async (req, res) => {
       .from(patientsTable)
       .leftJoin(ownersTable, eq(patientsTable.ownerId, ownersTable.id))
       .where(and(eq(patientsTable.clinicId, req.clinicId), eq(patientsTable.id, params.data.id)));
-
     if (!patient) return res.status(404).json({ error: "Patient non trouvé" });
-
     return res.json({
       ...patient,
       createdAt: patient.createdAt.toISOString(),
@@ -169,13 +170,10 @@ router.patch("/:id", async (req, res) => {
   try {
     const params = UpdatePatientParams.safeParse({ id: Number(req.params.id) });
     if (!params.success) return res.status(400).json({ error: "ID invalide" });
-
     const body = UpdatePatientBody.safeParse(req.body);
     if (!body.success) return res.status(400).json({ error: "Données invalides" });
-
     const [patient] = await db.update(patientsTable).set(body.data).where(and(eq(patientsTable.clinicId, req.clinicId), eq(patientsTable.id, params.data.id))).returning();
     if (!patient) return res.status(404).json({ error: "Patient non trouvé" });
-
     return res.json({ ...patient, createdAt: patient.createdAt.toISOString() });
   } catch (err) {
     req.log.error(err);
@@ -187,6 +185,23 @@ router.delete("/:id", async (req, res) => {
   try {
     const params = DeletePatientParams.safeParse({ id: Number(req.params.id) });
     if (!params.success) return res.status(400).json({ error: "ID invalide" });
+
+    // Vérifier l'absence de consultations liées avant suppression
+    // (évite une erreur FK PostgreSQL opaque et protège les données médicales)
+    const [linked] = await db
+      .select({ id: consultationsTable.id })
+      .from(consultationsTable)
+      .where(and(
+        eq(consultationsTable.clinicId, req.clinicId),
+        eq(consultationsTable.patientId, params.data.id),
+      ))
+      .limit(1);
+
+    if (linked) {
+      return res.status(409).json({
+        error: "Ce patient possède des consultations. Supprimez d'abord toutes ses consultations avant de supprimer le patient.",
+      });
+    }
 
     await db.delete(patientsTable).where(and(eq(patientsTable.clinicId, req.clinicId), eq(patientsTable.id, params.data.id)));
     return res.status(204).send();
@@ -200,9 +215,7 @@ router.get("/:id/consultations", async (req, res) => {
   try {
     const params = ListPatientConsultationsParams.safeParse({ id: Number(req.params.id) });
     if (!params.success) return res.status(400).json({ error: "ID invalide" });
-
     const consultations = await db.select().from(consultationsTable).where(and(eq(consultationsTable.clinicId, req.clinicId), eq(consultationsTable.patientId, params.data.id)));
-
     return res.json(consultations.map(c => ({
       ...c,
       createdAt: c.createdAt.toISOString(),
