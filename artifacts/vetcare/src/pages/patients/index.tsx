@@ -44,8 +44,9 @@ export default function PatientsPage() {
       toast({ title: "Patient supprimé avec succès" });
       setDeleteTarget(null);
       setConfirmName("");
-    } catch {
-      toast({ title: "Erreur lors de la suppression", variant: "destructive" });
+    } catch (err) {
+      const msg = (err as Error)?.message ?? "Erreur lors de la suppression";
+      toast({ title: msg, variant: "destructive" })
     }
   };
 
