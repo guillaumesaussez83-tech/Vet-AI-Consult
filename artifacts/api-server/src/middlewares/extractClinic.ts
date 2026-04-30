@@ -1,4 +1,4 @@
-—import type { Request, Response, NextFunction } from "express";
+import type { Request, Response, NextFunction } from "express";
 import { getAuth } from "@clerk/express";
 import { logger } from "../lib/logger";
 import { fail } from "../lib/response";
