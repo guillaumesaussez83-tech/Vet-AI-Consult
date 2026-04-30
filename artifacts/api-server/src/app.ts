@@ -41,6 +41,7 @@ app.use(
           "https://clerk.vetoai.fr",
           "https://*.vetoai.fr",
           "https://api.anthropic.com",
+          "https://api.openai.com",
                     "https://unpkg.com",
             "https://challenges.cloudflare.com",
         ],
