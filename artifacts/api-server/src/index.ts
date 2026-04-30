@@ -4,6 +4,7 @@ import { logger } from "./lib/logger";
 import { runStockSeeder } from "./routes/stock/seeder";
 import { startSyncJob } from "./jobs/syncSalleAttente";
 import { startRappelsJob } from "./jobs/sendRappels";
+import { setupVetKnowledge } from "./lib/vetKnowledgeService";
 
 const rawPort = process.env["PORT"] ?? "3000";
 const port = Number(rawPort);
@@ -17,7 +18,6 @@ app.listen(port, (err) => {
     logger.error({ err }, "Error listening on port");
     process.exit(1);
   }
-
   logger.info({ port }, "Server listening");
 
   // Auto-seed stock demo data if stock is empty
@@ -33,4 +33,10 @@ app.listen(port, (err) => {
 
   // Sync salle d'attente ↔ agenda toutes les 5 min
   startSyncJob();
+
+  // Initialisation base de connaissances vétérinaires RAG (ANMV/EMA/RESAPATH)
+  // Non bloquante — dégradation gracieuse si OPENAI_API_KEY absent
+  setupVetKnowledge().catch(err => {
+    logger.warn({ err }, "setupVetKnowledge ignoré (erreur non bloquante)");
+  });
 });
