@@ -61,7 +61,7 @@ export default function ConsultationDetailPage() {
       const res = await fetch(`/api/factures/by-consultation/${id}`);
       if (!res.ok) return null;
       const json = await res.json();
-      return json?.data ?? json;
+      return json?.data ?? null;
     },
     enabled: !!id,
     refetchInterval: false,
@@ -268,7 +268,7 @@ export default function ConsultationDetailPage() {
         </Badge>
       </div>
 
-      {factureExistante && (
+      {factureExistante?.id && (
         <div className="flex items-center justify-between bg-green-50 border border-green-200 rounded-lg px-4 py-3">
           <div className="flex items-center gap-3">
             <Receipt className="h-5 w-5 text-green-600" />
