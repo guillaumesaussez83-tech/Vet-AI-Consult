@@ -1,5 +1,5 @@
 [phases.install]
-cmds = ["pnpm install --no-frozen-lockfile"]
+cmds = ["NODE_ENV=development pnpm install --no-frozen-lockfile"]
 
 [phases.build]
 cmds = [
