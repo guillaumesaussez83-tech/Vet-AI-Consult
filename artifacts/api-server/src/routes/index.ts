@@ -21,6 +21,7 @@ import parametresCliniqueRouter from "./parametres-clinique";
 import agendaRouter from "./agenda";
 import searchRouter from "./search";
 import encaissementsRouter from "./encaissements";
+import vetKnowledgeRouter from "./vet-knowledge";
 
 const router: IRouter = Router();
 
@@ -44,6 +45,7 @@ router.use("/parametres-clinique", parametresCliniqueRouter);
 router.use("/agenda", agendaRouter);
 router.use("/search", searchRouter);
 router.use("/encaissements", encaissementsRouter);
+router.use("/vet-knowledge", vetKnowledgeRouter);
 router.use(storageRouter);
 
 export default router;
