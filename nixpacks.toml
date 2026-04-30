@@ -1,5 +1,11 @@
 [phases.install]
 cmds = ["pnpm install --no-frozen-lockfile"]
 
+[phases.build]
+cmds = [
+  "pnpm --filter ./artifacts/vetcare run build",
+  "pnpm --filter ./artifacts/api-server run build"
+]
+
 [start]
 cmd = "sh scripts/startup.sh"
