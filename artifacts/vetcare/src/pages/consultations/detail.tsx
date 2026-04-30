@@ -687,7 +687,7 @@ function EtapeOrdonnanceActes({
     });
     if (!res.ok) throw new Error("Erreur lors de la génération vocale de facture");
     const data = await res.json();
-    setVoixPreview(data);
+    setVoixPreview(data.data ?? data);
   };
 
   const handleValiderVoix = async () => {
