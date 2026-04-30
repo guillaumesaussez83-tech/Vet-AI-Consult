@@ -1,3 +1,4 @@
+// fix: données clinique dynamiques + UTF-8
 import { useState } from "react";
 import { useRoute, Link } from "wouter";
 import { useGetFacture } from "@workspace/api-client-react";
