@@ -1,11 +1,5 @@
 [phases.install]
-cmds = ["NODE_ENV=development pnpm install --no-frozen-lockfile"]
-
-[phases.build]
-cmds = [
-  "pnpm --filter ./artifacts/vetcare run build",
-  "pnpm --filter ./artifacts/api-server run build"
-]
+cmds = ["echo 'install deferred to build phase'"]
 
 [start]
 cmd = "sh scripts/startup.sh"
