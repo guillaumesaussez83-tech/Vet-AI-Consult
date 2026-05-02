@@ -1,4 +1,4 @@
-—import { Router } from "express";
+import { Router } from "express";
 import { requireAuth } from "@clerk/express";
 import { db } from "@workspace/db";
 import { ventesTable, venteLignesTable, insertVenteSchema, insertVenteLigneSchema } from "@workspace/db/schema";
