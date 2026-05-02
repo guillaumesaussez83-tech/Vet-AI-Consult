@@ -41,6 +41,8 @@ import IaDisclaimerModal from "./components/IaDisclaimerModal";
 import { CommandPalette } from "./components/CommandPalette";
 import NotFound from "@/pages/not-found";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import VentesPage from "./pages/ventes/index";
+import EquipePage from "./pages/equipe/index";
 
 const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
@@ -219,6 +221,8 @@ function Router() {
       <Route path="/confidentialite" component={ConfidentialitePage} />
       <Route path="/legal" component={LegalPage} />
       <Route component={NotFound} />
+          <Route path="/ventes" component={VentesPage} />
+          <Route path="/equipe" component={EquipePage} />
     </Switch>
   );
 }
