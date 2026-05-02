@@ -19,7 +19,7 @@
  */
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { sql } from "drizzle-orm";
-import { facturesTable, ordonnancesTable } from "@workspace/db";
+import { db, facturesTable, ordonnancesTable, ventesTable } from "@workspace/db";
 import { and, desc, eq } from "drizzle-orm";
 
 type Tx = NodePgDatabase<Record<string, never>>;
@@ -121,4 +121,23 @@ export function computeInvoiceTotals(
       .sort((a, b) => a[0] - b[0])
       .map(([rate, t]) => ({ rate, ht: round2(t.ht), tva: round2(t.tva) })),
   };
+}
+
+// ---------------------------------------------------------------------------
+// generateVenteNumero — numérotation atomique des ventes (standalone)
+// ---------------------------------------------------------------------------
+export async function generateVenteNumero(clinicId: string): Promise<string> {
+  return await db.transaction(async (tx) => {
+    await acquireAdvisoryLock(tx, "vente_numbering", clinicId);
+    const year = new Date().getFullYear();
+    const prefix = `VTE-${year}-`;
+    const [row] = await tx
+      .select({ numero: ventesTable.numero })
+      .from(ventesTable)
+      .where(and(eq(ventesTable.clinicId, clinicId), sql`${ventesTable.numero} LIKE ${prefix + "%"}`))
+      .orderBy(desc(ventesTable.id))
+      .limit(1);
+    const lastSeq = row?.numero ? parseInt(row.numero.split("-")[2] ?? "0", 10) || 0 : 0;
+    return `${prefix}${String(lastSeq + 1).padStart(4, "0")}`;
+  });
 }
