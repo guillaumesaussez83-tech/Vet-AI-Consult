@@ -220,9 +220,9 @@ function Router() {
       <Route path="/portail/:token" component={PortailPage} />
       <Route path="/confidentialite" component={ConfidentialitePage} />
       <Route path="/legal" component={LegalPage} />
+      <Route path="/ventes" component={() => <ProtectedRoute component={VentesPage} />} />
+      <Route path="/equipe" component={() => <ProtectedRoute component={EquipePage} />} />
       <Route component={NotFound} />
-          <Route path="/ventes" component={VentesPage} />
-          <Route path="/equipe" component={EquipePage} />
     </Switch>
   );
 }
