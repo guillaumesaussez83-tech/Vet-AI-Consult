@@ -110,7 +110,6 @@ function VenteTab({ type }: { type: "comptoir" | "prescription" }) {
   const { getToken } = useAuth();
   const qc = useQueryClient();
   const { toast } = useToast();
-
   const [open, setOpen] = useState(false);
   const [viewVente, setViewVente] = useState<Vente | null>(null);
   const [form, setForm] = useState<VenteForm>(EMPTY_FORM);
@@ -149,9 +148,10 @@ function VenteTab({ type }: { type: "comptoir" | "prescription" }) {
       qc.invalidateQueries({ queryKey: ["ventes", type] });
       setOpen(false);
       setForm(EMPTY_FORM);
-      toast({ title: "Vente crÃ©Ã©e" });
+      toast({ title: "Vente crÃ©Ã©e avec succÃ¨s" });
     },
-    onError: () => toast({ title: "Erreur", description: "Impossible de crÃ©er la vente", variant: "destructive" }),
+    onError: () =>
+      toast({ title: "Erreur", description: "Impossible de crÃ©er la vente", variant: "destructive" }),
   });
 
   const deleteVente = useMutation({
@@ -284,10 +284,11 @@ function VenteTab({ type }: { type: "comptoir" | "prescription" }) {
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Nouvelle vente {type === "comptoir" ? "comptoir" : "sur prescription"}</DialogTitle>
+            <DialogTitle>
+              Nouvelle vente {type === "comptoir" ? "comptoir" : "sur prescription"}
+            </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-
             {/* Mode de paiement */}
             <div>
               <Label className="mb-2 block">Mode de paiement</Label>
@@ -385,19 +386,26 @@ function VenteTab({ type }: { type: "comptoir" | "prescription" }) {
             </div>
 
             {/* Totaux */}
-            {form.lignes.length > 0 && (() => {
-              const t = computeTotals(form.lignes);
-              return (
-                <div className="bg-muted/30 rounded p-3 text-sm space-y-1 text-right">
-                  <div>HT : <strong>{t.montantHt} â¬</strong></div>
-                  <div>TVA : <strong>{t.montantTva} â¬</strong></div>
-                  <div className="text-base font-bold">TTC : {t.montantTtc} â¬</div>
-                </div>
-              );
-            })()}
+            {form.lignes.length > 0 &&
+              (() => {
+                const t = computeTotals(form.lignes);
+                return (
+                  <div className="bg-muted/30 rounded p-3 text-sm space-y-1 text-right">
+                    <div>
+                      Sous-total HT : <strong>{t.montantHt} â¬</strong>
+                    </div>
+                    <div>
+                      TVA : <strong>{t.montantTva} â¬</strong>
+                    </div>
+                    <div className="text-base font-bold">Total TTC : {t.montantTtc} â¬</div>
+                  </div>
+                );
+              })()}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setOpen(false)}>Annuler</Button>
+            <Button variant="outline" onClick={() => setOpen(false)}>
+              Annuler
+            </Button>
             <Button onClick={handleSubmit} disabled={createVente.isPending}>
               {createVente.isPending ? "Enregistrement..." : "Enregistrer"}
             </Button>
@@ -450,14 +458,18 @@ function VenteTab({ type }: { type: "comptoir" | "prescription" }) {
                 </table>
               </div>
               <div className="text-right space-y-1">
-                <div>HT : <strong>{parseFloat(viewVente.montantHt).toFixed(2)} â¬</strong></div>
+                <div>Sous-total HT : <strong>{parseFloat(viewVente.montantHt).toFixed(2)} â¬</strong></div>
                 <div>TVA : <strong>{parseFloat(viewVente.montantTva).toFixed(2)} â¬</strong></div>
-                <div className="text-base font-bold">TTC : {parseFloat(viewVente.montantTtc).toFixed(2)} â¬</div>
+                <div className="text-base font-bold">
+                  Total TTC : {parseFloat(viewVente.montantTtc).toFixed(2)} â¬
+                </div>
               </div>
             </div>
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setViewVente(null)}>Fermer</Button>
+            <Button variant="outline" onClick={() => setViewVente(null)}>
+              Fermer
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -467,14 +479,15 @@ function VenteTab({ type }: { type: "comptoir" | "prescription" }) {
 
 export default function VentesPage() {
   const [tab, setTab] = useState<"comptoir" | "prescription">("comptoir");
-
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center gap-3">
         <ShoppingCart className="h-6 w-6 text-primary" />
         <div>
           <h1 className="text-2xl font-bold">Ventes</h1>
-          <p className="text-muted-foreground text-sm">Gestion des ventes comptoir et sur prescription</p>
+          <p className="text-muted-foreground text-sm">
+            Gestion des ventes comptoir et sur prescription
+          </p>
         </div>
       </div>
 
