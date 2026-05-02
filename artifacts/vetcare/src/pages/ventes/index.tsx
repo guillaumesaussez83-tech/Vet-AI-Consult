@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@clerk/react";
-import { Plus, Trash2, Eye, ShoppingCart, FileText } from "lucide-react";
+import { Plus, Trash2, Eye, ShoppingCart, FileText, CreditCard, Banknote, FileCheck, ArrowRightLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -17,6 +17,19 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "";
+
+type ModePaiement = "especes" | "cb" | "cheque" | "virement";
+
+const MODES_PAIEMENT: { value: ModePaiement; label: string; icon: React.ReactNode }[] = [
+  { value: "especes", label: "EspÃ¨ces", icon: <Banknote className="h-4 w-4" /> },
+  { value: "cb", label: "Carte bancaire", icon: <CreditCard className="h-4 w-4" /> },
+  { value: "cheque", label: "ChÃ¨que", icon: <FileCheck className="h-4 w-4" /> },
+  { value: "virement", label: "Virement", icon: <ArrowRightLeft className="h-4 w-4" /> },
+];
+
+function modePaiementLabel(mode: string): string {
+  return MODES_PAIEMENT.find((m) => m.value === mode)?.label ?? mode;
+}
 
 type VenteLigne = {
   id: number;
@@ -40,6 +53,7 @@ type Vente = {
   proprietaireId?: number;
   ordonnanceId?: number;
   notes?: string;
+  modePaiement: ModePaiement;
   montantHt: string;
   montantTva: string;
   montantTtc: string;
@@ -57,11 +71,13 @@ type LigneForm = {
 
 type VenteForm = {
   notes: string;
+  modePaiement: ModePaiement;
   lignes: LigneForm[];
 };
 
 const EMPTY_FORM: VenteForm = {
   notes: "",
+  modePaiement: "especes",
   lignes: [{ description: "", quantite: "1", prixUnitaire: "0", tvaTaux: "20" }],
 };
 
@@ -126,16 +142,16 @@ function VenteTab({ type }: { type: "comptoir" | "prescription" }) {
         method: "POST",
         body: JSON.stringify(payload),
       });
-      if (!res.ok) throw new Error("Erreur création vente");
+      if (!res.ok) throw new Error("Erreur crÃ©ation vente");
       return res.json();
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["ventes", type] });
       setOpen(false);
       setForm(EMPTY_FORM);
-      toast({ title: "Vente créée" });
+      toast({ title: "Vente crÃ©Ã©e" });
     },
-    onError: () => toast({ title: "Erreur", description: "Impossible de créer la vente", variant: "destructive" }),
+    onError: () => toast({ title: "Erreur", description: "Impossible de crÃ©er la vente", variant: "destructive" }),
   });
 
   const deleteVente = useMutation({
@@ -144,7 +160,7 @@ function VenteTab({ type }: { type: "comptoir" | "prescription" }) {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["ventes", type] });
-      toast({ title: "Vente supprimée" });
+      toast({ title: "Vente supprimÃ©e" });
     },
   });
 
@@ -187,7 +203,7 @@ function VenteTab({ type }: { type: "comptoir" | "prescription" }) {
         montantTtc,
       };
     });
-    createVente.mutate({ type, notes: form.notes, ...totals, lignes });
+    createVente.mutate({ type, notes: form.notes, modePaiement: form.modePaiement, ...totals, lignes });
   }
 
   return (
@@ -202,12 +218,14 @@ function VenteTab({ type }: { type: "comptoir" | "prescription" }) {
         </Button>
       </div>
 
+      {/* Liste */}
       <div className="rounded-md border overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-muted/50">
             <tr>
-              <th className="text-left px-4 py-2 font-medium">Numéro</th>
+              <th className="text-left px-4 py-2 font-medium">NumÃ©ro</th>
               <th className="text-left px-4 py-2 font-medium">Date</th>
+              <th className="text-left px-4 py-2 font-medium">Paiement</th>
               <th className="text-right px-4 py-2 font-medium">TTC</th>
               <th className="text-left px-4 py-2 font-medium">Statut</th>
               <th className="px-4 py-2"></th>
@@ -216,7 +234,7 @@ function VenteTab({ type }: { type: "comptoir" | "prescription" }) {
           <tbody>
             {ventes.length === 0 && (
               <tr>
-                <td colSpan={5} className="text-center py-8 text-muted-foreground">
+                <td colSpan={6} className="text-center py-8 text-muted-foreground">
                   Aucune vente
                 </td>
               </tr>
@@ -227,8 +245,11 @@ function VenteTab({ type }: { type: "comptoir" | "prescription" }) {
                 <td className="px-4 py-2">
                   {new Date(v.date).toLocaleDateString("fr-FR")}
                 </td>
+                <td className="px-4 py-2">
+                  <span className="text-muted-foreground text-xs">{modePaiementLabel(v.modePaiement)}</span>
+                </td>
                 <td className="px-4 py-2 text-right font-semibold">
-                  {parseFloat(v.montantTtc).toFixed(2)} €
+                  {parseFloat(v.montantTtc).toFixed(2)} â¬
                 </td>
                 <td className="px-4 py-2">
                   <Badge variant={v.statut === "completee" ? "default" : "secondary"}>
@@ -236,13 +257,19 @@ function VenteTab({ type }: { type: "comptoir" | "prescription" }) {
                   </Badge>
                 </td>
                 <td className="px-4 py-2 flex gap-1 justify-end">
-                  <Button variant="ghost" size="icon" onClick={() => fetchDetail(v.id).then(() => {})}>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => fetchDetail(v.id).then(() => {})}
+                  >
                     <Eye className="h-4 w-4" />
                   </Button>
                   <Button
                     variant="ghost"
                     size="icon"
-                    onClick={() => { if (confirm("Supprimer cette vente ?")) deleteVente.mutate(v.id); }}
+                    onClick={() => {
+                      if (confirm("Supprimer cette vente ?")) deleteVente.mutate(v.id);
+                    }}
                   >
                     <Trash2 className="h-4 w-4 text-destructive" />
                   </Button>
@@ -253,12 +280,36 @@ function VenteTab({ type }: { type: "comptoir" | "prescription" }) {
         </table>
       </div>
 
+      {/* Dialog crÃ©ation */}
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Nouvelle vente {type === "comptoir" ? "comptoir" : "sur prescription"}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
+
+            {/* Mode de paiement */}
+            <div>
+              <Label className="mb-2 block">Mode de paiement</Label>
+              <div className="grid grid-cols-4 gap-2">
+                {MODES_PAIEMENT.map((m) => (
+                  <button
+                    key={m.value}
+                    type="button"
+                    onClick={() => setForm((f) => ({ ...f, modePaiement: m.value }))}
+                    className={`flex flex-col items-center gap-1 rounded-lg border-2 px-3 py-3 text-xs font-medium transition-colors ${
+                      form.modePaiement === m.value
+                        ? "border-primary bg-primary/10 text-primary"
+                        : "border-border text-muted-foreground hover:border-primary/50 hover:text-foreground"
+                    }`}
+                  >
+                    {m.icon}
+                    {m.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <div>
               <Label>Notes</Label>
               <Textarea
@@ -268,6 +319,7 @@ function VenteTab({ type }: { type: "comptoir" | "prescription" }) {
                 rows={2}
               />
             </div>
+
             <div>
               <div className="flex justify-between items-center mb-2">
                 <Label>Lignes</Label>
@@ -280,19 +332,50 @@ function VenteTab({ type }: { type: "comptoir" | "prescription" }) {
                 {form.lignes.map((l, i) => (
                   <div key={i} className="grid grid-cols-12 gap-2 items-start border rounded p-2">
                     <div className="col-span-5">
-                      <Input placeholder="Description" value={l.description} onChange={(e) => updateLigne(i, "description", e.target.value)} />
+                      <Input
+                        placeholder="Description"
+                        value={l.description}
+                        onChange={(e) => updateLigne(i, "description", e.target.value)}
+                      />
                     </div>
                     <div className="col-span-2">
-                      <Input type="number" placeholder="Qté" value={l.quantite} onChange={(e) => updateLigne(i, "quantite", e.target.value)} min="0" step="0.001" />
+                      <Input
+                        type="number"
+                        placeholder="QtÃ©"
+                        value={l.quantite}
+                        onChange={(e) => updateLigne(i, "quantite", e.target.value)}
+                        min="0"
+                        step="0.001"
+                      />
                     </div>
                     <div className="col-span-2">
-                      <Input type="number" placeholder="P.U. HT" value={l.prixUnitaire} onChange={(e) => updateLigne(i, "prixUnitaire", e.target.value)} min="0" step="0.01" />
+                      <Input
+                        type="number"
+                        placeholder="P.U. HT"
+                        value={l.prixUnitaire}
+                        onChange={(e) => updateLigne(i, "prixUnitaire", e.target.value)}
+                        min="0"
+                        step="0.01"
+                      />
                     </div>
                     <div className="col-span-2">
-                      <Input type="number" placeholder="TVA %" value={l.tvaTaux} onChange={(e) => updateLigne(i, "tvaTaux", e.target.value)} min="0" max="100" />
+                      <Input
+                        type="number"
+                        placeholder="TVA %"
+                        value={l.tvaTaux}
+                        onChange={(e) => updateLigne(i, "tvaTaux", e.target.value)}
+                        min="0"
+                        max="100"
+                      />
                     </div>
                     <div className="col-span-1 flex items-center">
-                      <Button type="button" variant="ghost" size="icon" onClick={() => removeLigne(i)} disabled={form.lignes.length === 1}>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => removeLigne(i)}
+                        disabled={form.lignes.length === 1}
+                      >
                         <Trash2 className="h-4 w-4 text-destructive" />
                       </Button>
                     </div>
@@ -300,13 +383,15 @@ function VenteTab({ type }: { type: "comptoir" | "prescription" }) {
                 ))}
               </div>
             </div>
+
+            {/* Totaux */}
             {form.lignes.length > 0 && (() => {
               const t = computeTotals(form.lignes);
               return (
                 <div className="bg-muted/30 rounded p-3 text-sm space-y-1 text-right">
-                  <div>HT : <strong>{t.montantHt} €</strong></div>
-                  <div>TVA : <strong>{t.montantTva} €</strong></div>
-                  <div className="text-base font-bold">TTC : {t.montantTtc} €</div>
+                  <div>HT : <strong>{t.montantHt} â¬</strong></div>
+                  <div>TVA : <strong>{t.montantTva} â¬</strong></div>
+                  <div className="text-base font-bold">TTC : {t.montantTtc} â¬</div>
                 </div>
               );
             })()}
@@ -320,6 +405,7 @@ function VenteTab({ type }: { type: "comptoir" | "prescription" }) {
         </DialogContent>
       </Dialog>
 
+      {/* Dialog dÃ©tail */}
       <Dialog open={!!viewVente} onOpenChange={(o) => !o && setViewVente(null)}>
         <DialogContent className="max-w-xl">
           <DialogHeader>
@@ -330,6 +416,10 @@ function VenteTab({ type }: { type: "comptoir" | "prescription" }) {
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Date</span>
                 <span>{new Date(viewVente.date).toLocaleDateString("fr-FR")}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Mode de paiement</span>
+                <span className="font-medium">{modePaiementLabel(viewVente.modePaiement)}</span>
               </div>
               {viewVente.notes && (
                 <div className="flex justify-between">
@@ -342,7 +432,7 @@ function VenteTab({ type }: { type: "comptoir" | "prescription" }) {
                   <thead className="bg-muted/50">
                     <tr>
                       <th className="text-left px-3 py-1 text-xs">Description</th>
-                      <th className="text-right px-3 py-1 text-xs">Qté</th>
+                      <th className="text-right px-3 py-1 text-xs">QtÃ©</th>
                       <th className="text-right px-3 py-1 text-xs">P.U.</th>
                       <th className="text-right px-3 py-1 text-xs">TTC</th>
                     </tr>
@@ -352,17 +442,17 @@ function VenteTab({ type }: { type: "comptoir" | "prescription" }) {
                       <tr key={l.id} className="border-t">
                         <td className="px-3 py-1">{l.description}</td>
                         <td className="px-3 py-1 text-right">{l.quantite}</td>
-                        <td className="px-3 py-1 text-right">{parseFloat(l.prixUnitaire).toFixed(2)} €</td>
-                        <td className="px-3 py-1 text-right">{parseFloat(l.montantTtc).toFixed(2)} €</td>
+                        <td className="px-3 py-1 text-right">{parseFloat(l.prixUnitaire).toFixed(2)} â¬</td>
+                        <td className="px-3 py-1 text-right">{parseFloat(l.montantTtc).toFixed(2)} â¬</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
               <div className="text-right space-y-1">
-                <div>HT : <strong>{parseFloat(viewVente.montantHt).toFixed(2)} €</strong></div>
-                <div>TVA : <strong>{parseFloat(viewVente.montantTva).toFixed(2)} €</strong></div>
-                <div className="text-base font-bold">TTC : {parseFloat(viewVente.montantTtc).toFixed(2)} €</div>
+                <div>HT : <strong>{parseFloat(viewVente.montantHt).toFixed(2)} â¬</strong></div>
+                <div>TVA : <strong>{parseFloat(viewVente.montantTva).toFixed(2)} â¬</strong></div>
+                <div className="text-base font-bold">TTC : {parseFloat(viewVente.montantTtc).toFixed(2)} â¬</div>
               </div>
             </div>
           )}
@@ -388,6 +478,7 @@ export default function VentesPage() {
         </div>
       </div>
 
+      {/* Tabs */}
       <div className="border-b">
         <div className="flex gap-1">
           {(["comptoir", "prescription"] as const).map((t) => (
