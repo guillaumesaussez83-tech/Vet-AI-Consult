@@ -19,6 +19,8 @@ import {
   LayoutDashboard,
   Stethoscope,
   FlaskConical,
+  ShoppingCart,
+  UserCog,
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { Button } from "@/components/ui/button";
@@ -45,6 +47,8 @@ export function AppLayout({ children }: { children: ReactNode }) {
     { name: "Stupéfiants", href: "/stupefiants", icon: FlaskConical },
     { name: "Actes & Produits", href: "/actes", icon: Syringe },
     { name: "Paramètres", href: "/parametres", icon: Settings },
+  { name: "Ventes", href: "/ventes", icon: ShoppingCart },
+  { name: "Équipe", href: "/equipe", icon: UserCog },
   ];
 
   const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
