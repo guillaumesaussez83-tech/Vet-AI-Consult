@@ -22,6 +22,8 @@ import agendaRouter from "./agenda";
 import searchRouter from "./search";
 import encaissementsRouter from "./encaissements";
 import vetKnowledgeRouter from "./vet-knowledge";
+import equipeRouter from "./equipe";
+import ventesRouter from "./ventes";
 
 const router: IRouter = Router();
 
@@ -47,5 +49,7 @@ router.use("/search", searchRouter);
 router.use("/encaissements", encaissementsRouter);
 router.use("/vet-knowledge", vetKnowledgeRouter);
 router.use(storageRouter);
+router.use("/equipe", equipeRouter);
+router.use("/ventes", ventesRouter);
 
 export default router;
