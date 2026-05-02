@@ -1,0 +1,109 @@
+import { Router } from "express";
+import { requireAuth } from "@clerk/express";
+import { db } from "@workspace/db";
+import { assistantsTable, insertAssistantSchema } from "@workspace/db/schema";
+import { eq, and } from "drizzle-orm";
+import { sendSuccess, sendError } from "../../lib/response";
+import { extractClinicId } from "../../middlewares/extractClinic";
+
+const router = Router();
+router.use(requireAuth());
+
+// GET /api/equipe — liste des assistantes actives
+router.get("/", extractClinicId, async (req, res) => {
+  try {
+    const clinicId = req.clinicId!;
+    const assistants = await db
+      .select()
+      .from(assistantsTable)
+      .where(and(eq(assistantsTable.clinicId, clinicId), eq(assistantsTable.actif, true)))
+      .orderBy(assistantsTable.nom);
+    return sendSuccess(res, assistants);
+  } catch (err) {
+    return sendError(res, 500, "Erreur lors de la récupération de l'équipe", err);
+  }
+});
+
+// GET /api/equipe/all — y compris inactives
+router.get("/all", extractClinicId, async (req, res) => {
+  try {
+    const clinicId = req.clinicId!;
+    const assistants = await db
+      .select()
+      .from(assistantsTable)
+      .where(eq(assistantsTable.clinicId, clinicId))
+      .orderBy(assistantsTable.nom);
+    return sendSuccess(res, assistants);
+  } catch (err) {
+    return sendError(res, 500, "Erreur lors de la récupération de l'équipe", err);
+  }
+});
+
+// GET /api/equipe/:id
+router.get("/:id", extractClinicId, async (req, res) => {
+  try {
+    const clinicId = req.clinicId!;
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) return sendError(res, 400, "ID invalide");
+    const [assistant] = await db
+      .select()
+      .from(assistantsTable)
+      .where(and(eq(assistantsTable.id, id), eq(assistantsTable.clinicId, clinicId)));
+    if (!assistant) return sendError(res, 404, "Assistante non trouvée");
+    return sendSuccess(res, assistant);
+  } catch (err) {
+    return sendError(res, 500, "Erreur lors de la récupération", err);
+  }
+});
+
+// POST /api/equipe
+router.post("/", extractClinicId, async (req, res) => {
+  try {
+    const clinicId = req.clinicId!;
+    const parsed = insertAssistantSchema.safeParse({ ...req.body, clinicId });
+    if (!parsed.success) return sendError(res, 400, "Données invalides", parsed.error.flatten());
+    const [created] = await db.insert(assistantsTable).values(parsed.data).returning();
+    return sendSuccess(res, created, 201);
+  } catch (err) {
+    return sendError(res, 500, "Erreur lors de la création", err);
+  }
+});
+
+// PUT /api/equipe/:id
+router.put("/:id", extractClinicId, async (req, res) => {
+  try {
+    const clinicId = req.clinicId!;
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) return sendError(res, 400, "ID invalide");
+    const { id: _id, clinicId: _cid, createdAt: _ca, updatedAt: _ua, ...body } = req.body;
+    const [updated] = await db
+      .update(assistantsTable)
+      .set({ ...body, updatedAt: new Date() })
+      .where(and(eq(assistantsTable.id, id), eq(assistantsTable.clinicId, clinicId)))
+      .returning();
+    if (!updated) return sendError(res, 404, "Assistante non trouvée");
+    return sendSuccess(res, updated);
+  } catch (err) {
+    return sendError(res, 500, "Erreur lors de la mise à jour", err);
+  }
+});
+
+// DELETE /api/equipe/:id — soft delete (désactivation)
+router.delete("/:id", extractClinicId, async (req, res) => {
+  try {
+    const clinicId = req.clinicId!;
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) return sendError(res, 400, "ID invalide");
+    const [updated] = await db
+      .update(assistantsTable)
+      .set({ actif: false, updatedAt: new Date() })
+      .where(and(eq(assistantsTable.id, id), eq(assistantsTable.clinicId, clinicId)))
+      .returning();
+    if (!updated) return sendError(res, 404, "Assistante non trouvée");
+    return sendSuccess(res, { message: "Assistante désactivée" });
+  } catch (err) {
+    return sendError(res, 500, "Erreur lors de la suppression", err);
+  }
+});
+
+export default router;
