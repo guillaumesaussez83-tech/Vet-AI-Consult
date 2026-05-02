@@ -1,4 +1,4 @@
-—/**
+/**
  * Base de connaissances vétérinaires embarquée
  * Sources : ANMV (Agence Nationale du Médicament Vétérinaire), EMA (European Medicines Agency),
  *           RESAPATH (Réseau de Surveillance de l'Antibiorésistance des Pathogènes des Animaux)
