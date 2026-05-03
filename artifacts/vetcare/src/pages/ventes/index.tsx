@@ -1,7 +1,10 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@clerk/react";
-import { Plus, Trash2, Eye, ShoppingCart, FileText, CreditCard, Banknote, FileCheck, ArrowRightLeft } from "lucide-react";
+import {
+  Plus, Trash2, Eye, ShoppingCart, FileText,
+  CreditCard, Banknote, FileCheck, ArrowRightLeft, User,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -21,15 +24,26 @@ const API_BASE = import.meta.env.VITE_API_URL ?? "";
 type ModePaiement = "especes" | "cb" | "cheque" | "virement";
 
 const MODES_PAIEMENT: { value: ModePaiement; label: string; icon: React.ReactNode }[] = [
-  { value: "especes", label: "EspÃ¨ces", icon: <Banknote className="h-4 w-4" /> },
-  { value: "cb", label: "Carte bancaire", icon: <CreditCard className="h-4 w-4" /> },
-  { value: "cheque", label: "ChÃ¨que", icon: <FileCheck className="h-4 w-4" /> },
-  { value: "virement", label: "Virement", icon: <ArrowRightLeft className="h-4 w-4" /> },
+  { value: "especes",  label: "Espèces",       icon: <Banknote       className="h-4 w-4" /> },
+  { value: "cb",       label: "Carte bancaire", icon: <CreditCard     className="h-4 w-4" /> },
+  { value: "cheque",   label: "Chèque",         icon: <FileCheck      className="h-4 w-4" /> },
+  { value: "virement", label: "Virement",       icon: <ArrowRightLeft className="h-4 w-4" /> },
 ];
 
 function modePaiementLabel(mode: string): string {
   return MODES_PAIEMENT.find((m) => m.value === mode)?.label ?? mode;
 }
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+type Patient = {
+  id: number;
+  nom: string;
+  espece: string;
+  race?: string;
+  proprietaireId?: number;
+  owner?: { id: number; prenom: string; nom: string };
+};
 
 type VenteLigne = {
   id: number;
@@ -48,10 +62,8 @@ type Vente = {
   clinicId: string;
   numero: string;
   type: "comptoir" | "prescription";
-  assistantId?: number;
   patientId?: number;
   proprietaireId?: number;
-  ordonnanceId?: number;
   notes?: string;
   modePaiement: ModePaiement;
   montantHt: string;
@@ -70,50 +82,57 @@ type LigneForm = {
 };
 
 type VenteForm = {
+  proprietaireId: string;
+  patientId: string;
   notes: string;
   modePaiement: ModePaiement;
   lignes: LigneForm[];
 };
 
 const EMPTY_FORM: VenteForm = {
+  proprietaireId: "",
+  patientId: "",
   notes: "",
   modePaiement: "especes",
   lignes: [{ description: "", quantite: "1", prixUnitaire: "0", tvaTaux: "20" }],
 };
 
+// ─── Calculs ─────────────────────────────────────────────────────────────────
+
 function computeLigne(l: LigneForm) {
   const qty = parseFloat(l.quantite) || 0;
-  const pu = parseFloat(l.prixUnitaire) || 0;
+  const pu  = parseFloat(l.prixUnitaire) || 0;
   const tva = parseFloat(l.tvaTaux) || 0;
-  const ht = Math.round(qty * pu * 100) / 100;
+  const ht  = Math.round(qty * pu * 100) / 100;
   const ttc = Math.round(ht * (1 + tva / 100) * 100) / 100;
   return { montantHt: ht.toFixed(2), montantTtc: ttc.toFixed(2) };
 }
 
 function computeTotals(lignes: LigneForm[]) {
-  let totalHt = 0;
-  let totalTtc = 0;
+  let totalHt = 0, totalTtc = 0;
   for (const l of lignes) {
     const { montantHt, montantTtc } = computeLigne(l);
-    totalHt += parseFloat(montantHt);
+    totalHt  += parseFloat(montantHt);
     totalTtc += parseFloat(montantTtc);
   }
-  const totalTva = totalTtc - totalHt;
   return {
-    montantHt: totalHt.toFixed(2),
-    montantTva: totalTva.toFixed(2),
+    montantHt:  totalHt.toFixed(2),
+    montantTva: (totalTtc - totalHt).toFixed(2),
     montantTtc: totalTtc.toFixed(2),
   };
 }
 
+// ─── Composant principal ──────────────────────────────────────────────────────
+
 function VenteTab({ type }: { type: "comptoir" | "prescription" }) {
   const { getToken } = useAuth();
-  const qc = useQueryClient();
-  const { toast } = useToast();
-  const [open, setOpen] = useState(false);
+  const qc           = useQueryClient();
+  const { toast }    = useToast();
+  const [open, setOpen]           = useState(false);
   const [viewVente, setViewVente] = useState<Vente | null>(null);
-  const [form, setForm] = useState<VenteForm>(EMPTY_FORM);
+  const [form, setForm]           = useState<VenteForm>(EMPTY_FORM);
 
+  // ── Auth fetch helper ──
   async function authFetch(path: string, init?: RequestInit) {
     const token = await getToken();
     return fetch(`${API_BASE}${path}`, {
@@ -126,50 +145,94 @@ function VenteTab({ type }: { type: "comptoir" | "prescription" }) {
     });
   }
 
-  const { data: ventes = [], isLoading } = useQuery<Vente[]>({
-    queryKey: ["ventes", type],
+  // ── Patients ──
+  const { data: patients = [] } = useQuery<Patient[]>({
+    queryKey: ["patients"],
     queryFn: async () => {
-      const res = await authFetch(`/api/ventes?type=${type}`);
+      const res  = await authFetch("/api/patients");
       const json = await res.json();
       return json.data ?? [];
     },
   });
 
+  // Dériver la liste unique des propriétaires depuis les patients
+  const proprietaires = useMemo(() => {
+    const map = new Map<number, { id: number; prenom: string; nom: string }>();
+    for (const p of patients) {
+      if (p.owner) map.set(p.owner.id, p.owner);
+    }
+    return Array.from(map.values()).sort((a, b) =>
+      `${a.nom} ${a.prenom}`.localeCompare(`${b.nom} ${b.prenom}`)
+    );
+  }, [patients]);
+
+  // Patients filtrés selon le propriétaire sélectionné
+  const patientsFiltered = useMemo(() => {
+    if (!form.proprietaireId) return [];
+    return patients.filter(
+      (p) => p.owner && String(p.owner.id) === form.proprietaireId
+    );
+  }, [patients, form.proprietaireId]);
+
+  // ── Ventes list ──
+  const { data: ventes = [], isLoading } = useQuery<Vente[]>({
+    queryKey: ["ventes", type],
+    queryFn: async () => {
+      const res  = await authFetch(`/api/ventes?type=${type}`);
+      const json = await res.json();
+      return json.data ?? [];
+    },
+  });
+
+  // ── Create mutation ──
   const createVente = useMutation({
     mutationFn: async (payload: object) => {
       const res = await authFetch("/api/ventes", {
         method: "POST",
         body: JSON.stringify(payload),
       });
-      if (!res.ok) throw new Error("Erreur crÃ©ation vente");
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err?.message ?? "Erreur création vente");
+      }
       return res.json();
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["ventes", type] });
       setOpen(false);
       setForm(EMPTY_FORM);
-      toast({ title: "Vente crÃ©Ã©e avec succÃ¨s" });
+      toast({ title: "Vente créée avec succès" });
     },
-    onError: () =>
-      toast({ title: "Erreur", description: "Impossible de crÃ©er la vente", variant: "destructive" }),
+    onError: (err: Error) =>
+      toast({
+        title: "Erreur",
+        description: err.message || "Impossible de créer la vente",
+        variant: "destructive",
+      }),
   });
 
+  // ── Delete mutation ──
   const deleteVente = useMutation({
     mutationFn: async (id: number) => {
-      await authFetch(`/api/ventes/${id}`, { method: "DELETE" });
+      const res = await authFetch(`/api/ventes/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Erreur suppression");
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["ventes", type] });
-      toast({ title: "Vente supprimÃ©e" });
+      toast({ title: "Vente supprimée" });
     },
+    onError: () =>
+      toast({ title: "Erreur", description: "Impossible de supprimer", variant: "destructive" }),
   });
 
+  // ── Detail fetch ──
   const fetchDetail = async (id: number) => {
-    const res = await authFetch(`/api/ventes/${id}`);
+    const res  = await authFetch(`/api/ventes/${id}`);
     const json = await res.json();
     setViewVente(json.data);
   };
 
+  // ── Ligne helpers ──
   function updateLigne(i: number, field: keyof LigneForm, value: string) {
     setForm((f) => {
       const lignes = [...f.lignes];
@@ -177,37 +240,39 @@ function VenteTab({ type }: { type: "comptoir" | "prescription" }) {
       return { ...f, lignes };
     });
   }
-
   function addLigne() {
     setForm((f) => ({
       ...f,
       lignes: [...f.lignes, { description: "", quantite: "1", prixUnitaire: "0", tvaTaux: "20" }],
     }));
   }
-
   function removeLigne(i: number) {
     setForm((f) => ({ ...f, lignes: f.lignes.filter((_, idx) => idx !== i) }));
   }
 
+  // ── Submit ──
   function handleSubmit() {
     if (form.lignes.length === 0) return;
     const totals = computeTotals(form.lignes);
     const lignes = form.lignes.map((l) => {
       const { montantHt, montantTtc } = computeLigne(l);
-      return {
-        description: l.description,
-        quantite: l.quantite,
-        prixUnitaire: l.prixUnitaire,
-        tvaTaux: l.tvaTaux,
-        montantHt,
-        montantTtc,
-      };
+      return { ...l, montantHt, montantTtc };
     });
-    createVente.mutate({ type, notes: form.notes, modePaiement: form.modePaiement, ...totals, lignes });
+    createVente.mutate({
+      type,
+      notes:           form.notes,
+      modePaiement:    form.modePaiement,
+      proprietaireId:  form.proprietaireId  ? parseInt(form.proprietaireId)  : undefined,
+      patientId:       form.patientId       ? parseInt(form.patientId)       : undefined,
+      ...totals,
+      lignes,
+    });
   }
 
+  // ── Render ──
   return (
     <div className="space-y-4">
+      {/* Header */}
       <div className="flex justify-between items-center">
         <p className="text-sm text-muted-foreground">
           {isLoading ? "Chargement..." : `${ventes.length} vente(s)`}
@@ -223,8 +288,9 @@ function VenteTab({ type }: { type: "comptoir" | "prescription" }) {
         <table className="w-full text-sm">
           <thead className="bg-muted/50">
             <tr>
-              <th className="text-left px-4 py-2 font-medium">NumÃ©ro</th>
+              <th className="text-left px-4 py-2 font-medium">Numéro</th>
               <th className="text-left px-4 py-2 font-medium">Date</th>
+              <th className="text-left px-4 py-2 font-medium">Client</th>
               <th className="text-left px-4 py-2 font-medium">Paiement</th>
               <th className="text-right px-4 py-2 font-medium">TTC</th>
               <th className="text-left px-4 py-2 font-medium">Statut</th>
@@ -234,62 +300,107 @@ function VenteTab({ type }: { type: "comptoir" | "prescription" }) {
           <tbody>
             {ventes.length === 0 && (
               <tr>
-                <td colSpan={6} className="text-center py-8 text-muted-foreground">
+                <td colSpan={7} className="text-center py-8 text-muted-foreground">
                   Aucune vente
                 </td>
               </tr>
             )}
-            {ventes.map((v) => (
-              <tr key={v.id} className="border-t hover:bg-muted/20 transition-colors">
-                <td className="px-4 py-2 font-mono text-xs">{v.numero}</td>
-                <td className="px-4 py-2">
-                  {new Date(v.date).toLocaleDateString("fr-FR")}
-                </td>
-                <td className="px-4 py-2">
-                  <span className="text-muted-foreground text-xs">{modePaiementLabel(v.modePaiement)}</span>
-                </td>
-                <td className="px-4 py-2 text-right font-semibold">
-                  {parseFloat(v.montantTtc).toFixed(2)} â¬
-                </td>
-                <td className="px-4 py-2">
-                  <Badge variant={v.statut === "completee" ? "default" : "secondary"}>
-                    {v.statut}
-                  </Badge>
-                </td>
-                <td className="px-4 py-2 flex gap-1 justify-end">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => fetchDetail(v.id).then(() => {})}
-                  >
-                    <Eye className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => {
-                      if (confirm("Supprimer cette vente ?")) deleteVente.mutate(v.id);
-                    }}
-                  >
-                    <Trash2 className="h-4 w-4 text-destructive" />
-                  </Button>
-                </td>
-              </tr>
-            ))}
+            {ventes.map((v) => {
+              const patient = patients.find((p) => p.id === v.patientId);
+              return (
+                <tr key={v.id} className="border-t hover:bg-muted/20 transition-colors">
+                  <td className="px-4 py-2 font-mono text-xs">{v.numero}</td>
+                  <td className="px-4 py-2">{new Date(v.date).toLocaleDateString("fr-FR")}</td>
+                  <td className="px-4 py-2 text-xs text-muted-foreground">
+                    {patient
+                      ? `${patient.owner?.prenom} ${patient.owner?.nom} — ${patient.nom}`
+                      : "—"}
+                  </td>
+                  <td className="px-4 py-2 text-xs text-muted-foreground">
+                    {modePaiementLabel(v.modePaiement)}
+                  </td>
+                  <td className="px-4 py-2 text-right font-semibold">
+                    {parseFloat(v.montantTtc).toFixed(2)} €
+                  </td>
+                  <td className="px-4 py-2">
+                    <Badge variant={v.statut === "completee" ? "default" : "secondary"}>
+                      {v.statut}
+                    </Badge>
+                  </td>
+                  <td className="px-4 py-2 flex gap-1 justify-end">
+                    <Button variant="ghost" size="icon" onClick={() => fetchDetail(v.id)}>
+                      <Eye className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => {
+                        if (confirm("Supprimer cette vente ?")) deleteVente.mutate(v.id);
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
 
-      {/* Dialog crÃ©ation */}
-      <Dialog open={open} onOpenChange={setOpen}>
+      {/* ── Dialog création ── */}
+      <Dialog open={open} onOpenChange={(o) => { if (!o) setForm(EMPTY_FORM); setOpen(o); }}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               Nouvelle vente {type === "comptoir" ? "comptoir" : "sur prescription"}
             </DialogTitle>
           </DialogHeader>
+
           <div className="space-y-4">
-            {/* Mode de paiement */}
+            {/* ── Sélection client / animal ── */}
+            <div className="grid grid-cols-2 gap-3 p-3 rounded-lg border bg-muted/20">
+              <div>
+                <Label className="flex items-center gap-1 mb-1">
+                  <User className="h-3 w-3" /> Propriétaire
+                </Label>
+                <select
+                  value={form.proprietaireId}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, proprietaireId: e.target.value, patientId: "" }))
+                  }
+                  className="w-full border border-input bg-background px-3 py-2 text-sm rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
+                >
+                  <option value="">Sélectionner un client...</option>
+                  {proprietaires.map((p) => (
+                    <option key={p.id} value={String(p.id)}>
+                      {p.prenom} {p.nom}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <Label className="mb-1 block">Animal</Label>
+                <select
+                  value={form.patientId}
+                  onChange={(e) => setForm((f) => ({ ...f, patientId: e.target.value }))}
+                  disabled={!form.proprietaireId}
+                  className="w-full border border-input bg-background px-3 py-2 text-sm rounded-md focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <option value="">
+                    {form.proprietaireId ? "Sélectionner un animal..." : "Choisir un client d'abord"}
+                  </option>
+                  {patientsFiltered.map((p) => (
+                    <option key={p.id} value={String(p.id)}>
+                      {p.nom} ({p.espece}{p.race ? ` — ${p.race}` : ""})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* ── Mode de paiement ── */}
             <div>
               <Label className="mb-2 block">Mode de paiement</Label>
               <div className="grid grid-cols-4 gap-2">
@@ -311,6 +422,7 @@ function VenteTab({ type }: { type: "comptoir" | "prescription" }) {
               </div>
             </div>
 
+            {/* ── Notes ── */}
             <div>
               <Label>Notes</Label>
               <Textarea
@@ -321,9 +433,10 @@ function VenteTab({ type }: { type: "comptoir" | "prescription" }) {
               />
             </div>
 
+            {/* ── Lignes ── */}
             <div>
               <div className="flex justify-between items-center mb-2">
-                <Label>Lignes</Label>
+                <Label>Lignes de vente</Label>
                 <Button type="button" variant="outline" size="sm" onClick={addLigne}>
                   <Plus className="h-3 w-3 mr-1" />
                   Ajouter
@@ -342,7 +455,7 @@ function VenteTab({ type }: { type: "comptoir" | "prescription" }) {
                     <div className="col-span-2">
                       <Input
                         type="number"
-                        placeholder="QtÃ©"
+                        placeholder="Qté"
                         value={l.quantite}
                         onChange={(e) => updateLigne(i, "quantite", e.target.value)}
                         min="0"
@@ -369,7 +482,7 @@ function VenteTab({ type }: { type: "comptoir" | "prescription" }) {
                         max="100"
                       />
                     </div>
-                    <div className="col-span-1 flex items-center">
+                    <div className="col-span-1 flex items-center justify-center">
                       <Button
                         type="button"
                         variant="ghost"
@@ -385,23 +498,19 @@ function VenteTab({ type }: { type: "comptoir" | "prescription" }) {
               </div>
             </div>
 
-            {/* Totaux */}
-            {form.lignes.length > 0 &&
-              (() => {
-                const t = computeTotals(form.lignes);
-                return (
-                  <div className="bg-muted/30 rounded p-3 text-sm space-y-1 text-right">
-                    <div>
-                      Sous-total HT : <strong>{t.montantHt} â¬</strong>
-                    </div>
-                    <div>
-                      TVA : <strong>{t.montantTva} â¬</strong>
-                    </div>
-                    <div className="text-base font-bold">Total TTC : {t.montantTtc} â¬</div>
-                  </div>
-                );
-              })()}
+            {/* ── Totaux ── */}
+            {form.lignes.length > 0 && (() => {
+              const t = computeTotals(form.lignes);
+              return (
+                <div className="bg-muted/30 rounded p-3 text-sm space-y-1 text-right">
+                  <div>Sous-total HT : <strong>{t.montantHt} €</strong></div>
+                  <div>TVA : <strong>{t.montantTva} €</strong></div>
+                  <div className="text-base font-bold">Total TTC : {t.montantTtc} €</div>
+                </div>
+              );
+            })()}
           </div>
+
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)}>
               Annuler
@@ -413,69 +522,80 @@ function VenteTab({ type }: { type: "comptoir" | "prescription" }) {
         </DialogContent>
       </Dialog>
 
-      {/* Dialog dÃ©tail */}
+      {/* ── Dialog détail ── */}
       <Dialog open={!!viewVente} onOpenChange={(o) => !o && setViewVente(null)}>
         <DialogContent className="max-w-xl">
           <DialogHeader>
             <DialogTitle>Vente {viewVente?.numero}</DialogTitle>
           </DialogHeader>
-          {viewVente && (
-            <div className="space-y-3 text-sm">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Date</span>
-                <span>{new Date(viewVente.date).toLocaleDateString("fr-FR")}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Mode de paiement</span>
-                <span className="font-medium">{modePaiementLabel(viewVente.modePaiement)}</span>
-              </div>
-              {viewVente.notes && (
+          {viewVente && (() => {
+            const patient = patients.find((p) => p.id === viewVente.patientId);
+            return (
+              <div className="space-y-3 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Notes</span>
-                  <span>{viewVente.notes}</span>
+                  <span className="text-muted-foreground">Date</span>
+                  <span>{new Date(viewVente.date).toLocaleDateString("fr-FR")}</span>
                 </div>
-              )}
-              <div className="border rounded overflow-hidden">
-                <table className="w-full">
-                  <thead className="bg-muted/50">
-                    <tr>
-                      <th className="text-left px-3 py-1 text-xs">Description</th>
-                      <th className="text-right px-3 py-1 text-xs">QtÃ©</th>
-                      <th className="text-right px-3 py-1 text-xs">P.U.</th>
-                      <th className="text-right px-3 py-1 text-xs">TTC</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(viewVente.lignes ?? []).map((l) => (
-                      <tr key={l.id} className="border-t">
-                        <td className="px-3 py-1">{l.description}</td>
-                        <td className="px-3 py-1 text-right">{l.quantite}</td>
-                        <td className="px-3 py-1 text-right">{parseFloat(l.prixUnitaire).toFixed(2)} â¬</td>
-                        <td className="px-3 py-1 text-right">{parseFloat(l.montantTtc).toFixed(2)} â¬</td>
+                {patient && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Client / Animal</span>
+                    <span className="font-medium">
+                      {patient.owner?.prenom} {patient.owner?.nom} — {patient.nom}
+                    </span>
+                  </div>
+                )}
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Mode de paiement</span>
+                  <span className="font-medium">{modePaiementLabel(viewVente.modePaiement)}</span>
+                </div>
+                {viewVente.notes && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Notes</span>
+                    <span>{viewVente.notes}</span>
+                  </div>
+                )}
+                <div className="border rounded overflow-hidden">
+                  <table className="w-full">
+                    <thead className="bg-muted/50">
+                      <tr>
+                        <th className="text-left px-3 py-1 text-xs">Description</th>
+                        <th className="text-right px-3 py-1 text-xs">Qté</th>
+                        <th className="text-right px-3 py-1 text-xs">P.U.</th>
+                        <th className="text-right px-3 py-1 text-xs">TTC</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              <div className="text-right space-y-1">
-                <div>Sous-total HT : <strong>{parseFloat(viewVente.montantHt).toFixed(2)} â¬</strong></div>
-                <div>TVA : <strong>{parseFloat(viewVente.montantTva).toFixed(2)} â¬</strong></div>
-                <div className="text-base font-bold">
-                  Total TTC : {parseFloat(viewVente.montantTtc).toFixed(2)} â¬
+                    </thead>
+                    <tbody>
+                      {(viewVente.lignes ?? []).map((l) => (
+                        <tr key={l.id} className="border-t">
+                          <td className="px-3 py-1">{l.description}</td>
+                          <td className="px-3 py-1 text-right">{l.quantite}</td>
+                          <td className="px-3 py-1 text-right">{parseFloat(l.prixUnitaire).toFixed(2)} €</td>
+                          <td className="px-3 py-1 text-right">{parseFloat(l.montantTtc).toFixed(2)} €</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <div className="text-right space-y-1">
+                  <div>Sous-total HT : <strong>{parseFloat(viewVente.montantHt).toFixed(2)} €</strong></div>
+                  <div>TVA : <strong>{parseFloat(viewVente.montantTva).toFixed(2)} €</strong></div>
+                  <div className="text-base font-bold">
+                    Total TTC : {parseFloat(viewVente.montantTtc).toFixed(2)} €
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setViewVente(null)}>
-              Fermer
-            </Button>
+            <Button variant="outline" onClick={() => setViewVente(null)}>Fermer</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
   );
 }
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function VentesPage() {
   const [tab, setTab] = useState<"comptoir" | "prescription">("comptoir");
@@ -491,7 +611,6 @@ export default function VentesPage() {
         </div>
       </div>
 
-      {/* Tabs */}
       <div className="border-b">
         <div className="flex gap-1">
           {(["comptoir", "prescription"] as const).map((t) => (
@@ -505,15 +624,9 @@ export default function VentesPage() {
               }`}
             >
               {t === "comptoir" ? (
-                <>
-                  <ShoppingCart className="h-4 w-4 inline mr-1" />
-                  Ventes comptoir
-                </>
+                <><ShoppingCart className="h-4 w-4 inline mr-1" />Ventes comptoir</>
               ) : (
-                <>
-                  <FileText className="h-4 w-4 inline mr-1" />
-                  Ventes sur prescription
-                </>
+                <><FileText className="h-4 w-4 inline mr-1" />Ventes sur prescription</>
               )}
             </button>
           ))}
