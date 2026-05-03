@@ -34,7 +34,6 @@ export async function nextInvoiceNumber(tx: Tx, clinicId: string): Promise<strin
   await acquireAdvisoryLock(tx, "invoice_numbering", clinicId);
   const year = new Date().getFullYear();
   const prefix = `FACT-${year}-`;
-
   const [row] = await tx
     .select({ numero: facturesTable.numero })
     .from(facturesTable)
@@ -46,7 +45,6 @@ export async function nextInvoiceNumber(tx: Tx, clinicId: string): Promise<strin
     )
     .orderBy(desc(facturesTable.id))
     .limit(1);
-
   const lastSeq = row?.numero ? parseInt(row.numero.split("-")[2] ?? "0", 10) || 0 : 0;
   return `${prefix}${String(lastSeq + 1).padStart(4, "0")}`;
 }
@@ -55,7 +53,6 @@ export async function nextOrdonnanceNumber(tx: Tx, clinicId: string): Promise<st
   await acquireAdvisoryLock(tx, "ordonnance_numbering", clinicId);
   const year = new Date().getFullYear();
   const prefix = `ORD-${year}-`;
-
   const [row] = await tx
     .select({ numero: ordonnancesTable.numeroOrdonnance })
     .from(ordonnancesTable)
@@ -67,7 +64,6 @@ export async function nextOrdonnanceNumber(tx: Tx, clinicId: string): Promise<st
     )
     .orderBy(desc(ordonnancesTable.id))
     .limit(1);
-
   const lastSeq = row?.numeroOrdonnance
     ? parseInt(row.numeroOrdonnance.split("-")[2] ?? "0", 10) || 0
     : 0;
@@ -100,6 +96,7 @@ export function computeInvoiceTotals(
   defaultTvaRate: number,
 ): InvoiceTotals {
   const totalsByRate = new Map<number, { ht: number; tva: number }>();
+
   for (const a of actes) {
     const ht = a.prixUnitaire * a.quantite;
     const rate = a.tvaRate ?? defaultTvaRate;
@@ -108,6 +105,7 @@ export function computeInvoiceTotals(
     cur.tva += ht * (rate / 100);
     totalsByRate.set(rate, cur);
   }
+
   const montantHT = [...totalsByRate.values()].reduce((s, t) => s + t.ht, 0);
   const totalTva = [...totalsByRate.values()].reduce((s, t) => s + t.tva, 0);
   const montantTTC = montantHT + totalTva;
@@ -124,20 +122,18 @@ export function computeInvoiceTotals(
 }
 
 // ---------------------------------------------------------------------------
-// generateVenteNumero — numérotation atomique des ventes (standalone)
+// generateVenteNumero — numérotation des ventes (sans verrou advisory)
+// L'index unique (clinicId, numero) protège contre les doublons.
 // ---------------------------------------------------------------------------
 export async function generateVenteNumero(clinicId: string): Promise<string> {
-  return await db.transaction(async (tx) => {
-    await acquireAdvisoryLock(tx, "vente_numbering", clinicId);
-    const year = new Date().getFullYear();
-    const prefix = `VTE-${year}-`;
-    const [row] = await tx
-      .select({ numero: ventesTable.numero })
-      .from(ventesTable)
-      .where(and(eq(ventesTable.clinicId, clinicId), sql`${ventesTable.numero} LIKE ${prefix + "%"}`))
-      .orderBy(desc(ventesTable.id))
-      .limit(1);
-    const lastSeq = row?.numero ? parseInt(row.numero.split("-")[2] ?? "0", 10) || 0 : 0;
-    return `${prefix}${String(lastSeq + 1).padStart(4, "0")}`;
-  });
+  const year = new Date().getFullYear();
+  const prefix = `VTE-${year}-`;
+  const [row] = await db
+    .select({ numero: ventesTable.numero })
+    .from(ventesTable)
+    .where(and(eq(ventesTable.clinicId, clinicId), sql`${ventesTable.numero} LIKE ${prefix + "%"}`))
+    .orderBy(desc(ventesTable.id))
+    .limit(1);
+  const lastSeq = row?.numero ? parseInt(row.numero.split("-")[2] ?? "0", 10) || 0 : 0;
+  return `${prefix}${String(lastSeq + 1).padStart(4, "0")}`;
 }
