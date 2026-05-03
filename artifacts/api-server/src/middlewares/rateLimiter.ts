@@ -6,6 +6,7 @@ export const apiLimiter = rateLimit({
   max: 200,
   standardHeaders: true,
   legacyHeaders: false,
+  validate: false,
   skip: (req) => req.path === "/health",
   message: fail("RATE_LIMIT", "Trop de requ\u00eates, r\u00e9essayez dans une minute"),
 });
@@ -15,5 +16,6 @@ export const aiLimiter = rateLimit({
   max: 10,
   standardHeaders: true,
   legacyHeaders: false,
+  validate: false,
   message: fail("AI_RATE_LIMIT", "Limite IA atteinte, r\u00e9essayez dans une minute"),
 });
