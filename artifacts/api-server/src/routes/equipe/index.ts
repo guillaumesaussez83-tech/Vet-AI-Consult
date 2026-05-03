@@ -16,9 +16,9 @@ router.get("/", extractClinic(), async (req, res) => {
       .from(assistantsTable)
       .where(and(eq(assistantsTable.clinicId, clinicId), eq(assistantsTable.actif, true)))
       .orderBy(assistantsTable.nom);
-    return ok(res, assistants);
+    return res.json(ok(assistants));
   } catch (err) {
-    return fail(res, 500, "Erreur lors de la récupération de l'équipe", err);
+    return res.status(500).json(fail("INTERNAL_ERROR", "Erreur lors de la récupération de l'équipe", err));
   }
 });
 
@@ -31,9 +31,9 @@ router.get("/all", extractClinic(), async (req, res) => {
       .from(assistantsTable)
       .where(eq(assistantsTable.clinicId, clinicId))
       .orderBy(assistantsTable.nom);
-    return ok(res, assistants);
+    return res.json(ok(assistants));
   } catch (err) {
-    return fail(res, 500, "Erreur lors de la récupération de l'équipe", err);
+    return res.status(500).json(fail("INTERNAL_ERROR", "Erreur lors de la récupération de l'équipe", err));
   }
 });
 
@@ -42,15 +42,15 @@ router.get("/:id", extractClinic(), async (req, res) => {
   try {
     const clinicId = req.clinicId!;
     const id = parseInt(req.params.id);
-    if (isNaN(id)) return fail(res, 400, "ID invalide");
+    if (isNaN(id)) return res.status(400).json(fail("VALIDATION_ERROR", "ID invalide"));
     const [assistant] = await db
       .select()
       .from(assistantsTable)
       .where(and(eq(assistantsTable.id, id), eq(assistantsTable.clinicId, clinicId)));
-    if (!assistant) return fail(res, 404, "Assistante non trouvée");
-    return ok(res, assistant);
+    if (!assistant) return res.status(404).json(fail("NOT_FOUND", "Assistante non trouvée"));
+    return res.json(ok(assistant));
   } catch (err) {
-    return fail(res, 500, "Erreur lors de la récupération", err);
+    return res.status(500).json(fail("INTERNAL_ERROR", "Erreur lors de la récupération", err));
   }
 });
 
@@ -59,11 +59,11 @@ router.post("/", extractClinic(), async (req, res) => {
   try {
     const clinicId = req.clinicId!;
     const parsed = insertAssistantSchema.safeParse({ ...req.body, clinicId });
-    if (!parsed.success) return fail(res, 400, "Données invalides", parsed.error.flatten());
+    if (!parsed.success) return res.status(400).json(fail("VALIDATION_ERROR", "Données invalides", parsed.error.flatten()));
     const [created] = await db.insert(assistantsTable).values(parsed.data).returning();
-    return ok(res, created, 201);
+    return res.status(201).json(ok(created));
   } catch (err) {
-    return fail(res, 500, "Erreur lors de la création", err);
+    return res.status(500).json(fail("INTERNAL_ERROR", "Erreur lors de la création", err));
   }
 });
 
@@ -72,17 +72,17 @@ router.put("/:id", extractClinic(), async (req, res) => {
   try {
     const clinicId = req.clinicId!;
     const id = parseInt(req.params.id);
-    if (isNaN(id)) return fail(res, 400, "ID invalide");
+    if (isNaN(id)) return res.status(400).json(fail("VALIDATION_ERROR", "ID invalide"));
     const { id: _id, clinicId: _cid, createdAt: _ca, updatedAt: _ua, ...body } = req.body;
     const [updated] = await db
       .update(assistantsTable)
       .set({ ...body, updatedAt: new Date() })
       .where(and(eq(assistantsTable.id, id), eq(assistantsTable.clinicId, clinicId)))
       .returning();
-    if (!updated) return fail(res, 404, "Assistante non trouvée");
-    return ok(res, updated);
+    if (!updated) return res.status(404).json(fail("NOT_FOUND", "Assistante non trouvée"));
+    return res.json(ok(updated));
   } catch (err) {
-    return fail(res, 500, "Erreur lors de la mise à jour", err);
+    return res.status(500).json(fail("INTERNAL_ERROR", "Erreur lors de la mise à jour", err));
   }
 });
 
@@ -91,16 +91,16 @@ router.delete("/:id", extractClinic(), async (req, res) => {
   try {
     const clinicId = req.clinicId!;
     const id = parseInt(req.params.id);
-    if (isNaN(id)) return fail(res, 400, "ID invalide");
+    if (isNaN(id)) return res.status(400).json(fail("VALIDATION_ERROR", "ID invalide"));
     const [updated] = await db
       .update(assistantsTable)
       .set({ actif: false, updatedAt: new Date() })
       .where(and(eq(assistantsTable.id, id), eq(assistantsTable.clinicId, clinicId)))
       .returning();
-    if (!updated) return fail(res, 404, "Assistante non trouvée");
-    return ok(res, { message: "Assistante désactivée" });
+    if (!updated) return res.status(404).json(fail("NOT_FOUND", "Assistante non trouvée"));
+    return res.json(ok({ message: "Assistante désactivée" }));
   } catch (err) {
-    return fail(res, 500, "Erreur lors de la suppression", err);
+    return res.status(500).json(fail("INTERNAL_ERROR", "Erreur lors de la suppression", err));
   }
 });
 
