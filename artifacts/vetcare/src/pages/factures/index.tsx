@@ -1,23 +1,23 @@
 import { useState } from "react";
 import { Link } from "wouter";
-import { useListFactures, useListConsultations, useUpdateFactureStatut } from "@workspace/api-client-react";
+import { useListFactures, useListConsultations } from "@workspace/api-client-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { FileText, ArrowRight, Euro, AlertCircle, CheckCircle, Clock, CreditCard, Smartphone, Banknote, Building2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, useMutation } from "@tanstack/react-query";
+import { useAuth } from "@clerk/react";
 import { formatDateFR } from "@/lib/utils";
 
 const MODES_PAIEMENT = [
   { value: "carte_bancaire", label: "Carte bancaire", icon: CreditCard },
   { value: "carte_sans_contact", label: "Sans contact (NFC)", icon: Smartphone },
-  { value: "especes", label: "Espèces", icon: Banknote },
-  { value: "cheque", label: "Chèque", icon: FileText },
+  { value: "especes", label: "EspÃ¨ces", icon: Banknote },
+  { value: "cheque", label: "ChÃ¨que", icon: FileText },
   { value: "virement", label: "Virement", icon: Building2 },
   { value: "autre", label: "Autre", icon: Euro },
 ];
@@ -48,8 +48,8 @@ function EmptyState({ icon: Icon, message, sub }: { icon: any; message: string; 
 function FactureCard({ f }: { f: any }) {
   const config: Record<string, { label: string; className: string }> = {
     en_attente: { label: "En attente", className: "text-amber-600 bg-amber-50 border-amber-200" },
-    payee: { label: "Payée", className: "text-green-600 bg-green-50 border-green-200" },
-    annulee: { label: "Annulée", className: "text-red-600 bg-red-50 border-red-200" },
+    payee: { label: "PayÃ©e", className: "text-green-600 bg-green-50 border-green-200" },
+    annulee: { label: "AnnulÃ©e", className: "text-red-600 bg-red-50 border-red-200" },
   };
   const s = config[f.statut] ?? { label: f.statut, className: "" };
   return (
@@ -65,14 +65,14 @@ function FactureCard({ f }: { f: any }) {
                 <div className="font-semibold">{f.numero}</div>
                 <div className="text-sm text-muted-foreground">
                   {formatDateFR(f.dateEmission)}
-                  {f.consultation?.patient && ` — ${f.consultation.patient.nom}`}
+                  {f.consultation?.patient && ` â ${f.consultation.patient.nom}`}
                   {f.consultation?.patient?.owner && ` (${f.consultation.patient.owner.prenom} ${f.consultation.patient.owner.nom})`}
                 </div>
               </div>
             </div>
             <div className="flex items-center gap-4">
               <div className="text-right">
-                <div className="font-semibold">{f.montantTTC?.toFixed(2)} €</div>
+                <div className="font-semibold">{f.montantTTC?.toFixed(2)} â¬</div>
                 <div className="text-xs text-muted-foreground">TTC</div>
               </div>
               {f.modePaiement && (
@@ -101,7 +101,7 @@ function ConsultationSansFactureCard({ c }: { c: any }) {
               <div>
                 <div className="font-semibold">{c.patient?.nom ?? "Patient"}</div>
                 <div className="text-sm text-muted-foreground">
-                  {formatDateFR(c.date)} — {c.motif || "Consultation"}
+                  {formatDateFR(c.date)} â {c.motif || "Consultation"}
                   {c.patient?.owner && ` (${c.patient.owner.prenom} ${c.patient.owner.nom})`}
                 </div>
               </div>
@@ -122,27 +122,58 @@ function ConsultationSansFactureCard({ c }: { c: any }) {
 function EncaisserDialog({ facture, open, onClose }: { facture: any; open: boolean; onClose: () => void }) {
   const [mode, setMode] = useState("");
   const [montantRecu, setMontantRecu] = useState("");
-  const { mutate: patchFacture, isPending } = useUpdateFactureStatut();
+  const { getToken } = useAuth();
+  const { mutate: patchFacture, isPending } = useMutation({
+    mutationFn: async (payload: { id: number; data: Record<string, unknown> }) => {
+      const token = await getToken();
+      const API_BASE = (import.meta as any).env?.VITE_API_URL ?? "";
+      const res = await fetch(`${API_BASE}/api/factures/${payload.id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload.data),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error((err as any).message ?? "Erreur lors de l'enregistrement");
+      }
+      return res.json();
+    },
+  });
   const { toast } = useToast();
   const qc = useQueryClient();
 
   const isEspeces = mode === "especes";
   const montantTTC = facture?.montantTTC ?? 0;
-  const renduMonnaie = isEspeces && montantRecu ? Math.max(0, parseFloat(montantRecu) - montantTTC) : null;
+  const renduMonnaie = isEspeces && montantRecu
+    ? Math.max(0, parseFloat(montantRecu) - montantTTC)
+    : null;
 
   function handleEncaisser() {
-    if (!mode) { toast({ title: "Sélectionnez un mode de paiement", variant: "destructive" }); return; }
-    if (isEspeces && (!montantRecu || parseFloat(montantRecu) < montantTTC)) {
-      toast({ title: "Montant reçu insuffisant", variant: "destructive" });
+    if (!mode) {
+      toast({ title: "SÃ©lectionnez un mode de paiement", variant: "destructive" });
       return;
     }
-    const payload: any = { statut: "payee", datePaiement: new Date().toISOString().slice(0, 10), modePaiement: mode };
+    if (isEspeces && (!montantRecu || parseFloat(montantRecu) < montantTTC)) {
+      toast({ title: "Montant reÃ§u insuffisant", variant: "destructive" });
+      return;
+    }
+    const payload: any = {
+      statut: "payee",
+      datePaiement: new Date().toISOString().slice(0, 10),
+      modePaiement: mode,
+    };
     if (isEspeces && montantRecu) payload.montantEspecesRecu = parseFloat(montantRecu);
+
     patchFacture({ id: facture.id, data: payload }, {
       onSuccess: () => {
         const modeLabel = MODES_PAIEMENT.find(m => m.value === mode)?.label ?? mode;
-        const renduStr = renduMonnaie != null && renduMonnaie > 0 ? ` — Rendu : ${renduMonnaie.toFixed(2)} €` : "";
-        toast({ title: "Facture encaissée", description: `${modeLabel}${renduStr}` });
+        const renduStr = renduMonnaie != null && renduMonnaie > 0
+          ? ` â Rendu : ${renduMonnaie.toFixed(2)} â¬`
+          : "";
+        toast({ title: "Facture encaissÃ©e", description: `${modeLabel}${renduStr}` });
         qc.invalidateQueries({ queryKey: ["factures"] });
         onClose();
       },
@@ -161,8 +192,8 @@ function EncaisserDialog({ facture, open, onClose }: { facture: any; open: boole
         </DialogHeader>
         <div className="space-y-4 py-2">
           <div className="bg-muted/30 rounded-lg p-4 text-center">
-            <p className="text-sm text-muted-foreground mb-1">Montant TTC à encaisser</p>
-            <p className="text-3xl font-bold text-primary">{montantTTC.toFixed(2)} €</p>
+            <p className="text-sm text-muted-foreground mb-1">Montant TTC Ã  encaisser</p>
+            <p className="text-3xl font-bold text-primary">{montantTTC.toFixed(2)} â¬</p>
           </div>
           <div className="space-y-2">
             <label className="text-sm font-medium">Mode de paiement</label>
@@ -189,7 +220,7 @@ function EncaisserDialog({ facture, open, onClose }: { facture: any; open: boole
           </div>
           {isEspeces && (
             <div className="space-y-2">
-              <label className="text-sm font-medium">Montant reçu (€)</label>
+              <label className="text-sm font-medium">Montant reÃ§u (â¬)</label>
               <input
                 type="number"
                 step="0.01"
@@ -200,9 +231,11 @@ function EncaisserDialog({ facture, open, onClose }: { facture: any; open: boole
                 className="w-full border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               />
               {renduMonnaie != null && renduMonnaie >= 0 && montantRecu && (
-                <div className={`flex items-center justify-between rounded-lg p-3 font-semibold ${renduMonnaie === 0 ? "bg-green-50 text-green-700" : "bg-amber-50 text-amber-700"}`}>
+                <div className={`flex items-center justify-between rounded-lg p-3 font-semibold ${
+                  renduMonnaie === 0 ? "bg-green-50 text-green-700" : "bg-amber-50 text-amber-700"
+                }`}>
                   <span>Rendu monnaie</span>
-                  <span>{renduMonnaie.toFixed(2)} €</span>
+                  <span>{renduMonnaie.toFixed(2)} â¬</span>
                 </div>
               )}
             </div>
@@ -210,7 +243,11 @@ function EncaisserDialog({ facture, open, onClose }: { facture: any; open: boole
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Annuler</Button>
-          <Button onClick={handleEncaisser} disabled={!mode || isPending} className="min-w-[140px]">
+          <Button
+            onClick={handleEncaisser}
+            disabled={!mode || isPending}
+            className="min-w-[140px]"
+          >
             <CheckCircle className="h-4 w-4 mr-2" />
             {isPending ? "Enregistrement..." : "Valider l'encaissement"}
           </Button>
@@ -226,15 +263,12 @@ export default function FacturesPage() {
   const [encaisserFacture, setEncaisserFacture] = useState<any>(null);
 
   const isLoading = loadingFactures || loadingConsultations;
-
   const factureConsultationIds = new Set((factures ?? []).map((f: any) => f.consultationId));
-
   const aFacturer = (consultations ?? []).filter(
     (c: any) => c.statut === "terminee" && !factureConsultationIds.has(c.id)
   );
   const aRegler = (factures ?? []).filter((f: any) => f.statut === "en_attente");
   const historique = (factures ?? []).filter((f: any) => f.statut === "payee" || f.statut === "annulee");
-
   const totalARegler = aRegler.reduce((s: number, f: any) => s + (f.montantTTC ?? 0), 0);
 
   return (
@@ -242,12 +276,12 @@ export default function FacturesPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Facturation</h1>
-          <p className="text-muted-foreground">Gestion des factures, devis et règlements</p>
+          <p className="text-muted-foreground">Gestion des factures, devis et rÃ¨glements</p>
         </div>
         {aRegler.length > 0 && (
           <div className="text-right">
             <div className="text-sm text-muted-foreground">A encaisser</div>
-            <div className="text-2xl font-bold text-amber-600">{totalARegler.toFixed(2)} €</div>
+            <div className="text-2xl font-bold text-amber-600">{totalARegler.toFixed(2)} â¬</div>
           </div>
         )}
       </div>
@@ -276,7 +310,7 @@ export default function FacturesPage() {
 
         <TabsContent value="a-facturer" className="mt-4">
           {isLoading ? <SkeletonList /> : aFacturer.length === 0 ? (
-            <EmptyState icon={CheckCircle} message="Tout est facture" sub="Toutes les consultations terminées ont une facture" />
+            <EmptyState icon={CheckCircle} message="Tout est facture" sub="Toutes les consultations terminÃ©es ont une facture" />
           ) : (
             <div className="space-y-3">
               {aFacturer.map((c: any) => <ConsultationSansFactureCard key={c.id} c={c} />)}
@@ -295,7 +329,11 @@ export default function FacturesPage() {
                   <Button
                     size="sm"
                     className="absolute right-14 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity"
-                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); setEncaisserFacture(f); }}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setEncaisserFacture(f);
+                    }}
                   >
                     <CreditCard className="h-4 w-4 mr-1.5" />
                     Encaisser
