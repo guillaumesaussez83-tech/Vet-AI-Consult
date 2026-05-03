@@ -22,9 +22,9 @@ router.get("/", extractClinic(), async (req, res) => {
       .from(ventesTable)
       .where(and(...conditions))
       .orderBy(desc(ventesTable.date));
-    return ok(res, ventes);
+    return res.json(ok(ventes));
   } catch (err) {
-    return fail(res, 500, "Erreur lors de la recuperation des ventes", err);
+    return res.status(500).json(fail("INTERNAL_ERROR", "Erreur lors de la recuperation des ventes", err));
   }
 });
 
@@ -33,19 +33,19 @@ router.get("/:id", extractClinic(), async (req, res) => {
   try {
     const clinicId = req.clinicId!;
     const id = parseInt(req.params.id);
-    if (isNaN(id)) return fail(res, 400, "ID invalide");
+    if (isNaN(id)) return res.status(400).json(fail("VALIDATION_ERROR", "ID invalide"));
     const [vente] = await db
       .select()
       .from(ventesTable)
       .where(and(eq(ventesTable.id, id), eq(ventesTable.clinicId, clinicId)));
-    if (!vente) return fail(res, 404, "Vente non trouvee");
+    if (!vente) return res.status(404).json(fail("NOT_FOUND", "Vente non trouvee"));
     const lignes = await db
       .select()
       .from(venteLignesTable)
       .where(eq(venteLignesTable.venteId, id));
-    return ok(res, { ...vente, lignes });
+    return res.json(ok({ ...vente, lignes }));
   } catch (err) {
-    return fail(res, 500, "Erreur lors de la recuperation", err);
+    return res.status(500).json(fail("INTERNAL_ERROR", "Erreur lors de la recuperation", err));
   }
 });
 
@@ -56,7 +56,7 @@ router.post("/", extractClinic(), async (req, res) => {
     const { lignes: lignesData, ...venteData } = req.body;
     const numero = await generateVenteNumero(clinicId);
     const parsed = insertVenteSchema.safeParse({ ...venteData, clinicId, numero });
-    if (!parsed.success) return fail(res, 400, "Donnees invalides", parsed.error.flatten());
+    if (!parsed.success) return res.status(400).json(fail("VALIDATION_ERROR", "Donnees invalides", parsed.error.flatten()));
     const [vente] = await db.insert(ventesTable).values(parsed.data).returning();
     let lignes: typeof venteLignesTable.$inferSelect[] = [];
     if (Array.isArray(lignesData) && lignesData.length > 0) {
@@ -67,9 +67,9 @@ router.post("/", extractClinic(), async (req, res) => {
       });
       lignes = await db.insert(venteLignesTable).values(lignesInsert).returning();
     }
-    return ok(res, { ...vente, lignes }, 201);
+    return res.status(201).json(ok({ ...vente, lignes }));
   } catch (err) {
-    return fail(res, 500, "Erreur lors de la creation de la vente", err);
+    return res.status(500).json(fail("INTERNAL_ERROR", "Erreur lors de la creation de la vente", err));
   }
 });
 
@@ -78,14 +78,14 @@ router.put("/:id", extractClinic(), async (req, res) => {
   try {
     const clinicId = req.clinicId!;
     const id = parseInt(req.params.id);
-    if (isNaN(id)) return fail(res, 400, "ID invalide");
+    if (isNaN(id)) return res.status(400).json(fail("VALIDATION_ERROR", "ID invalide"));
     const { id: _id, clinicId: _cid, numero: _num, createdAt: _ca, updatedAt: _ua, lignes: lignesData, ...body } = req.body;
     const [updated] = await db
       .update(ventesTable)
       .set({ ...body, updatedAt: new Date() })
       .where(and(eq(ventesTable.id, id), eq(ventesTable.clinicId, clinicId)))
       .returning();
-    if (!updated) return fail(res, 404, "Vente non trouvee");
+    if (!updated) return res.status(404).json(fail("NOT_FOUND", "Vente non trouvee"));
     if (Array.isArray(lignesData)) {
       await db.delete(venteLignesTable).where(eq(venteLignesTable.venteId, id));
       if (lignesData.length > 0) {
@@ -98,9 +98,9 @@ router.put("/:id", extractClinic(), async (req, res) => {
       }
     }
     const lignes = await db.select().from(venteLignesTable).where(eq(venteLignesTable.venteId, id));
-    return ok(res, { ...updated, lignes });
+    return res.json(ok({ ...updated, lignes }));
   } catch (err) {
-    return fail(res, 500, "Erreur lors de la mise a jour", err);
+    return res.status(500).json(fail("INTERNAL_ERROR", "Erreur lors de la mise a jour", err));
   }
 });
 
@@ -109,11 +109,11 @@ router.delete("/:id", extractClinic(), async (req, res) => {
   try {
     const clinicId = req.clinicId!;
     const id = parseInt(req.params.id);
-    if (isNaN(id)) return fail(res, 400, "ID invalide");
+    if (isNaN(id)) return res.status(400).json(fail("VALIDATION_ERROR", "ID invalide"));
     await db.delete(ventesTable).where(and(eq(ventesTable.id, id), eq(ventesTable.clinicId, clinicId)));
-    return ok(res, { message: "Vente supprimee" });
+    return res.json(ok({ message: "Vente supprimee" }));
   } catch (err) {
-    return fail(res, 500, "Erreur lors de la suppression", err);
+    return res.status(500).json(fail("INTERNAL_ERROR", "Erreur lors de la suppression", err));
   }
 });
 
