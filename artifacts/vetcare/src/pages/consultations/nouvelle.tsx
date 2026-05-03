@@ -32,7 +32,7 @@ import { PatientBarre } from "@/components/PatientBarre";
 import { VoiceRecorder } from "@/components/VoiceRecorder";
 import DicteeOrdonnanceDialog, { PrescriptionConfirmee } from "@/components/DicteeOrdonnanceDialog";
 
-/** Fetch authentifiÃ© : injecte le Bearer token Clerk sur toutes les requÃªtes /api/* */
+/** Fetch authentifié : injecte le Bearer token Clerk sur toutes les requêtes /api/* */
 async function authFetch(input: RequestInfo, init?: RequestInit): Promise<Response> {
   const token = await (window as any).Clerk?.session?.getToken();
   const headers = new Headers(init?.headers);
@@ -42,10 +42,10 @@ async function authFetch(input: RequestInfo, init?: RequestInit): Promise<Respon
 
 const ETAPES = [
   { id: 1, label: "Patient & Contexte" },
-  { id: 2, label: "AnamnÃ¨se" },
+  { id: 2, label: "Anamnèse" },
   { id: 3, label: "Examen clinique" },
   { id: 4, label: "Diagnostic IA" },
-  { id: 5, label: "Ordonnance & RÃ©cap" },
+  { id: 5, label: "Ordonnance & Récap" },
 ];
 
 type DiagnosticItem = { nom: string; probabilite: string; description: string };
@@ -110,7 +110,7 @@ export default function NouvelleConsultationPage() {
 
   const handleDiagnosticIA = async () => {
     if (!selectedPatient) {
-      toast({ title: "Aucun patient sÃ©lectionnÃ©", variant: "destructive" });
+      toast({ title: "Aucun patient sélectionné", variant: "destructive" });
       return;
     }
     setIsDiagnosticLoading(true);
@@ -146,7 +146,7 @@ export default function NouvelleConsultationPage() {
       });
       setStep4(f => ({ ...f, diagnosticIA: res.texteComplet }));
     } catch {
-      toast({ title: "Erreur lors de la gÃ©nÃ©ration du diagnostic IA", variant: "destructive" });
+      toast({ title: "Erreur lors de la génération du diagnostic IA", variant: "destructive" });
     } finally {
       setIsDiagnosticLoading(false);
     }
@@ -154,7 +154,7 @@ export default function NouvelleConsultationPage() {
 
   const handleSubmit = async () => {
     if (!step1.patientId) {
-      toast({ title: "Veuillez sÃ©lectionner un patient", variant: "destructive" });
+      toast({ title: "Veuillez sélectionner un patient", variant: "destructive" });
       setEtape(1);
       return;
     }
@@ -196,10 +196,10 @@ export default function NouvelleConsultationPage() {
         });
       }
       queryClient.invalidateQueries({ queryKey: getListConsultationsQueryKey() });
-      toast({ title: "Consultation crÃ©Ã©e avec succÃ¨s" });
+      toast({ title: "Consultation créée avec succès" });
       navigate(`/consultations/${consultation.id}`);
     } catch {
-      toast({ title: "Erreur lors de la crÃ©ation de la consultation", variant: "destructive" });
+      toast({ title: "Erreur lors de la création de la consultation", variant: "destructive" });
     }
   };
 
@@ -222,7 +222,7 @@ export default function NouvelleConsultationPage() {
         </Link>
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Nouvelle Consultation</h1>
-          <p className="text-muted-foreground">Renseignez les informations Ã©tape par Ã©tape</p>
+          <p className="text-muted-foreground">Renseignez les informations étape par étape</p>
         </div>
       </div>
 
@@ -269,7 +269,7 @@ export default function NouvelleConsultationPage() {
         </div>
       </div>
 
-      {/* Ãtape 1 â Patient & Contexte */}
+      {/* Étape 1 — Patient & Contexte */}
       {etape === 1 && (
         <Card>
           <CardHeader>
@@ -278,23 +278,23 @@ export default function NouvelleConsultationPage() {
           <CardContent className="space-y-4">
             <div>
               <Label>Patient *</Label>
-              {/* Native select â Ã©vite le bug Radix Portal removeChild */}
+              {/* Native select — évite le bug Radix Portal removeChild */}
               <select
                 value={step1.patientId}
                 onChange={e => setStep1(f => ({ ...f, patientId: e.target.value }))}
                 className="mt-1 w-full border border-input bg-background px-3 py-2 text-sm rounded-md ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
               >
-                <option value="">SÃ©lectionner un patient...</option>
+                <option value="">Sélectionner un patient...</option>
                 {patients?.map(p => (
                   <option key={p.id} value={String(p.id)}>
-                    {p.nom} ({p.espece}) â {p.owner?.prenom} {p.owner?.nom}
+                    {p.nom} ({p.espece}) — {p.owner?.prenom} {p.owner?.nom}
                   </option>
                 ))}
               </select>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label>VÃ©tÃ©rinaire *</Label>
+                <Label>Vétérinaire *</Label>
                 <Input
                   className="mt-1"
                   value={step1.veterinaire}
@@ -325,7 +325,7 @@ export default function NouvelleConsultationPage() {
         </Card>
       )}
 
-      {/* Ãtape 2 â AnamnÃ¨se */}
+      {/* Étape 2 — Anamnèse */}
       {etape === 2 && (
         <Step2Anamnese
           anamnese={step2.anamnese}
@@ -333,7 +333,7 @@ export default function NouvelleConsultationPage() {
         />
       )}
 
-      {/* Ãtape 3 â Examen clinique */}
+      {/* Étape 3 — Examen clinique */}
       {etape === 3 && (
         <Step3ExamenClinique
           step3={step3}
@@ -343,13 +343,13 @@ export default function NouvelleConsultationPage() {
         />
       )}
 
-      {/* Ãtape 4 â Diagnostic IA */}
+      {/* Étape 4 — Diagnostic IA */}
       {etape === 4 && (
         <Card>
           <CardHeader>
-            <CardTitle>Diagnostic diffÃ©rentiel</CardTitle>
+            <CardTitle>Diagnostic différentiel</CardTitle>
             <p className="text-sm text-muted-foreground">
-              L'IA analyse les donnÃ©es cliniques pour proposer des hypothÃ¨ses diagnostiques
+              L'IA analyse les données cliniques pour proposer des hypothèses diagnostiques
             </p>
           </CardHeader>
           <CardContent className="space-y-5">
@@ -368,7 +368,7 @@ export default function NouvelleConsultationPage() {
               ) : (
                 <>
                   <Sparkles className="mr-2 h-5 w-5" />
-                  GÃ©nÃ©rer le diagnostic diffÃ©rentiel avec l'IA
+                  Générer le diagnostic différentiel avec l'IA
                 </>
               )}
             </Button>
@@ -378,9 +378,9 @@ export default function NouvelleConsultationPage() {
                 {step4Result.urgence && (
                   <div
                     className={`text-sm font-medium px-3 py-2 rounded-md border ${
-                      step4Result.urgence === "Ã©levÃ©e"
+                      step4Result.urgence === "élévée"
                         ? "bg-red-50 border-red-200 text-red-700"
-                        : step4Result.urgence === "modÃ©rÃ©e"
+                        : step4Result.urgence === "modérée"
                         ? "bg-amber-50 border-amber-200 text-amber-700"
                         : "bg-green-50 border-green-200 text-green-700"
                     }`}
@@ -411,20 +411,20 @@ export default function NouvelleConsultationPage() {
             )}
 
             <div>
-              <Label>Diagnostic retenu par le vÃ©tÃ©rinaire</Label>
+              <Label>Diagnostic retenu par le vétérinaire</Label>
               <Textarea
                 className="mt-1"
                 rows={4}
                 value={step4.diagnostic}
                 onChange={e => setStep4(f => ({ ...f, diagnostic: e.target.value }))}
-                placeholder="Diagnostic final retenu aprÃ¨s analyse des rÃ©sultats..."
+                placeholder="Diagnostic final retenu après analyse des résultats..."
               />
             </div>
           </CardContent>
         </Card>
       )}
 
-      {/* Ãtape 5 â Ordonnance & RÃ©cap */}
+      {/* Étape 5 — Ordonnance & Récap */}
       {etape === 5 && (
         <div className="space-y-5">
           <Card>
@@ -450,10 +450,10 @@ export default function NouvelleConsultationPage() {
                   <Alert className="mb-2 border-green-300 bg-green-50 text-green-800">
                     <CheckCircle className="h-4 w-4 text-green-600" />
                     <AlertDescription>
-                      {pendingPrescriptions.length} mÃ©dicament
+                      {pendingPrescriptions.length} médicament
                       {pendingPrescriptions.length > 1 ? "s" : ""} issu
-                      {pendingPrescriptions.length > 1 ? "s" : ""} de la dictÃ©e â stock sera
-                      dÃ©crÃ©mentÃ© Ã  la sauvegarde.
+                      {pendingPrescriptions.length > 1 ? "s" : ""} de la dictée — stock sera
+                      décrémenté à la sauvegarde.
                     </AlertDescription>
                   </Alert>
                 )}
@@ -461,8 +461,8 @@ export default function NouvelleConsultationPage() {
                   <Alert className="mt-2 border-amber-300 bg-amber-50 text-amber-800">
                     <AlertTriangle className="h-4 w-4 text-amber-600" />
                     <AlertDescription>
-                      Poids relevÃ© : <strong>{step3.poids} kg</strong> â Pensez Ã  adapter les
-                      posologies par kg (ex : 0.1 mL/kg, 10 mg/kgâ¦)
+                      Poids relevé : <strong>{step3.poids} kg</strong> — Pensez à adapter les
+                      posologies par kg (ex : 0.1 mL/kg, 10 mg/kg…)
                     </AlertDescription>
                   </Alert>
                 )}
@@ -483,7 +483,7 @@ export default function NouvelleConsultationPage() {
                   rows={3}
                   value={step5.notes}
                   onChange={e => setStep5(f => ({ ...f, notes: e.target.value }))}
-                  placeholder="Notes pour l'Ã©quipe soignante, suivi recommandÃ©..."
+                  placeholder="Notes pour l'équipe soignante, suivi recommandé..."
                 />
               </div>
             </CardContent>
@@ -503,20 +503,20 @@ export default function NouvelleConsultationPage() {
           />
 
           <div className="bg-muted/40 border rounded-xl p-5 space-y-3 text-sm">
-            <p className="font-semibold text-base">RÃ©capitulatif</p>
+            <p className="font-semibold text-base">Récapitulatif</p>
             <div className="grid grid-cols-2 gap-x-6 gap-y-2">
               <span className="text-muted-foreground">Patient</span>
               <span className="font-medium">
-                {selectedPatient ? `${selectedPatient.nom} (${selectedPatient.espece})` : "â"}
+                {selectedPatient ? `${selectedPatient.nom} (${selectedPatient.espece})` : "—"}
               </span>
-              <span className="text-muted-foreground">PropriÃ©taire</span>
+              <span className="text-muted-foreground">Propriétaire</span>
               <span>
                 {selectedPatient?.owner
                   ? `${selectedPatient.owner.prenom} ${selectedPatient.owner.nom}`
-                  : "â"}
+                  : "—"}
               </span>
-              <span className="text-muted-foreground">VÃ©tÃ©rinaire</span>
-              <span>{step1.veterinaire || "â"}</span>
+              <span className="text-muted-foreground">Vétérinaire</span>
+              <span>{step1.veterinaire || "—"}</span>
               <span className="text-muted-foreground">Date</span>
               <span>{formatDateFR(step1.date)}</span>
               {step1.motif && (
@@ -533,8 +533,8 @@ export default function NouvelleConsultationPage() {
               )}
               {step3.temperature && (
                 <>
-                  <span className="text-muted-foreground">TempÃ©rature</span>
-                  <span>{step3.temperature} Â°C</span>
+                  <span className="text-muted-foreground">Température</span>
+                  <span>{step3.temperature} °C</span>
                 </>
               )}
               {step4.diagnostic && (
@@ -548,7 +548,7 @@ export default function NouvelleConsultationPage() {
         </div>
       )}
 
-      {/* Navigation PrÃ©cÃ©dent / Suivant */}
+      {/* Navigation Précédent / Suivant */}
       <div className="flex items-center justify-between pt-2">
         <Button
           type="button"
@@ -557,7 +557,7 @@ export default function NouvelleConsultationPage() {
           disabled={etape === 1}
         >
           <ArrowLeft className="mr-2 h-4 w-4" />
-          PrÃ©cÃ©dent
+          Précédent
         </Button>
         {etape < 5 ? (
           <Button type="button" onClick={() => setEtape(e => e + 1)} disabled={!canNext()}>
@@ -569,12 +569,12 @@ export default function NouvelleConsultationPage() {
             {isSubmitting ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                CrÃ©ation...
+                Création...
               </>
             ) : (
               <>
                 <CheckCircle className="mr-2 h-4 w-4" />
-                CrÃ©er la consultation
+                Créer la consultation
               </>
             )}
           </Button>
@@ -611,27 +611,27 @@ function Step2Anamnese({
     if (!res.ok) throw new Error("Erreur lors de la reformulation");
     const json = await res.json();
     setAnamnese((json.data ?? json).anamnese);
-    toast({ title: "AnamnÃ¨se reformulÃ©e par Claude" });
+    toast({ title: "Anamnèse reformulée par Claude" });
   };
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>AnamnÃ¨se</CardTitle>
+        <CardTitle>Anamnèse</CardTitle>
         <p className="text-sm text-muted-foreground">
-          Histoire clinique rapportÃ©e par le propriÃ©taire
+          Histoire clinique rapportée par le propriétaire
         </p>
       </CardHeader>
       <CardContent className="space-y-4">
         <VoiceRecorder onAction={handleReformuler} actionLabel="Reformuler avec l'IA" />
         <div>
-          <Label>AnamnÃ¨se (ou saisie manuelle)</Label>
+          <Label>Anamnèse (ou saisie manuelle)</Label>
           <Textarea
             className="mt-1"
             rows={10}
             value={anamnese}
             onChange={e => setAnamnese(e.target.value)}
-            placeholder="DÃ©crivez l'histoire clinique : dÃ©but des symptÃ´mes, Ã©volution, contexte, traitements en cours, comportement alimentaire, hydratation, vaccination, environnement..."
+            placeholder="Décrivez l'histoire clinique : début des symptômes, évolution, contexte, traitements en cours, comportement alimentaire, hydratation, vaccination, environnement..."
           />
         </div>
       </CardContent>
@@ -669,7 +669,7 @@ function Step3ExamenClinique({
     if (!res.ok) throw new Error("Erreur lors de la structuration");
     const json = await res.json();
     setStep3(f => ({ ...f, examenClinique: (json.data ?? json).examenClinique }));
-    toast({ title: "Examen clinique structurÃ© par Claude" });
+    toast({ title: "Examen clinique structuré par Claude" });
   };
 
   const handleFilesChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -699,7 +699,7 @@ function Step3ExamenClinique({
           { name: file.name, objectPath, type: file.type, previewUrl },
         ]);
       }
-      toast({ title: `${files.length} fichier(s) ajoutÃ©(s)` });
+      toast({ title: `${files.length} fichier(s) ajouté(s)` });
     } catch (err: any) {
       toast({ title: err?.message || "Erreur lors de l'upload", variant: "destructive" });
     } finally {
@@ -718,7 +718,7 @@ function Step3ExamenClinique({
         <CardHeader>
           <CardTitle>Examen clinique</CardTitle>
           <p className="text-sm text-muted-foreground">
-            Constantes vitales et observations par systÃ¨mes
+            Constantes vitales et observations par systèmes
           </p>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -735,7 +735,7 @@ function Step3ExamenClinique({
               />
             </div>
             <div>
-              <Label>TempÃ©rature (Â°C)</Label>
+              <Label>Température (°C)</Label>
               <Input
                 className="mt-1"
                 type="number"
@@ -754,7 +754,7 @@ function Step3ExamenClinique({
               rows={7}
               value={step3.examenClinique}
               onChange={e => setStep3(f => ({ ...f, examenClinique: e.target.value }))}
-              placeholder="Ãtat gÃ©nÃ©ral, muqueuses, frÃ©quence cardiaque, respiratoire, auscultation, palpation abdominale, examen locomoteur, ganglions, peau et phanÃ¨res..."
+              placeholder="État général, muqueuses, fréquence cardiaque, respiratoire, auscultation, palpation abdominale, examen locomoteur, ganglions, peau et phanères..."
             />
           </div>
         </CardContent>
@@ -762,12 +762,12 @@ function Step3ExamenClinique({
 
       <Card>
         <CardHeader>
-          <CardTitle>Examens complÃ©mentaires</CardTitle>
-          <p className="text-sm text-muted-foreground">RÃ©sultats biologiques, imagerie, analyses</p>
+          <CardTitle>Examens complémentaires</CardTitle>
+          <p className="text-sm text-muted-foreground">Résultats biologiques, imagerie, analyses</p>
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
-            <Label>RÃ©sultats (texte)</Label>
+            <Label>Résultats (texte)</Label>
             <Textarea
               className="mt-1"
               rows={4}
@@ -775,13 +775,13 @@ function Step3ExamenClinique({
               onChange={e =>
                 setStep3(f => ({ ...f, examensComplementaires: e.target.value }))
               }
-              placeholder="NFS, biochimie, urines, rÃ©sultats d'imagerie... (laisser vide si aucun)"
+              placeholder="NFS, biochimie, urines, résultats d'imagerie... (laisser vide si aucun)"
             />
           </div>
           <div>
             <Label className="flex items-center gap-2">
               <Upload className="h-4 w-4" />
-              Ajouter bilans sanguins, Ã©cho, radio
+              Ajouter bilans sanguins, écho, radio
             </Label>
             <div className="mt-2">
               <label
@@ -809,7 +809,7 @@ function Step3ExamenClinique({
                     <Upload className="h-6 w-6 text-muted-foreground mb-2" />
                     <span className="text-sm font-medium">Cliquer pour ajouter des fichiers</span>
                     <span className="text-xs text-muted-foreground mt-1">
-                      JPG, PNG, PDF acceptÃ©s â max 10 Mo par fichier
+                      JPG, PNG, PDF acceptés — max 10 Mo par fichier
                     </span>
                   </>
                 )}
@@ -896,7 +896,7 @@ function ResumeClientBlock({
       const json = await res.json();
       setResume((json.data ?? json).resume);
     } catch {
-      toast({ title: "Erreur lors de la gÃ©nÃ©ration du rÃ©sumÃ©", variant: "destructive" });
+      toast({ title: "Erreur lors de la génération du résumé", variant: "destructive" });
     } finally {
       setIsGenerating(false);
     }
@@ -906,13 +906,13 @@ function ResumeClientBlock({
     const w = window.open("", "_blank");
     if (!w) return;
     w.document.write(
-      `<!DOCTYPE html><html><head><title>RÃ©sumÃ© consultation â ${nomAnimal ?? "Patient"}</title><style>body{font-family:Georgia,serif;max-width:700px;margin:40px auto;padding:20px;line-height:1.7;color:#222}h1{font-size:22px;margin-bottom:4px}p{white-space:pre-wrap}@media print{button{display:none}}</style></head><body><h1>RÃ©sumÃ© de consultation</h1>${
+      `<!DOCTYPE html><html><head><title>Résumé consultation — ${nomAnimal ?? "Patient"}</title><style>body{font-family:Georgia,serif;max-width:700px;margin:40px auto;padding:20px;line-height:1.7;color:#222}h1{font-size:22px;margin-bottom:4px}p{white-space:pre-wrap}@media print{button{display:none}}</style></head><body><h1>Résumé de consultation</h1>${
         nomAnimal
           ? `<p><strong>Patient :</strong> ${nomAnimal}${espece ? ` (${espece})` : ""}</p>`
           : ""
       }${
         nomProprietaire
-          ? `<p><strong>PropriÃ©taire :</strong> ${nomProprietaire}</p>`
+          ? `<p><strong>Propriétaire :</strong> ${nomProprietaire}</p>`
           : ""
       }<hr style="margin:16px 0"><p>${resume.replace(
         /\n/g,
@@ -927,9 +927,9 @@ function ResumeClientBlock({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>RÃ©sumÃ© client</CardTitle>
+        <CardTitle>Résumé client</CardTitle>
         <p className="text-sm text-muted-foreground">
-          Texte vulgarisÃ© Ã  remettre au propriÃ©taire
+          Texte vulgarisé à remettre au propriétaire
         </p>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -943,12 +943,12 @@ function ResumeClientBlock({
           {isGenerating ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              GÃ©nÃ©ration en cours...
+              Génération en cours...
             </>
           ) : (
             <>
               <Sparkles className="mr-2 h-4 w-4" />
-              GÃ©nÃ©rer le rÃ©sumÃ© client
+              Générer le résumé client
             </>
           )}
         </Button>
