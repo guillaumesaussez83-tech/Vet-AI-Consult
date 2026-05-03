@@ -13,13 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+// Select natif utilisé à la place de Radix (fix removeChild crash)
 import { useToast } from "@/hooks/use-toast";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "";
@@ -287,21 +281,15 @@ export default function EquipePage() {
 
             <div>
               <Label>Rôle</Label>
-              <Select
+              <select
                 value={form.role}
-                onValueChange={(v) => setForm((f) => ({ ...f, role: v }))}
+                onChange={(e) => setForm((f) => ({ ...f, role: e.target.value }))}
+                className="w-full border border-input bg-background px-3 py-2 text-sm rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
               >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {ROLES.map((r) => (
-                    <SelectItem key={r} value={r}>
-                      {r.charAt(0).toUpperCase() + r.slice(1)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                {ROLES.map((r) => (
+                  <option key={r} value={r}>{r.charAt(0).toUpperCase() + r.slice(1)}</option>
+                ))}
+              </select>
             </div>
 
             <div>
