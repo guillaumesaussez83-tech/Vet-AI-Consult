@@ -11,7 +11,7 @@ const router = Router();
 router.use(requireAuth());
 
 // GET /api/ventes?type=comptoir|prescription
-router.get("/", extractClinic, async (req, res) => {
+router.get("/", extractClinic(), async (req, res) => {
   try {
     const clinicId = req.clinicId!;
     const type = req.query.type as string | undefined;
@@ -26,12 +26,12 @@ router.get("/", extractClinic, async (req, res) => {
       .orderBy(desc(ventesTable.date));
     return ok(res, ventes);
   } catch (err) {
-    return fail(res, 500, "Erreur lors de la récupération des ventes", err);
+    return fail(res, 500, "Erreur lors de la recuperation des ventes", err);
   }
 });
 
 // GET /api/ventes/:id
-router.get("/:id", extractClinic, async (req, res) => {
+router.get("/:id", extractClinic(), async (req, res) => {
   try {
     const clinicId = req.clinicId!;
     const id = parseInt(req.params.id);
@@ -40,30 +40,26 @@ router.get("/:id", extractClinic, async (req, res) => {
       .select()
       .from(ventesTable)
       .where(and(eq(ventesTable.id, id), eq(ventesTable.clinicId, clinicId)));
-    if (!vente) return fail(res, 404, "Vente non trouvée");
+    if (!vente) return fail(res, 404, "Vente non trouvee");
     const lignes = await db
       .select()
       .from(venteLignesTable)
       .where(eq(venteLignesTable.venteId, id));
     return ok(res, { ...vente, lignes });
   } catch (err) {
-    return fail(res, 500, "Erreur lors de la récupération", err);
+    return fail(res, 500, "Erreur lors de la recuperation", err);
   }
 });
 
 // POST /api/ventes
-router.post("/", extractClinic, async (req, res) => {
+router.post("/", extractClinic(), async (req, res) => {
   try {
     const clinicId = req.clinicId!;
     const { lignes: lignesData, ...venteData } = req.body;
-
     const numero = await generateVenteNumero(clinicId);
-
     const parsed = insertVenteSchema.safeParse({ ...venteData, clinicId, numero });
-    if (!parsed.success) return fail(res, 400, "Données invalides", parsed.error.flatten());
-
+    if (!parsed.success) return fail(res, 400, "Donnees invalides", parsed.error.flatten());
     const [vente] = await db.insert(ventesTable).values(parsed.data).returning();
-
     let lignes: typeof venteLignesTable.$inferSelect[] = [];
     if (Array.isArray(lignesData) && lignesData.length > 0) {
       const lignesInsert = lignesData.map((l: unknown) => {
@@ -73,28 +69,25 @@ router.post("/", extractClinic, async (req, res) => {
       });
       lignes = await db.insert(venteLignesTable).values(lignesInsert).returning();
     }
-
     return ok(res, { ...vente, lignes }, 201);
   } catch (err) {
-    return fail(res, 500, "Erreur lors de la création de la vente", err);
+    return fail(res, 500, "Erreur lors de la creation de la vente", err);
   }
 });
 
 // PUT /api/ventes/:id
-router.put("/:id", extractClinic, async (req, res) => {
+router.put("/:id", extractClinic(), async (req, res) => {
   try {
     const clinicId = req.clinicId!;
     const id = parseInt(req.params.id);
     if (isNaN(id)) return fail(res, 400, "ID invalide");
     const { id: _id, clinicId: _cid, numero: _num, createdAt: _ca, updatedAt: _ua, lignes: lignesData, ...body } = req.body;
-
     const [updated] = await db
       .update(ventesTable)
       .set({ ...body, updatedAt: new Date() })
       .where(and(eq(ventesTable.id, id), eq(ventesTable.clinicId, clinicId)))
       .returning();
-    if (!updated) return fail(res, 404, "Vente non trouvée");
-
+    if (!updated) return fail(res, 404, "Vente non trouvee");
     if (Array.isArray(lignesData)) {
       await db.delete(venteLignesTable).where(eq(venteLignesTable.venteId, id));
       if (lignesData.length > 0) {
@@ -106,22 +99,21 @@ router.put("/:id", extractClinic, async (req, res) => {
         await db.insert(venteLignesTable).values(lignesInsert);
       }
     }
-
     const lignes = await db.select().from(venteLignesTable).where(eq(venteLignesTable.venteId, id));
     return ok(res, { ...updated, lignes });
   } catch (err) {
-    return fail(res, 500, "Erreur lors de la mise à jour", err);
+    return fail(res, 500, "Erreur lors de la mise a jour", err);
   }
 });
 
 // DELETE /api/ventes/:id
-router.delete("/:id", extractClinic, async (req, res) => {
+router.delete("/:id", extractClinic(), async (req, res) => {
   try {
     const clinicId = req.clinicId!;
     const id = parseInt(req.params.id);
     if (isNaN(id)) return fail(res, 400, "ID invalide");
     await db.delete(ventesTable).where(and(eq(ventesTable.id, id), eq(ventesTable.clinicId, clinicId)));
-    return ok(res, { message: "Vente supprimée" });
+    return ok(res, { message: "Vente supprimee" });
   } catch (err) {
     return fail(res, 500, "Erreur lors de la suppression", err);
   }
