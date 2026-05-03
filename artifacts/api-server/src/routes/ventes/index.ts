@@ -1,5 +1,4 @@
 import { Router } from "express";
-import { requireAuth } from "@clerk/express";
 import { db } from "@workspace/db";
 import { ventesTable, venteLignesTable, insertVenteSchema, insertVenteLigneSchema } from "@workspace/db/schema";
 import { eq, and, desc } from "drizzle-orm";
@@ -8,7 +7,6 @@ import { extractClinic } from "../../middlewares/extractClinic";
 import { generateVenteNumero } from "../../lib/numbering";
 
 const router = Router();
-router.use(requireAuth());
 
 // GET /api/ventes?type=comptoir|prescription
 router.get("/", extractClinic(), async (req, res) => {
