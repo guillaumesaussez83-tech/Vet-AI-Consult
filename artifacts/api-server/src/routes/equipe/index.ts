@@ -1,5 +1,4 @@
 import { Router } from "express";
-import { requireAuth } from "@clerk/express";
 import { db } from "@workspace/db";
 import { assistantsTable, insertAssistantSchema } from "@workspace/db/schema";
 import { eq, and } from "drizzle-orm";
@@ -7,10 +6,9 @@ import { ok, fail } from "../../lib/response";
 import { extractClinic } from "../../middlewares/extractClinic";
 
 const router = Router();
-router.use(requireAuth());
 
 // GET /api/equipe — liste des assistantes actives
-router.get("/", extractClinic, async (req, res) => {
+router.get("/", extractClinic(), async (req, res) => {
   try {
     const clinicId = req.clinicId!;
     const assistants = await db
@@ -25,7 +23,7 @@ router.get("/", extractClinic, async (req, res) => {
 });
 
 // GET /api/equipe/all — y compris inactives
-router.get("/all", extractClinic, async (req, res) => {
+router.get("/all", extractClinic(), async (req, res) => {
   try {
     const clinicId = req.clinicId!;
     const assistants = await db
@@ -40,7 +38,7 @@ router.get("/all", extractClinic, async (req, res) => {
 });
 
 // GET /api/equipe/:id
-router.get("/:id", extractClinic, async (req, res) => {
+router.get("/:id", extractClinic(), async (req, res) => {
   try {
     const clinicId = req.clinicId!;
     const id = parseInt(req.params.id);
@@ -57,7 +55,7 @@ router.get("/:id", extractClinic, async (req, res) => {
 });
 
 // POST /api/equipe
-router.post("/", extractClinic, async (req, res) => {
+router.post("/", extractClinic(), async (req, res) => {
   try {
     const clinicId = req.clinicId!;
     const parsed = insertAssistantSchema.safeParse({ ...req.body, clinicId });
@@ -70,7 +68,7 @@ router.post("/", extractClinic, async (req, res) => {
 });
 
 // PUT /api/equipe/:id
-router.put("/:id", extractClinic, async (req, res) => {
+router.put("/:id", extractClinic(), async (req, res) => {
   try {
     const clinicId = req.clinicId!;
     const id = parseInt(req.params.id);
@@ -89,7 +87,7 @@ router.put("/:id", extractClinic, async (req, res) => {
 });
 
 // DELETE /api/equipe/:id — soft delete (désactivation)
-router.delete("/:id", extractClinic, async (req, res) => {
+router.delete("/:id", extractClinic(), async (req, res) => {
   try {
     const clinicId = req.clinicId!;
     const id = parseInt(req.params.id);
