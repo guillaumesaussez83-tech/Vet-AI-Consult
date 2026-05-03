@@ -15,14 +15,15 @@ import { fail, ok } from "../../lib/response";
 
 const router: IRouter = Router();
 
-// TTL de 90 jours par défaut — configurable via env.
+// TTL de 90 jours par defaut — configurable via env.
 const PORTAIL_TOKEN_TTL_DAYS = Number(process.env["PORTAIL_TOKEN_TTL_DAYS"] ?? 90);
 
-// Rate limit dédié anti-énumération sur la génération de tokens.
-// Clé = userId Clerk (donc par compte connecté de la clinique).
+// Rate limit dedie anti-enumeration sur la generation de tokens.
+// Cle = userId Clerk (donc par compte connecte de la clinique).
 const generateLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: 10,
+  validate: false,
   keyGenerator: (req) => {
     const auth = getAuth(req as Request);
     return auth?.userId ?? req.ip ?? "anon";
@@ -31,37 +32,26 @@ const generateLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-// ============================================================================
-//  GET /:token — ROUTE PUBLIQUE (lecture portail client par le propriétaire)
-//  La regex en PUBLIC_ROUTES (extractClinic) garantit que seuls des tokens
-//  hex de 64 caractères arrivent jusqu'ici. On vérifie TTL + clinicId partout.
-// ============================================================================
-
+// GET /:token — ROUTE PUBLIQUE (lecture portail client par le proprietaire)
 router.get("/:token", async (req: Request, res: Response) => {
   try {
     const { token } = req.params;
     if (!token || !/^[a-f0-9]{64}$/.test(token)) {
       return res.status(400).json(fail("INVALID_TOKEN_FORMAT", "Token invalide."));
     }
-
     const [tokenRecord] = await db
       .select()
       .from(portailTokensTable)
       .where(
         and(
           eq(portailTokensTable.token, token),
-          // si la colonne expires_at n'existe pas encore (migration pas passée),
-          // commenter la ligne suivante et appliquer d'abord la migration.
           gt(portailTokensTable.expiresAt, new Date()),
         ),
       );
     if (!tokenRecord) {
-      return res.status(404).json(fail("TOKEN_NOT_FOUND", "Lien invalide ou expiré."));
+      return res.status(404).json(fail("TOKEN_NOT_FOUND", "Lien invalide ou expire."));
     }
-
     const tenantClinicId = tokenRecord.clinicId;
-
-    // Owner strictement dans la clinique du token.
     const [owner] = await db
       .select()
       .from(ownersTable)
@@ -69,16 +59,14 @@ router.get("/:token", async (req: Request, res: Response) => {
         and(eq(ownersTable.clinicId, tenantClinicId), eq(ownersTable.id, tokenRecord.ownerId)),
       );
     if (!owner) {
-      return res.status(404).json(fail("OWNER_NOT_FOUND", "Propriétaire introuvable."));
+      return res.status(404).json(fail("OWNER_NOT_FOUND", "Proprietaire introuvable."));
     }
-
     const patients = await db
       .select()
       .from(patientsTable)
       .where(
         and(eq(patientsTable.clinicId, tenantClinicId), eq(patientsTable.ownerId, owner.id)),
       );
-
     const patientsWithData = await Promise.all(
       patients.map(async (patient) => {
         const [lastConsultation] = await db
@@ -92,7 +80,6 @@ router.get("/:token", async (req: Request, res: Response) => {
           )
           .orderBy(desc(consultationsTable.date))
           .limit(1);
-
         const vaccinations = await db
           .select()
           .from(vaccinationsTable)
@@ -103,11 +90,9 @@ router.get("/:token", async (req: Request, res: Response) => {
             ),
           )
           .orderBy(desc(vaccinationsTable.dateInjection));
-
         return { ...patient, lastConsultation: lastConsultation ?? null, vaccinations };
       }),
     );
-
     return res.json(
       ok({
         owner: {
@@ -125,13 +110,7 @@ router.get("/:token", async (req: Request, res: Response) => {
   }
 });
 
-// ============================================================================
-//  POST /generate/:ownerId — ROUTE AUTHENTIFIÉE (appelée par la clinique)
-//  extractClinic() passe → req.clinicId est renseigné.
-//  Le router principal doit monter cette route APRÈS extractClinic pour qu'elle
-//  ne matche pas la regex publique.
-// ============================================================================
-
+// POST /generate/:ownerId — ROUTE AUTHENTIFIEE (appelee par la clinique)
 router.post(
   "/generate/:ownerId",
   generateLimiter,
@@ -139,19 +118,15 @@ router.post(
     try {
       const ownerId = Number.parseInt(req.params.ownerId ?? "", 10);
       if (!Number.isInteger(ownerId) || ownerId <= 0) {
-        return res.status(400).json(fail("INVALID_ID", "ID propriétaire invalide."));
+        return res.status(400).json(fail("INVALID_ID", "ID proprietaire invalide."));
       }
-
-      // Vérifier que l'owner appartient bien à la clinique du caller.
       const [owner] = await db
         .select({ id: ownersTable.id })
         .from(ownersTable)
         .where(and(eq(ownersTable.clinicId, req.clinicId), eq(ownersTable.id, ownerId)));
       if (!owner) {
-        return res.status(404).json(fail("OWNER_NOT_FOUND", "Propriétaire introuvable."));
+        return res.status(404).json(fail("OWNER_NOT_FOUND", "Proprietaire introuvable."));
       }
-
-      // Réutilisation : si un token actif existe déjà, on le renvoie.
       const now = new Date();
       const [existing] = await db
         .select()
@@ -167,17 +142,14 @@ router.post(
       if (existing) {
         return res.json(ok({ token: existing.token, expiresAt: existing.expiresAt }));
       }
-
-      const token = crypto.randomBytes(32).toString("hex"); // 64 chars hex
+      const token = crypto.randomBytes(32).toString("hex");
       const expiresAt = new Date(now.getTime() + PORTAIL_TOKEN_TTL_DAYS * 24 * 3600 * 1000);
-
       await db.insert(portailTokensTable).values({
         clinicId: req.clinicId,
         ownerId,
         token,
         expiresAt,
       });
-
       return res.status(201).json(ok({ token, expiresAt }));
     } catch (err) {
       req.log.error({ err }, "portail POST /generate/:ownerId failed");
