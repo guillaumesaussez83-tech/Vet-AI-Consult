@@ -1,4 +1,5 @@
 import { Router } from "express";
+import workflowRouter from "./workflow";
 import { db } from "@workspace/db";
 import {
   consultationsTable,
@@ -528,4 +529,7 @@ router.post("/:id/facture", async (req, res) => {
   }
 });
 
+
+// Workflow dual-phase IA
+router.use(workflowRouter);
 export default router;
