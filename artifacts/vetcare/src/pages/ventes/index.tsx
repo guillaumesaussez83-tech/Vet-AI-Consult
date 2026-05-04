@@ -155,22 +155,22 @@ function VenteTab({ type }: { type: "comptoir" | "prescription" }) {
     },
   });
 
-  // Dériver la liste unique des propriétaires depuis les patients
-  const proprietaires = useMemo(() => {
-    const map = new Map<number, { id: number; prenom: string; nom: string }>();
-    for (const p of patients) {
-      if (p.owner) map.set(p.owner.id, p.owner);
-    }
-    return Array.from(map.values()).sort((a, b) =>
-      `${a.nom} ${a.prenom}`.localeCompare(`${b.nom} ${b.prenom}`)
-    );
-  }, [patients]);
+  //  Propriétaires (query directe via /api/owners)
+  const { data: proprietaires = [] } = useQuery<{ id: number; prenom: string; nom: string }[]>({
+    queryKey: ['owners'],
+    queryFn: async () => {
+      const res  = await authFetch('/api/owners')
+      const json = await res.json()
+      return Array.isArray(json) ? json : (json.data ?? [])
+    },
+  })
+
 
   // Patients filtrés selon le propriétaire sélectionné
   const patientsFiltered = useMemo(() => {
     if (!form.proprietaireId) return [];
     return patients.filter(
-      (p) => p.owner && String(p.owner.id) === form.proprietaireId
+      (p) => String(p.ownerId) === form.proprietaireId
     );
   }, [patients, form.proprietaireId]);
 
@@ -307,13 +307,14 @@ function VenteTab({ type }: { type: "comptoir" | "prescription" }) {
             )}
             {ventes.map((v) => {
               const patient = patients.find((p) => p.id === v.patientId);
+              const owner   = proprietaires.find((o) => o.id === (patient ? patient.ownerId : undefined))
               return (
                 <tr key={v.id} className="border-t hover:bg-muted/20 transition-colors">
                   <td className="px-4 py-2 font-mono text-xs">{v.numero}</td>
                   <td className="px-4 py-2">{new Date(v.date).toLocaleDateString("fr-FR")}</td>
                   <td className="px-4 py-2 text-xs text-muted-foreground">
                     {patient
-                      ? `${patient.owner?.prenom} ${patient.owner?.nom} — ${patient.nom}`
+                      ? `${owner?.prenom} ${owner?.nom} — ${patient.nom}`
                       : "—"}
                   </td>
                   <td className="px-4 py-2 text-xs text-muted-foreground">
