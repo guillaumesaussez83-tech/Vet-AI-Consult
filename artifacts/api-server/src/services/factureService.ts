@@ -20,7 +20,7 @@ export class FactureService {
     const actes = await db
       .select({
         quantite: actesConsultationsTable.quantite,
-        prixUnitaireHT: actesTable.prix,
+        prixUnitaireHT: actesConsultationsTable.prixUnitaire,
         tauxTVA: actesTable.tvaRate,
       })
       .from(actesConsultationsTable)
