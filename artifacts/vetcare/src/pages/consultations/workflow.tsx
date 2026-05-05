@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
-import { Mic, MicOff, Loader2, ChevronRight, Check, ArrowhLeft, Stethoscope, ClipboardList, FlaskConical, FileCheck, Receipt } from "lucide-react";
+import { Mic, MicOff, Loader2, ChevronRight, Check, Stethoscope, ClipboardList, FlaskConical, FileCheck, Receipt , ArrowLeft} from "lucide-react";
 
 type DevisActe = { id: number; description: string | null; prixUnitaire: number; quantite: number; tvaRate: number | null };
 
