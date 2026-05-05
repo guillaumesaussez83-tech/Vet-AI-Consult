@@ -8,7 +8,7 @@ import { AI_MODEL, AI_MAX_TOKENS } from "../../lib/constants";
 const router = Router();
 
 // POST /:id/anamnese
-router.post("/:id/anamnese", async (req, res) => {
+router.post("/:id/anamnese", async (req, res) => {h
   const consultationId = parseInt(req.params.id);
   const { transcription } = req.body;
   const clinicId = req.clinicId;
@@ -18,7 +18,7 @@ router.post("/:id/anamnese", async (req, res) => {
       .where(and(eq(consultationsTable.id, consultationId), eq(consultationsTable.clinicId, clinicId)));
     if (!consult) return res.status(404).json({ error: "Consultation introuvable" });
     const prompt = "Tu es un assistant veterinaire expert. Analyse l'anamnese dictee par le proprietaire.\n\nMotif: " + (consult.motif || "Non precise") + "\nAnamnese: " + transcription + '\n\nReponds en JSON: {"resume":"","signes_rapportes":[],"duree_evolution":"","contexte":"","hypotheses_initiales":[{"diagnostic":"","probabilite":"haute|moyenne|faible","justification":""}],"points_cles_examen":[],"urgence":"normale|moderee|elevee"}';
-    const message = await anthropic.messages.create({ model: AI_MODEL, max_tokens: AI_MAX_TOKENS, messages: [{ role: "user", content: prompt }] });
+    const message = await anthropic.messages.create({ model: AI_MODEL, max_tokens: AI_MAX_TOKENS.long, messages: [{ role: "user", content: prompt }] });
     const rawText = message.content[0].type === "text" ? message.content[0].text : "";
     let anamneseIA;
     try { const m = rawText.match(/\{[\s\S]*\}/); anamneseIA = m ? JSON.parse(m[0]) : { raw: rawText }; } catch { anamneseIA = { raw: rawText }; }
@@ -41,7 +41,7 @@ router.post("/:id/examen", async (req, res) => {
     let anamneseData = null;
     try { if (consult.anamneseIA) anamneseData = JSON.parse(consult.anamneseIA); } catch { /**/ }
     const prompt = "Tu es un assistant veterinaire expert. Croise l'anamnese avec l'examen clinique.\n\nAnamnese analysee:\n" + JSON.stringify(anamneseData) + "\n\nExamen clinique dicte:\n" + transcription + '\n\nReponds en JSON: {"resume_examen":"","parametres":{"temperature":"","fc":"","fr":"","muqueuses":"","autres":""},"concordance_anamnese":"","hypotheses_affinees":[{"diagnostic":"","probabilite":"","pour":[],"contre":[]}],"examens_proposes":[{"examen":"","priorite":"urgent|recommande|optionnel","justification":""}],"diagnostic_probable":"","traitement_initial":""}';
-    const message = await anthropic.messages.create({ model: AI_MODEL, max_tokens: AI_MAX_TOKENS, messages: [{ role: "user", content: prompt }] });
+    const message = await anthropic.messages.create({ model: AI_MODEL, max_tokens: AI_MAX_TOKENS.long, messages: [{ role: "user", content: prompt }] });
     const rawText = message.content[0].type === "text" ? message.content[0].text : "";
     let examenIA;
     try { const m = rawText.match(/\{[\s\S]*\}/); examenIA = m ? JSON.parse(m[0]) : { raw: rawText }; } catch { examenIA = { raw: rawText }; }
