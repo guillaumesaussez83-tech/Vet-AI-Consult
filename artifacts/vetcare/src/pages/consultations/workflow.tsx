@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
-import { Mic, MicOff, Loader2, ChevronRight, Check, ArrowLeft, Stethoscope, ClipboardList, FlaskConical, FileCheck } from "lucide-react";
+import { Mic, MicOff, Loader2, ChevronRight, Check, ArrowLeft, Stethoscope, ClipboardList, FlaskConical, FileCheck, FileText } from "lucide-react";
 
 const API_BASE = "/api/consultations";
 const PHASES = ["ANAMNESE", "EXAMEN", "SYNTHESE", "TERMINEE"];
@@ -24,6 +24,7 @@ export default function ConsultationWorkflow() {
   const [isRecording, setIsRecording] = useState(false);
   const [examensValides, setExamensValides] = useState([]);
   const [ordonnanceInfo, setOrdonnanceInfo] = useState(null);
+  const [ordonnanceData, setOrdonnanceData] = useState(null);
   const recognitionRef = useRef(null);
 
   const authHeaders = useCallback(async () => {
@@ -39,6 +40,7 @@ export default function ConsultationWorkflow() {
       if (r.ok) {
         const data = await r.json();
         setWorkflowState(data);
+          if (data.ordonnance) setOrdonnanceData(data.ordonnance);
         if (data.phase === "SYNTHESE" && data.examenIA?.examens_proposes) {
           setExamensValides(data.examenIA.examens_proposes.map(e => e.examen));
         }
@@ -260,7 +262,41 @@ export default function ConsultationWorkflow() {
               <Link href={"/consultations/" + consultationId}>
                 <Button variant="outline"><ArrowLeft className="h-4 w-4 mr-2" />Voir la consultation</Button>
               </Link>
-              {ordonnanceInfo && (
+              {/* Ordonnance IA */}
+          {(ordonnanceData || (workflowState?.syntheseIA?.ordonnance_suggeree?.length > 0)) && (
+            <Card className="border-blue-200 bg-blue-50">
+              <CardHeader><CardTitle className="text-blue-800 text-base flex items-center gap-2">
+                <FileCheck className="h-4 w-4" />
+                Ordonnance {ordonnanceData ? <Badge variant="outline" className="text-green-600 border-green-500 text-xs">{ordonnanceData.numero}</Badge> : "suggérée par l'IA"}
+              </CardTitle></CardHeader>
+              <CardContent className="space-y-3">
+                {ordonnanceData ? (
+                  <>
+                    <Textarea value={ordonnanceData.contenu} rows={8} className="font-mono text-xs bg-white" readOnly />
+                    <div className="flex gap-2">
+                      <Link href={"/ordonnances/" + ordonnanceData.id}>
+                        <Button variant="outline" size="sm" className="border-blue-400 text-blue-700 hover:bg-blue-100">
+                          <FileCheck className="h-4 w-4 mr-1" />Voir / Modifier
+                        </Button>
+                      </Link>
+                    </div>
+                  </>
+                ) : (
+                  <div className="space-y-2">
+                    {(workflowState.syntheseIA.ordonnance_suggeree || []).map((med, i) => (
+                      <div key={i} className="flex items-start gap-2 p-2 bg-white rounded border text-sm">
+                        <span className="font-medium text-blue-800">{med.specialite || med.molecule}</span>
+                        {med.posologie && <span className="text-gray-600">— {med.posologie}</span>}
+                        {med.duree && <Badge variant="outline" className="text-xs">{med.duree}</Badge>}
+                      </div>
+                    ))}
+                    <p className="text-xs text-gray-500 italic">L'ordonnance sera créée automatiquement lors de la prochaine synthèse.</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+          {ordonnanceInfo && (
                 <Link href={"/ordonnances/" + ordonnanceInfo.id}>
                   <Button variant="outline" className="border-green-500 text-green-700 hover:bg-green-50">
                     <FileCheck className="h-4 w-4 mr-2" />Voir l'ordonnance ({ordonnanceInfo.numero})
