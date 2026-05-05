@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
-import { Mic, MicOff, Loader2, ChevronRight, Check, ArrowLeft, Stethoscope, ClipboardList, FlaskConical, FileCheck, Receipt } from "lucide-react";
+import { Mic, MicOff, Loader2, ChevronRight, Check, ArrowhLeft, Stethoscope, ClipboardList, FlaskConical, FileCheck, Receipt } from "lucide-react";
 
 type DevisActe = { id: number; description: string | null; prixUnitaire: number; quantite: number; tvaRate: number | null };
 
@@ -42,9 +42,9 @@ export default function ConsultationWorkflow() {
       const r = await fetch(API_BASE + "/" + consultationId + "/workflow-state", { headers });
       if (r.ok) {
         const data = await r.json();
-        setWorkflowState(data);
+        setWorkflowState(data.data);
         if (data.ordonnance) setOrdonnanceData(data.ordonnance);
-        if (data.devisActes) setDevisActes(data.devisActes);
+        if (data.data.devisActes) setDevisActes(data.data.devisActes);
         if (data.phase === "SYNTHESE" && data.examenIA?.examens_proposes) {
           setExamensValides(data.examenIA.examens_proposes.map((e: any) => e.examen));
         }
