@@ -8,7 +8,7 @@ import { AI_MODEL, AI_MAX_TOKENS } from "../../lib/constants";
 const router = Router();
 
 // POST /:id/anamnese
-router.post("/:id/anamnese", async (req, res) => {h
+router.post("/:id/anamnese", async (req, res) => {
   const consultationId = parseInt(req.params.id);
   const { transcription } = req.body;
   const clinicId = req.clinicId;
@@ -138,6 +138,13 @@ router.get("/:id/workflow-state", async (req, res) => {
     const [consult] = await db.select().from(consultationsTable)
       .where(and(eq(consultationsTable.id, consultationId), eq(consultationsTable.clinicId, clinicId)));
     if (!consult) return res.status(404).json({ error: "Consultation introuvable" });
+        const [ordonnance] = await db.select({
+      id: ordonnancesTable.id,
+      numero: ordonnancesTable.numeroOrdonnance,
+      contenu: ordonnancesTable.contenu,
+    }).from(ordonnancesTable)
+      .where(and(eq(ordonnancesTable.consultationId, consultationId), eq(ordonnancesTable.clinicId, clinicId)))
+      .limit(1);
     const parse = (s) => { try { return s ? JSON.parse(s) : null; } catch { return null; } };
     return res.json({
       phase: consult.phase || "ANAMNESE",
@@ -145,6 +152,7 @@ router.get("/:id/workflow-state", async (req, res) => {
       examenIA: parse(consult.examenIA),
       syntheseIA: parse(consult.syntheseIA),
       examensComplementairesValides: parse(consult.examensComplementairesValides),
+      ordonnance: ordonnance ? { id: ordonnance.id, numero: ordonnance.numero, contenu: ordonnance.contenu } : null,
     });
   } catch (err) {
     req.log.error({ err }, "workflow-state failed");
