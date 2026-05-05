@@ -17,13 +17,13 @@ export default function ConsultationWorkflow() {
   const consultationId = params?.id;
   const { getToken } = useAuth();
   const { toast } = useToast();
-
   const [workflowState, setWorkflowState] = useState(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [transcript, setTranscript] = useState("");
   const [isRecording, setIsRecording] = useState(false);
   const [examensValides, setExamensValides] = useState([]);
+  const [ordonnanceInfo, setOrdonnanceInfo] = useState(null);
   const recognitionRef = useRef(null);
 
   const authHeaders = useCallback(async () => {
@@ -50,13 +50,20 @@ export default function ConsultationWorkflow() {
     }
   }, [consultationId, authHeaders]);
 
-  useEffect(() => { fetchWorkflowState(); }, [fetchWorkflowState]);
+  useEffect(() => {
+    fetchWorkflowState();
+  }, [fetchWorkflowState]);
 
   const startRecording = () => {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SR) { toast({ title: "Micro non supporte", description: "Utilisez Chrome ou Edge", variant: "destructive" }); return; }
+    if (!SR) {
+      toast({ title: "Micro non supporte", description: "Utilisez Chrome ou Edge", variant: "destructive" });
+      return;
+    }
     const rec = new SR();
-    rec.lang = "fr-FR"; rec.continuous = true; rec.interimResults = false;
+    rec.lang = "fr-FR";
+    rec.continuous = true;
+    rec.interimResults = false;
     rec.onresult = (e) => {
       const text = Array.from(e.results).map(r => r[0].transcript).join(" ");
       setTranscript(prev => prev ? prev + " " + text : text);
@@ -67,11 +74,16 @@ export default function ConsultationWorkflow() {
     setIsRecording(true);
   };
 
-  const stopRecording = () => { recognitionRef.current?.stop(); setIsRecording(false); };
+  const stopRecording = () => {
+    recognitionRef.current?.stop();
+    setIsRecording(false);
+  };
 
   const callAPI = async (endpoint, method, body) => {
     const headers = await authHeaders();
-    const r = await fetch(API_BASE + "/" + consultationId + "/" + endpoint, { method, headers, body: JSON.stringify(body) });
+    const r = await fetch(API_BASE + "/" + consultationId + "/" + endpoint, {
+      method, headers, body: JSON.stringify(body)
+    });
     if (!r.ok) throw new Error("API error " + r.status);
     return r.json();
   };
@@ -79,13 +91,18 @@ export default function ConsultationWorkflow() {
   const submitPhase = async (endpoint, body, successMsg) => {
     setSubmitting(true);
     try {
-      await callAPI(endpoint, "POST", body);
+      const result = await callAPI(endpoint, "POST", body);
+      if (endpoint === "valider-examens" && result.ordonnanceId) {
+        setOrdonnanceInfo({ id: result.ordonnanceId, numero: result.ordonnanceNumero });
+      }
       toast({ title: successMsg });
       setTranscript("");
       await fetchWorkflowState();
     } catch (e) {
       toast({ title: "Erreur", description: "Requete echouee", variant: "destructive" });
-    } finally { setSubmitting(false); }
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   if (loading) return (
@@ -108,7 +125,8 @@ export default function ConsultationWorkflow() {
       {/* Barre de progression */}
       <div className="flex items-center gap-2 overflow-x-auto pb-2">
         {["ANAMNESE", "EXAMEN", "SYNTHESE"].map((p, i) => {
-          const done = i < phaseIdx; const active = p === phase;
+          const done = i < phaseIdx;
+          const active = p === phase;
           return (
             <div key={p} className="flex items-center gap-2">
               <div className={"flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium whitespace-nowrap " + (done ? "bg-green-100 text-green-700" : active ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-400")}>
@@ -184,7 +202,7 @@ export default function ConsultationWorkflow() {
         </Card>
       )}
 
-      {/* Recap examen + PHASE 3 - SYNTHESE */}
+      {/* Recap examen */}
       {phaseIdx > 1 && workflowState?.examenIA && (
         <Card className="border-purple-200 bg-purple-50">
           <CardHeader><CardTitle className="text-purple-800 text-base flex items-center gap-2"><Check className="h-4 w-4" />Examen analyse</CardTitle></CardHeader>
@@ -195,6 +213,7 @@ export default function ConsultationWorkflow() {
         </Card>
       )}
 
+      {/* PHASE 3 - SYNTHESE */}
       {phase === "SYNTHESE" && workflowState?.examenIA && (
         <Card>
           <CardHeader><CardTitle className="flex items-center gap-2"><FlaskConical className="h-5 w-5 text-orange-500" />Phase 3 — Examens complementaires</CardTitle></CardHeader>
@@ -241,8 +260,15 @@ export default function ConsultationWorkflow() {
               <Link href={"/consultations/" + consultationId}>
                 <Button variant="outline"><ArrowLeft className="h-4 w-4 mr-2" />Voir la consultation</Button>
               </Link>
+              {ordonnanceInfo && (
+                <Link href={"/ordonnances/" + ordonnanceInfo.id}>
+                  <Button variant="outline" className="border-green-500 text-green-700 hover:bg-green-50">
+                    <FileCheck className="h-4 w-4 mr-2" />Voir l'ordonnance ({ordonnanceInfo.numero})
+                  </Button>
+                </Link>
+              )}
               <Link href={"/consultations/" + consultationId + "/facture"}>
-                <Button>Generer la facture</Button>
+                <Button>Creer la facture</Button>
               </Link>
             </div>
           </CardContent>
