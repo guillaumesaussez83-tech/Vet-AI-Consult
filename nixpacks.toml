@@ -1,5 +1,8 @@
 [phases.install]
-cmds = ["echo 'install deferred to build phase'"]
+cmds = ["pnpm install --frozen-lockfile"]
+
+[phases.build]
+cmds = ["pnpm run build"]
 
 [start]
 cmd = "sh scripts/startup.sh"
