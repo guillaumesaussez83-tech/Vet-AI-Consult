@@ -63,8 +63,8 @@ router.post("/:id/valider-examens", async (req, res) => {
     let anamneseData = null, examenData = null;
     try { if (consult.anamneseIA) anamneseData = JSON.parse(consult.anamneseIA); } catch { /**/ }
     try { if (consult.examenIA) examenData = JSON.parse(consult.examenIA); } catch { /**/ }
-    const prompt = "Tu es un assistant veterinaire expert. Genere la synthese finale et le compte rendu medical.\n\nAnamnese: " + JSON.stringify(anamneseData) + "\nExamen: " + JSON.stringify(examenData) + "\nExamens retenus: " + JSON.stringify(examensValides || []) + '\n\nReponds UNIQUEMENT en JSON valide (sans markdown). Structure exacte:\n{"diagnostic_final":"","diagnostics_differentiels":[],"compte_rendu":"Compte rendu medical complet professionnel","ordonnance_suggeree":[{"molecule":"nom molecule","specialite":"nom commercial","dose_mg":0,"forme":"cp|sirop|injectable|pommade","posologie":"description complete","frequence_jour":2,"duree_jours":7,"voie":"oral|injectable|topique","prix_estime":15}],"examens_a_facturer":[{"acte":"","quantite":1,"prix_estime":0}],"suivi":"","pronostic":"favorable|reserve|defavorable"}';
-    const message = await anthropic.messages.create({ model: AI_MODEL, max_tokens: 4096, messages: [{ role: "user", content: prompt }] });
+    const prompt = "Tu es un assistant veterinaire expert. Genere la synthese finale et le compte rendu medical.\n\nAnamnese: " + JSON.stringify(anamneseData) + "\nExamen: " + JSON.stringify(examenData) + "\nExamens retenus: " + JSON.stringify(examensValides || []) + '\n\nReponds UNIQUEMENT en JSON valide (sans markdown). Structure exacte:\n{"diagnostic_final":"","diagnostics_differentiels":[],"ordonnance_suggeree":[{"molecule":"nom molecule","specialite":"nom commercial","dose_mg":0,"forme":"cp|sirop|injectable|pommade","posologie":"description complete","frequence_jour":2,"duree_jours":7,"voie":"oral|injectable|topique","prix_estime":15}],"examens_a_facturer":[{"acte":"","quantite":1,"prix_estime":0}],"suivi":"","pronostic":"favorable|reserve|defavorable"}';
+    const message = await anthropic.messages.create({ model: AI_MODEL, max_tokens: AI_MAX_TOKENS.long, messages: [{ role: "user", content: prompt }] });
     const rawText = message.content[0].type === "text" ? message.content[0].text : "";
     let syntheseIA;
     try { const m = rawText.match(/\{[\s\S]*\}/); syntheseIA = m ? JSON.parse(m[0]) : { raw: rawText }; } catch { syntheseIA = { raw: rawText }; }
@@ -74,7 +74,7 @@ router.post("/:id/valider-examens", async (req, res) => {
       phase: "TERMINEE",
       statut: "terminee",
       diagnostic: typeof syntheseIA.diagnostic_final === "string" ? syntheseIA.diagnostic_final : "",
-      notes: typeof syntheseIA.compte_rendu === "string" ? syntheseIA.compte_rendu : "",
+      notes: typeof syntheseIA.suivi === "string" ? syntheseIA.suivi : "",
     }).where(and(eq(consultationsTable.id, consultationId), eq(consultationsTable.clinicId, clinicId)));
 
     // Auto-creation ordonnance depuis ordonnance_suggeree
