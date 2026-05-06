@@ -24,6 +24,7 @@ import encaissementsRouter from "./encaissements";
 import vetKnowledgeRouter from "./vet-knowledge";
 import equipeRouter from "./equipe";
 import ventesRouter from "./ventes";
+import adminAiCostsRouter from "./admin/ai-costs";
 
 const router: IRouter = Router();
 
@@ -51,5 +52,6 @@ router.use("/vet-knowledge", vetKnowledgeRouter);
 router.use(storageRouter);
 router.use("/equipe", equipeRouter);
 router.use("/ventes", ventesRouter);
+router.use("/admin", adminAiCostsRouter);
 
 export default router;
