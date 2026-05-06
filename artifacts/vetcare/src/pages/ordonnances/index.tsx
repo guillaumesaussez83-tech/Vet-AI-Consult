@@ -19,6 +19,7 @@ interface Ordonnance {
   contenu: string;
   genereIA: boolean;
   instructionsClient: string | null;
+  numeroAmm?: string | null;
   createdAt: string;
 }
 
@@ -149,6 +150,9 @@ export default function OrdonnancesPage() {
                             <User className="h-3 w-3" />
                             {o.veterinaire}
                           </span>
+                        )}
+                        {o.numeroAmm && (
+                        <span className="text-xs text-muted-foreground">AMM: {o.numeroAmm}</span>
                         )}
                         <span className="flex items-center gap-1">
                           <Calendar className="h-3 w-3" />
