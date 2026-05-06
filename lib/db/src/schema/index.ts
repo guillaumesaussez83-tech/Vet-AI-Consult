@@ -31,3 +31,5 @@ export * from "./ai-usage-logs";
 export * from "./medications-anmv";
 export * from "./ai-outputs";
 export * from "./user-permissions";
+export * from "./consultation-patients";
+export * from "./consultation-attachments";
