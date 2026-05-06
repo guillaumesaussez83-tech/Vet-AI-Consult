@@ -45,12 +45,13 @@ import NotFound from "@/pages/not-found";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import VentesPage from "./pages/ventes/index";
 import EquipePage from "./pages/equipe/index";
+import AdminPermissionsPage from "./pages/admin/permissions";
 
 const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 
 /**
- * F-P0-3 : si la clé Clerk manque, on AFFICHE un écran propre au lieu de
+ * F-P0-3 : si la clÃ© Clerk manque, on AFFICHE un Ã©cran propre au lieu de
  * laisser un throw crasher avant le mount ErrorBoundary.
  */
 function MissingConfigScreen({ reason }: { reason: string }) {
@@ -60,7 +61,7 @@ function MissingConfigScreen({ reason }: { reason: string }) {
         <h1 className="text-2xl font-bold">Configuration manquante</h1>
         <p className="text-gray-600">{reason}</p>
         <p className="text-sm text-gray-400">
-          Si vous êtes administrateur, vérifiez les variables d'environnement du déploiement.
+          Si vous Ãªtes administrateur, vÃ©rifiez les variables d'environnement du dÃ©ploiement.
           Sinon, contactez votre support.
         </p>
       </div>
@@ -75,9 +76,9 @@ function stripBase(path: string): string {
 }
 
 /**
- * F-P1-4 + F-P2-8 : observe les changements d'identité Clerk pour
- * 1. Purger le cache React Query quand l'user change (sécu multi-tenant
- *    côté navigateur — évite qu'un user qui se logout/login voit les
+ * F-P1-4 + F-P2-8 : observe les changements d'identitÃ© Clerk pour
+ * 1. Purger le cache React Query quand l'user change (sÃ©cu multi-tenant
+ *    cÃ´tÃ© navigateur â Ã©vite qu'un user qui se logout/login voit les
  *    caches de l'ancien user).
  * 2. Populer Sentry.setUser pour attacher l'user context aux erreurs.
  */
@@ -112,8 +113,8 @@ function ClerkSideEffects() {
 }
 
 /**
- * F-P1-3 : handler 401 global branché sur le queryClient.
- * Quand le backend renvoie 401 (token Clerk expiré), on signOut l'utilisateur
+ * F-P1-3 : handler 401 global branchÃ© sur le queryClient.
+ * Quand le backend renvoie 401 (token Clerk expirÃ©), on signOut l'utilisateur
  * et on le redirige vers /sign-in. Plus efficace qu'un toast d'erreur perdu.
  */
 function On401Redirect() {
@@ -131,9 +132,9 @@ function On401Redirect() {
 }
 
 /**
- * Branche le getter de token Clerk sur le client API auto-généré (Orval).
- * Sans ça, tous les hooks React Query générés font leurs requêtes sans
- * Authorization header → 401 systématique sur toutes les listes.
+ * Branche le getter de token Clerk sur le client API auto-gÃ©nÃ©rÃ© (Orval).
+ * Sans Ã§a, tous les hooks React Query gÃ©nÃ©rÃ©s font leurs requÃªtes sans
+ * Authorization header â 401 systÃ©matique sur toutes les listes.
  */
 function ClerkTokenSync() {
   const { session } = useSession();
@@ -158,7 +159,7 @@ function HomeRedirect() {
 }
 
 /**
- * F-P1-5 : chaque route protégée est wrappée dans un ErrorBoundary local.
+ * F-P1-5 : chaque route protÃ©gÃ©e est wrappÃ©e dans un ErrorBoundary local.
  * Un crash d'un composant enfant montre un fallback plus granulaire, sans
  * tuer la nav.
  */
@@ -225,6 +226,7 @@ function Router() {
       <Route path="/legal" component={LegalPage} />
       <Route path="/ventes" component={() => <ProtectedRoute component={VentesPage} />} />
       <Route path="/equipe" component={() => <ProtectedRoute component={EquipePage} />} />
+      <Route path="/admin/permissions" component={() => <ProtectedRoute component={AdminPermissionsPage} />} />
       <Route component={NotFound} />
     </Switch>
   );
@@ -286,14 +288,14 @@ function App() {
   // F-P0-3 : check config avant de monter quoi que ce soit.
   if (!clerkPubKey) {
     return (
-      <MissingConfigScreen reason="La clé Clerk (VITE_CLERK_PUBLISHABLE_KEY) est introuvable." />
+      <MissingConfigScreen reason="La clÃ© Clerk (VITE_CLERK_PUBLISHABLE_KEY) est introuvable." />
     );
   }
   return (
     <ErrorBoundary>
       <TooltipProvider>
         {/* F-P1-1 : QueryClientProvider MONTE AVANT ClerkProvider pour survivre aux
-            changements de session et garantir que les toasters reçoivent bien leur cache. */}
+            changements de session et garantir que les toasters reÃ§oivent bien leur cache. */}
         <QueryClientProvider client={queryClient}>
           <WouterRouter base={basePath}>
             <ClerkProviderWithRoutes />
