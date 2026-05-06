@@ -32,6 +32,8 @@ const selectRdv = {
     telephone: ownersTable.telephone,
     email: ownersTable.email,
   },
+  noShowAt: rendezVousTable.noShowAt,
+  noShowReason: rendezVousTable.noShowReason,
 };
 
 router.get("/", async (req, res) => {
@@ -95,7 +97,7 @@ router.post("/", async (req, res) => {
       patientId: patientId ? parseInt(patientId) : null,
       ownerId: ownerId ? parseInt(ownerId) : null,
       veterinaire, motif,
-      statut: statut ?? "planifié",
+      statut: statut ?? "planifiÃ©",
       statutSalle: "en_attente_arrivee",
       notes,
     }).returning();
@@ -121,7 +123,7 @@ router.patch("/:id/statut-salle", async (req, res) => {
       .where(and(eq(rendezVousTable.id, id), eq(rendezVousTable.clinicId, req.clinicId)))
       .returning();
 
-    if (!rdvs[0]) return res.status(404).json({ error: "RDV non trouvé" });
+    if (!rdvs[0]) return res.status(404).json({ error: "RDV non trouvÃ©" });
 
     const full = await db
       .select(selectRdv)
@@ -138,6 +140,25 @@ router.patch("/:id/statut-salle", async (req, res) => {
   }
 });
 
+
+router.patch("/:id/no-show", async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ error: "ID invalide" });
+    const { noShowReason } = req.body;
+    const clinicId = (req as any).auth?.orgId || (req as any).auth?.userId || "default";
+    const [updated] = await db
+      .update(rendezVousTable)
+      .set({ statut: "non_honor\u00e9", noShowAt: new Date(), noShowReason: noShowReason || null })
+      .where(and(eq(rendezVousTable.id, id), eq(rendezVousTable.clinicId, clinicId)))
+      .returning(selectRdv);
+    if (!updated) return res.status(404).json({ error: "RDV introuvable" });
+    return res.json(updated);
+  } catch (e) {
+    return res.status(500).json({ error: "Erreur serveur" });
+  }
+});
+
 router.patch("/:id", async (req, res) => {
   try {
     const id = parseInt(req.params.id);
@@ -147,7 +168,7 @@ router.patch("/:id", async (req, res) => {
       eq(rendezVousTable.id, id),
       eq(rendezVousTable.clinicId, req.clinicId),
     )).returning();
-    if (!rdv) return res.status(404).json({ error: "RDV non trouvé" });
+    if (!rdv) return res.status(404).json({ error: "RDV non trouvÃ©" });
     return res.json(rdv);
   } catch (err) {
     req.log.error(err);
