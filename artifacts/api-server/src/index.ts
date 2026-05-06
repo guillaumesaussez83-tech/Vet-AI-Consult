@@ -4,6 +4,7 @@ import { logger } from "./lib/logger";
 import { runStockSeeder } from "./routes/stock/seeder";
 import { startSyncJob } from "./jobs/syncSalleAttente";
 import { startRappelsJob } from "./jobs/sendRappels";
+import { startStockAnalysisJob } from "./jobs/stockAnalysis";
 import { setupVetKnowledge } from "./lib/vetKnowledgeService";
 import { db } from "@workspace/db";
 
@@ -48,6 +49,12 @@ app.listen(port, async (err) => {
 
   // Sync salle d'attente ↔ agenda toutes les 5 min
   startSyncJob();
+
+  // Envoi automatique des rappels (toutes les heures)
+  startRappelsJob();
+
+  // Analyse nocturne du stock — EOQ + alertes (toutes les 24h, démarrage dans 5 min)
+  startStockAnalysisJob();
 
   // Initialisation base de connaissances vétérinaires RAG (ANMV/EMA/RESAPATH)
   // Non bloquante — dégradation gracieuse si OPENAI_API_KEY absent
