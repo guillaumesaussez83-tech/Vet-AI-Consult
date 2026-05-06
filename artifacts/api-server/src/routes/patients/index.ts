@@ -102,10 +102,10 @@ router.get("/", async (req, res) => {
 router.post("/", async (req, res) => {
   try {
     const body = CreatePatientBody.safeParse(req.body);
-    if (!body.success) return res.status(400).json({ error: "Données invalides" });
+    if (!body.success) return res.status(400).json({ error: "DonnÃ©es invalides" });
     const [own] = await db.select({ id: ownersTable.id }).from(ownersTable)
       .where(and(eq(ownersTable.clinicId, req.clinicId), eq(ownersTable.id, body.data.ownerId)));
-    if (!own) return res.status(400).json({ error: "Propriétaire introuvable" });
+    if (!own) return res.status(400).json({ error: "PropriÃ©taire introuvable" });
     const [patient] = await db.insert(patientsTable).values({ ...body.data, clinicId: req.clinicId }).returning();
     return res.status(201).json({ ...patient, createdAt: patient.createdAt.toISOString() });
   } catch (err) {
@@ -154,7 +154,7 @@ router.get("/:id", async (req, res) => {
       .from(patientsTable)
       .leftJoin(ownersTable, eq(patientsTable.ownerId, ownersTable.id))
       .where(and(eq(patientsTable.clinicId, req.clinicId), eq(patientsTable.id, params.data.id)));
-    if (!patient) return res.status(404).json({ error: "Patient non trouvé" });
+    if (!patient) return res.status(404).json({ error: "Patient non trouvÃ©" });
     return res.json({
       ...patient,
       createdAt: patient.createdAt.toISOString(),
@@ -171,9 +171,9 @@ router.patch("/:id", async (req, res) => {
     const params = UpdatePatientParams.safeParse({ id: Number(req.params.id) });
     if (!params.success) return res.status(400).json({ error: "ID invalide" });
     const body = UpdatePatientBody.safeParse(req.body);
-    if (!body.success) return res.status(400).json({ error: "Données invalides" });
+    if (!body.success) return res.status(400).json({ error: "DonnÃ©es invalides" });
     const [patient] = await db.update(patientsTable).set(body.data).where(and(eq(patientsTable.clinicId, req.clinicId), eq(patientsTable.id, params.data.id))).returning();
-    if (!patient) return res.status(404).json({ error: "Patient non trouvé" });
+    if (!patient) return res.status(404).json({ error: "Patient non trouvÃ©" });
     return res.json({ ...patient, createdAt: patient.createdAt.toISOString() });
   } catch (err) {
     req.log.error(err);
@@ -186,8 +186,8 @@ router.delete("/:id", async (req, res) => {
     const params = DeletePatientParams.safeParse({ id: Number(req.params.id) });
     if (!params.success) return res.status(400).json({ error: "ID invalide" });
 
-    // Vérifier l'absence de consultations liées avant suppression
-    // (évite une erreur FK PostgreSQL opaque et protège les données médicales)
+    // VÃ©rifier l'absence de consultations liÃ©es avant suppression
+    // (Ã©vite une erreur FK PostgreSQL opaque et protÃ¨ge les donnÃ©es mÃ©dicales)
     const [linked] = await db
       .select({ id: consultationsTable.id })
       .from(consultationsTable)
@@ -199,7 +199,7 @@ router.delete("/:id", async (req, res) => {
 
     if (linked) {
       return res.status(409).json({
-        error: "Ce patient possède des consultations. Supprimez d'abord toutes ses consultations avant de supprimer le patient.",
+        error: "Ce patient possÃ¨de des consultations. Supprimez d'abord toutes ses consultations avant de supprimer le patient.",
       });
     }
 
@@ -223,6 +223,41 @@ router.get("/:id/consultations", async (req, res) => {
   } catch (err) {
     req.log.error(err);
     return res.status(500).json({ error: "Erreur interne du serveur" });
+  }
+});
+
+router.post("/batch", requireAuth(), async (req, res) => {
+  try {
+    const { patients, motherId, fatherId } = req.body as {
+      patients: Array<{
+        nom: string; espece: string; sexe: string; race?: string;
+        couleur?: string; dateNaissance?: string; poids?: number;
+        ownerId: number; clinicId?: number;
+      }>;
+      motherId?: number;
+      fatherId?: number;
+    };
+    if (!Array.isArray(patients) || patients.length === 0) {
+      return res.status(400).json({ error: "patients array required" });
+    }
+    if (patients.length > 20) {
+      return res.status(400).json({ error: "Maximum 20 patients par portee" });
+    }
+    const rows = await db.insert(patientsTable).values(
+      patients.map(p => ({
+        ...p,
+        motherId: motherId ?? null,
+        fatherId: fatherId ?? null,
+        sterilise: false,
+        assurance: false,
+        agressif: false,
+        consentementRgpd: false,
+      }))
+    ).returning();
+    return res.status(201).json({ data: rows, count: rows.length });
+  } catch (err) {
+    req.log.error(err);
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
