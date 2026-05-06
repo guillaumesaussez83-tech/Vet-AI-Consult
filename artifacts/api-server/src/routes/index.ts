@@ -56,4 +56,7 @@ router.use("/ventes", ventesRouter);
 router.use("/admin/permissions", adminPermissionsRouter);
 router.use("/admin", adminAiCostsRouter);
 
+import cremationRouter from "./cremation";
+router.use("/cremation-partners", cremationRouter);
+
 export default router;
