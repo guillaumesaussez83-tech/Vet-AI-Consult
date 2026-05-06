@@ -21,6 +21,7 @@ import {
   FlaskConical,
   ShoppingCart,
   UserCog,
+  Shield,
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { Button } from "@/components/ui/button";
@@ -44,11 +45,12 @@ export function AppLayout({ children }: { children: ReactNode }) {
     { name: "Ordonnances", href: "/ordonnances", icon: ClipboardList },
     { name: "Rappels", href: "/rappels", icon: Bell },
     { name: "Stock", href: "/stock", icon: Package },
-    { name: "Stupéfiants", href: "/stupefiants", icon: FlaskConical },
+    { name: "StupÃ©fiants", href: "/stupefiants", icon: FlaskConical },
     { name: "Actes & Produits", href: "/actes", icon: Syringe },
-    { name: "Paramètres", href: "/parametres", icon: Settings },
+    { name: "ParamÃ¨tres", href: "/parametres", icon: Settings },
   { name: "Ventes", href: "/ventes", icon: ShoppingCart },
-  { name: "Équipe", href: "/equipe", icon: UserCog },
+  { name: "Ãquipe", href: "/equipe", icon: UserCog },
+  { name: "Permissions", href: "/admin/permissions", icon: Shield },
   ];
 
   const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
@@ -94,7 +96,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
               {user?.firstName?.charAt(0) || "D"}
             </div>
             <div className="flex-1 overflow-hidden">
-              <p className="text-sm font-medium text-sidebar-foreground truncate">Dr. {user?.firstName || "Vétérinaire"}</p>
+              <p className="text-sm font-medium text-sidebar-foreground truncate">Dr. {user?.firstName || "VÃ©tÃ©rinaire"}</p>
               <p className="text-xs text-sidebar-foreground/60 truncate">{user?.emailAddresses[0]?.emailAddress}</p>
             </div>
           </div>
@@ -104,7 +106,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
             onClick={() => signOut()}
           >
             <LogOut className="h-4 w-4 mr-2" />
-            Déconnexion
+            DÃ©connexion
           </Button>
         </div>
       </aside>
@@ -142,11 +144,11 @@ export function AppLayout({ children }: { children: ReactNode }) {
         {currentPath !== "/salle-attente" && (
           <footer className="border-t bg-card/50 py-3 px-4 md:px-6">
             <div className="max-w-6xl mx-auto flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
-              <span>© {new Date().getFullYear()} VétoAI</span>
+              <span>Â© {new Date().getFullYear()} VÃ©toAI</span>
               <div className="flex items-center gap-3">
-                <a href="/legal" className="hover:text-foreground hover:underline">Mentions légales</a>
-                <span>·</span>
-                <a href="/confidentialite" className="hover:text-foreground hover:underline">Confidentialité</a>
+                <a href="/legal" className="hover:text-foreground hover:underline">Mentions lÃ©gales</a>
+                <span>Â·</span>
+                <a href="/confidentialite" className="hover:text-foreground hover:underline">ConfidentialitÃ©</a>
               </div>
             </div>
           </footer>
