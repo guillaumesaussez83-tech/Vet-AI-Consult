@@ -27,3 +27,4 @@ export * from "./parametres-clinique";
 export * from "./registre-stupefiants";
 export * from "./assistants";
 export * from "./ventes";
+export * from "./ai-usage-logs";
