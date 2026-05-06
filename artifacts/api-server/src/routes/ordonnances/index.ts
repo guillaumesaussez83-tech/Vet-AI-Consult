@@ -16,10 +16,10 @@ import { decrementerConsultationFEFO } from "../stock/ia-engine";
 
 const router = Router();
 
-// ─────────────────────────────────────────────────────────
-// HELPER : décrémenter le stock depuis le texte d'une ordonnance
-// Fire-and-forget — ne bloque jamais la réponse HTTP.
-// ─────────────────────────────────────────────────────────
+// âââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// HELPER : dÃ©crÃ©menter le stock depuis le texte d'une ordonnance
+// Fire-and-forget â ne bloque jamais la rÃ©ponse HTTP.
+// âââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 async function decrementeStockDepuisOrdonnance(
   clinicId: string,
   consultationId: number,
@@ -27,20 +27,20 @@ async function decrementeStockDepuisOrdonnance(
   logFn: (msg: string, data?: unknown) => void,
 ): Promise<void> {
   try {
-    const parsePrompt = `Analyse cette ordonnance vétérinaire et extrais UNIQUEMENT la liste des médicaments/produits avec leurs quantités.
+    const parsePrompt = `Analyse cette ordonnance vÃ©tÃ©rinaire et extrais UNIQUEMENT la liste des mÃ©dicaments/produits avec leurs quantitÃ©s.
 
 ORDONNANCE :
 ${contenu}
 
-Réponds UNIQUEMENT en JSON valide, sans texte autour, format exact :
+RÃ©ponds UNIQUEMENT en JSON valide, sans texte autour, format exact :
 [ { "nom": "Meloxicam", "quantite": 14 }, { "nom": "Amoxicilline 500mg", "quantite": 30 } ]
 
-Règles :
-- "nom" = DCI ou nom commercial exact du médicament
-- "quantite" = nombre d'unités à délivrer
-- Si quantité non précisée, mettre 1
-- Ignorer les vitamines, suppléments, conseils de soins
-- Si aucun médicament trouvé, retourner []`;
+RÃ¨gles :
+- "nom" = DCI ou nom commercial exact du mÃ©dicament
+- "quantite" = nombre d'unitÃ©s Ã  dÃ©livrer
+- Si quantitÃ© non prÃ©cisÃ©e, mettre 1
+- Ignorer les vitamines, supplÃ©ments, conseils de soins
+- Si aucun mÃ©dicament trouvÃ©, retourner []`;
 
     const aiResp = await anthropic.messages.create({
       model: AI_MODEL,
@@ -59,10 +59,10 @@ Règles :
 
     const resultats = await decrementerConsultationFEFO(clinicId, consultationId, parsed);
     const decremented = resultats.filter((r) => !r.notFound).length;
-    logFn(`Stock décrémenté depuis ordonnance: ${decremented}/${parsed.length} produits (FEFO)`);
+    logFn(`Stock dÃ©crÃ©mentÃ© depuis ordonnance: ${decremented}/${parsed.length} produits (FEFO)`);
   } catch (err) {
-    // Non-bloquant — on log uniquement
-    logFn("Décrémentation stock depuis ordonnance ignorée (non bloquante): " + String(err));
+    // Non-bloquant â on log uniquement
+    logFn("DÃ©crÃ©mentation stock depuis ordonnance ignorÃ©e (non bloquante): " + String(err));
   }
 }
 
@@ -122,7 +122,7 @@ router.get("/:id", async (req, res) => {
           eq(ordonnancesTable.id, id),
         ),
       );
-    if (!row) return res.status(404).json({ error: "Ordonnance non trouvée" });
+    if (!row) return res.status(404).json({ error: "Ordonnance non trouvÃ©e" });
     return res.json({
       ...row,
       createdAt: row.createdAt.toISOString(),
@@ -143,6 +143,7 @@ router.post("/", async (req, res) => {
       contenu,
       genereIA,
       instructionsClient,
+      numeroAmm,
     } = req.body;
     if (!consultationId || !contenu) {
       return res
@@ -189,11 +190,12 @@ router.post("/", async (req, res) => {
         numeroOrdonnance,
         genereIA: genereIA ?? false,
         instructionsClient: instructionsClient ?? null,
+        numeroAmm: numeroAmm ?? null,
         clinicId: req.clinicId,
       })
       .returning();
 
-    // Décrémenter le stock automatiquement (FEFO) — fire and forget
+    // DÃ©crÃ©menter le stock automatiquement (FEFO) â fire and forget
     setImmediate(() =>
       void decrementeStockDepuisOrdonnance(
         req.clinicId,
@@ -218,12 +220,13 @@ router.patch("/:id", async (req, res) => {
   try {
     const id = Number(req.params.id);
     if (!id) return res.status(400).json({ error: "ID invalide" });
-    const { contenu, instructionsClient, veterinaire } = req.body;
+    const { contenu, instructionsClient, veterinaire, numeroAmm } = req.body;
     const updateData: Record<string, unknown> = {};
     if (contenu !== undefined) updateData.contenu = contenu;
     if (instructionsClient !== undefined)
       updateData.instructionsClient = instructionsClient;
     if (veterinaire !== undefined) updateData.veterinaire = veterinaire;
+    if (numeroAmm !== undefined) updateData.numeroAmm = numeroAmm;
     const [row] = await db
       .update(ordonnancesTable)
       .set(updateData)
@@ -234,7 +237,7 @@ router.patch("/:id", async (req, res) => {
         ),
       )
       .returning();
-    if (!row) return res.status(404).json({ error: "Ordonnance non trouvée" });
+    if (!row) return res.status(404).json({ error: "Ordonnance non trouvÃ©e" });
     return res.json({
       ...row,
       createdAt: row.createdAt.toISOString(),
@@ -260,7 +263,7 @@ router.delete("/:id", async (req, res) => {
       )
       .returning();
     if (!deleted)
-      return res.status(404).json({ error: "Ordonnance non trouvée" });
+      return res.status(404).json({ error: "Ordonnance non trouvÃ©e" });
     return res.json({ success: true });
   } catch (err) {
     req.log.error(err);
@@ -313,7 +316,7 @@ router.post("/ia/generer", async (req, res) => {
         ),
       );
     if (!consultation)
-      return res.status(404).json({ error: "Consultation non trouvée" });
+      return res.status(404).json({ error: "Consultation non trouvÃ©e" });
 
     const actes = await db
       .select({
@@ -342,7 +345,7 @@ router.post("/ia/generer", async (req, res) => {
           (Date.now() - new Date(dateNaissance).getTime()) /
             (365.25 * 24 * 3600 * 1000),
         )} ans`
-      : "âge inconnu";
+      : "Ã¢ge inconnu";
     const proprietaire = consultation.patient?.owner
       ? `${consultation.patient.owner.prenom ?? ""} ${consultation.patient.owner.nom ?? ""}`.trim()
       : "";
@@ -353,7 +356,7 @@ router.post("/ia/generer", async (req, res) => {
         .filter(
           (a) =>
             a.categorie === "medicament" ||
-            a.categorie === "Médicaments" ||
+            a.categorie === "MÃ©dicaments" ||
             a.code?.startsWith("MED"),
         )
         .map(
@@ -363,38 +366,38 @@ router.post("/ia/generer", async (req, res) => {
         .join("\n") ||
       actes.map((a) => `- ${a.nom} (x${a.quantite})`).join("\n");
 
-    const prompt = `Tu es un vétérinaire expert. Génère une ordonnance vétérinaire professionnelle en français pour la consultation suivante.
+    const prompt = `Tu es un vÃ©tÃ©rinaire expert. GÃ©nÃ¨re une ordonnance vÃ©tÃ©rinaire professionnelle en franÃ§ais pour la consultation suivante.
 
 PATIENT :
 - Nom : ${nomPatient}
-- Espèce : ${espece} ${race ? `(${race})` : ""}
+- EspÃ¨ce : ${espece} ${race ? `(${race})` : ""}
 - Age : ${ageStr}
-- Poids : ${poids ? `${poids} kg` : "non renseigné"}
-- Propriétaire : ${proprietaire || "non renseigné"}
+- Poids : ${poids ? `${poids} kg` : "non renseignÃ©"}
+- PropriÃ©taire : ${proprietaire || "non renseignÃ©"}
 ${allergies ? `- Allergies connues : ${allergies}` : ""}
-${antecedents ? `- Antécédents : ${antecedents}` : ""}
+${antecedents ? `- AntÃ©cÃ©dents : ${antecedents}` : ""}
 
 CONSULTATION DU ${consultation.date} :
-${consultation.anamnese ? `Motif / Anamnèse : ${consultation.anamnese}` : ""}
+${consultation.anamnese ? `Motif / AnamnÃ¨se : ${consultation.anamnese}` : ""}
 ${consultation.examenClinique ? `Examen clinique : ${consultation.examenClinique}` : ""}
-${consultation.temperature ? `Température : ${consultation.temperature}°C` : ""}
-Diagnostic : ${consultation.diagnostic ?? consultation.diagnosticIA ?? "non spécifié"}
+${consultation.temperature ? `TempÃ©rature : ${consultation.temperature}Â°C` : ""}
+Diagnostic : ${consultation.diagnostic ?? consultation.diagnosticIA ?? "non spÃ©cifiÃ©"}
 ${consultation.ordonnance ? `Ordonnance saisie manuellement : ${consultation.ordonnance}` : ""}
 
-ACTES / MÉDICAMENTS PRESCRITS :
-${medicaments || "Aucun acte enregistré"}
+ACTES / MÃDICAMENTS PRESCRITS :
+${medicaments || "Aucun acte enregistrÃ©"}
 
 INSTRUCTIONS :
-1. Génère le contenu complet de l'ordonnance (section CONTENU) incluant :
-   - Liste de chaque médicament avec : posologie précise (dose/kg si pertinent), fréquence, durée du traitement, voie d'administration
-   - Conditions de conservation si nécessaire
-   - Précautions particulières (éviter ensoleillement, jeûne, etc.)
-2. Génère les instructions simplifiées pour le propriétaire (section INSTRUCTIONS_CLIENT) :
-   language clair, sans jargon médical
-3. Sois précis, professionnel et adapté à l'espèce animale
+1. GÃ©nÃ¨re le contenu complet de l'ordonnance (section CONTENU) incluant :
+   - Liste de chaque mÃ©dicament avec : posologie prÃ©cise (dose/kg si pertinent), frÃ©quence, durÃ©e du traitement, voie d'administration
+   - Conditions de conservation si nÃ©cessaire
+   - PrÃ©cautions particuliÃ¨res (Ã©viter ensoleillement, jeÃ»ne, etc.)
+2. GÃ©nÃ¨re les instructions simplifiÃ©es pour le propriÃ©taire (section INSTRUCTIONS_CLIENT) :
+   language clair, sans jargon mÃ©dical
+3. Sois prÃ©cis, professionnel et adaptÃ© Ã  l'espÃ¨ce animale
 
-Réponds en JSON strict (sans markdown) :
-{ "contenu": "texte complet de l'ordonnance médicale", "instructionsClient": "texte simplifié pour le propriétaire" }`;
+RÃ©ponds en JSON strict (sans markdown) :
+{ "contenu": "texte complet de l'ordonnance mÃ©dicale", "instructionsClient": "texte simplifiÃ© pour le propriÃ©taire" }`;
 
     const response = await anthropic.messages.create({
       model: AI_MODEL,
@@ -446,7 +449,7 @@ Réponds en JSON strict (sans markdown) :
       })
       .returning();
 
-    // Décrémenter le stock automatiquement (FEFO) — fire and forget
+    // DÃ©crÃ©menter le stock automatiquement (FEFO) â fire and forget
     setImmediate(() =>
       void decrementeStockDepuisOrdonnance(
         req.clinicId,
@@ -463,7 +466,7 @@ Réponds en JSON strict (sans markdown) :
     });
   } catch (err) {
     req.log.error(err);
-    return res.status(500).json({ error: "Erreur lors de la génération IA" });
+    return res.status(500).json({ error: "Erreur lors de la gÃ©nÃ©ration IA" });
   }
 });
 
