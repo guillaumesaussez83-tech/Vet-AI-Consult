@@ -36,29 +36,41 @@ app.listen(port, async (err) => {
     logger.warn({ err: e }, "Workflow migration skipped");
   }
 
+  // Auto-migration Sprint 1 — No-Show RDV + AMM Ordonnances (idempotent)
+  try {
+    await (db as any).execute(`
+      ALTER TABLE rendez_vous ADD COLUMN IF NOT EXISTS no_show_at TIMESTAMPTZ;
+      ALTER TABLE rendez_vous ADD COLUMN IF NOT EXISTS no_show_reason TEXT;
+      ALTER TABLE ordonnances ADD COLUMN IF NOT EXISTS numero_amm TEXT;
+    `);
+    logger.info("Sprint 1 DB migration OK");
+  } catch (e) {
+    logger.warn({ err: e }, "Sprint 1 migration skipped");
+  }
+
   // Auto-seed stock demo data if stock is empty
   runStockSeeder("default")
     .then(result => {
       if (result.inserted > 0) {
-        logger.info(result, "Stock initialisé automatiquement avec les données démo");
+        logger.info(result, "Stock initialisÃ© automatiquement avec les donnÃ©es dÃ©mo");
       }
     })
     .catch(err => {
-      logger.warn({ err }, "Auto-seeding du stock ignoré (erreur non bloquante)");
+      logger.warn({ err }, "Auto-seeding du stock ignorÃ© (erreur non bloquante)");
     });
 
-  // Sync salle d'attente ↔ agenda toutes les 5 min
+  // Sync salle d'attente â agenda toutes les 5 min
   startSyncJob();
 
   // Envoi automatique des rappels (toutes les heures)
   startRappelsJob();
 
-  // Analyse nocturne du stock — EOQ + alertes (toutes les 24h, démarrage dans 5 min)
+  // Analyse nocturne du stock â EOQ + alertes (toutes les 24h, dÃ©marrage dans 5 min)
   startStockAnalysisJob();
 
-  // Initialisation base de connaissances vétérinaires RAG (ANMV/EMA/RESAPATH)
-  // Non bloquante — dégradation gracieuse si OPENAI_API_KEY absent
+  // Initialisation base de connaissances vÃ©tÃ©rinaires RAG (ANMV/EMA/RESAPATH)
+  // Non bloquante â dÃ©gradation gracieuse si OPENAI_API_KEY absent
   setupVetKnowledge().catch(err => {
-    logger.warn({ err }, "setupVetKnowledge ignoré (erreur non bloquante)");
+    logger.warn({ err }, "setupVetKnowledge ignorÃ© (erreur non bloquante)");
   });
 });
