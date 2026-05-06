@@ -21,6 +21,8 @@ export const rendezVousTable = pgTable("rendez_vous", {
   animalNom: text("animal_nom"),
   animalEspece: text("animal_espece"), // chien|chat|nac|cheval|autre
   statut: text("statut").notNull().default("planifié"),
+  noShowAt: timestamp("no_show_at", { withTimezone: true }),
+  noShowReason: text("no_show_reason"),
   statutSalle: text("statut_salle").notNull().default("en_attente_arrivee"),
   notes: text("notes"),
   createdBy: text("created_by"),
