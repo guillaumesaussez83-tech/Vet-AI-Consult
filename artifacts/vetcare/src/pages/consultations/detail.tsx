@@ -33,6 +33,8 @@ import { VoiceInput } from "@/components/VoiceInput";
 import { DoseCalculator } from "@/components/DoseCalculator";
 
 import { unwrapResponse as __unwrapEnvelope } from "../../lib/queryClient";
+import { MultiPatientSelector } from "@/components/MultiPatientSelector";
+import { AttachmentsPanel } from "@/components/AttachmentsPanel";
 
 type ActeLine = {
   acteId: number;
@@ -96,7 +98,7 @@ export default function ConsultationDetailPage() {
     try {
       await updateConsultation.mutateAsync({ id, data: data as any });
       queryClient.invalidateQueries({ queryKey: getGetConsultationQueryKey(id) });
-      toast({ title: "Sauvegardé" });
+      toast({ title: "SauvegardÃ©" });
     } catch {
       toast({ title: "Erreur lors de la sauvegarde", variant: "destructive" });
     }
@@ -107,7 +109,7 @@ export default function ConsultationDetailPage() {
       await updateConsultation.mutateAsync({ id, data: data as any });
       queryClient.invalidateQueries({ queryKey: getGetConsultationQueryKey(id) });
     } catch {
-      // autosave silent — ne pas bloquer l'UX
+      // autosave silent â ne pas bloquer l'UX
     }
   }, [id, updateConsultation, queryClient]);
 
@@ -136,9 +138,9 @@ export default function ConsultationDetailPage() {
       const texte = result.texteComplet;
       await updateConsultation.mutateAsync({ id, data: { diagnosticIA: texte } as any });
       queryClient.invalidateQueries({ queryKey: getGetConsultationQueryKey(id) });
-      toast({ title: "Diagnostic IA généré" });
+      toast({ title: "Diagnostic IA gÃ©nÃ©rÃ©" });
     } catch {
-      toast({ title: "Erreur lors de la génération du diagnostic", variant: "destructive" });
+      toast({ title: "Erreur lors de la gÃ©nÃ©ration du diagnostic", variant: "destructive" });
     } finally {
       setIaSaving(false);
     }
@@ -149,9 +151,9 @@ export default function ConsultationDetailPage() {
       await handleSaveActes();
       const result = await generateOrdonnance.mutateAsync({ id });
       queryClient.invalidateQueries({ queryKey: getGetConsultationQueryKey(id) });
-      toast({ title: "Ordonnance générée" });
+      toast({ title: "Ordonnance gÃ©nÃ©rÃ©e" });
     } catch {
-      toast({ title: "Erreur lors de la génération de l'ordonnance", variant: "destructive" });
+      toast({ title: "Erreur lors de la gÃ©nÃ©ration de l'ordonnance", variant: "destructive" });
     }
   };
 
@@ -162,10 +164,10 @@ export default function ConsultationDetailPage() {
       queryClient.invalidateQueries({ queryKey: getGetConsultationQueryKey(id) });
       queryClient.invalidateQueries({ queryKey: getListFacturesQueryKey() });
       queryClient.invalidateQueries({ queryKey: ["facture-by-consultation", id] });
-      toast({ title: "Facture créée", description: "Redirection vers la facture…" });
+      toast({ title: "Facture crÃ©Ã©e", description: "Redirection vers la factureâ¦" });
       if (facture?.id) navigate(`/factures/${facture.id}`);
     } catch {
-      toast({ title: "Erreur lors de la génération de la facture", variant: "destructive" });
+      toast({ title: "Erreur lors de la gÃ©nÃ©ration de la facture", variant: "destructive" });
     }
   };
 
@@ -187,10 +189,10 @@ export default function ConsultationDetailPage() {
       queryClient.invalidateQueries({ queryKey: getGetConsultationQueryKey(id) });
       queryClient.invalidateQueries({ queryKey: getListFacturesQueryKey() });
       queryClient.invalidateQueries({ queryKey: ["facture-by-consultation", id] });
-      toast({ title: "Facture créée", description: "Redirection vers la facture…" });
+      toast({ title: "Facture crÃ©Ã©e", description: "Redirection vers la factureâ¦" });
       if (facture?.id) navigate(`/factures/${facture.id}`);
     } catch {
-      toast({ title: "Erreur lors de la génération de la facture", variant: "destructive" });
+      toast({ title: "Erreur lors de la gÃ©nÃ©ration de la facture", variant: "destructive" });
     }
   };
 
@@ -209,7 +211,7 @@ export default function ConsultationDetailPage() {
     queryClient.invalidateQueries({ queryKey: getGetConsultationQueryKey(id) });
     queryClient.invalidateQueries({ queryKey: getListFacturesQueryKey() });
     queryClient.invalidateQueries({ queryKey: ["facture-by-consultation", id] });
-    // Invalider toutes les factures individuelles pour éviter le cache périmé
+    // Invalider toutes les factures individuelles pour Ã©viter le cache pÃ©rimÃ©
     queryClient.invalidateQueries({ queryKey: ["factures"] });
   };
 
@@ -235,7 +237,7 @@ export default function ConsultationDetailPage() {
     </div>
   );
 
-  if (!consultation) return <div className="text-center py-16">Consultation non trouvée</div>;
+  if (!consultation) return <div className="text-center py-16">Consultation non trouvÃ©e</div>;
 
   const patient = consultation.patient;
 
@@ -251,20 +253,20 @@ export default function ConsultationDetailPage() {
             <span>/</span>
             {patient && (
               <Link href={`/patients/${patient.id}`} className="hover:text-primary transition-colors font-medium">
-                ← {patient.nom}
+                â {patient.nom}
               </Link>
             )}
           </div>
           <h1 className="text-2xl font-bold tracking-tight">
-            Consultation — {patient?.nom ?? "Patient"}
+            Consultation â {patient?.nom ?? "Patient"}
           </h1>
           <p className="text-muted-foreground text-sm">
-            {consultation.veterinaire?.startsWith('Dr.') ? consultation.veterinaire : `Dr. ${consultation.veterinaire}`} • {formatDateLong(consultation.date)}
-            {patient?.owner && ` • ${patient.owner.prenom} ${patient.owner.nom}`}
+            {consultation.veterinaire?.startsWith('Dr.') ? consultation.veterinaire : `Dr. ${consultation.veterinaire}`} â¢ {formatDateLong(consultation.date)}
+            {patient?.owner && ` â¢ ${patient.owner.prenom} ${patient.owner.nom}`}
           </p>
         </div>
         <Badge variant={consultation.statut === "terminee" ? "outline" : consultation.statut === "en_cours" ? "default" : "secondary"}>
-          {consultation.statut === "en_attente" ? "En attente" : consultation.statut === "en_cours" ? "En cours" : "Terminée"}
+          {consultation.statut === "en_attente" ? "En attente" : consultation.statut === "en_cours" ? "En cours" : "TerminÃ©e"}
         </Badge>
       </div>
 
@@ -275,8 +277,8 @@ export default function ConsultationDetailPage() {
             <div>
               <span className="font-semibold text-green-800">{factureExistante.numero}</span>
               <span className="text-sm text-green-600 ml-2">
-                {factureExistante.montantTTC?.toFixed(2)} € TTC
-                {factureExistante.statut === "payee" ? " — Payée" : " — En attente"}
+                {factureExistante.montantTTC?.toFixed(2)} â¬ TTC
+                {factureExistante.statut === "payee" ? " â PayÃ©e" : " â En attente"}
               </span>
             </div>
           </div>
@@ -295,7 +297,7 @@ export default function ConsultationDetailPage() {
 
       {patient?.allergies && (
         <div className="flex items-start gap-3 bg-red-50 border-l-4 border-red-600 px-4 py-3 rounded-r-lg">
-          <span className="text-red-600 mt-0.5 flex-shrink-0">⚠️</span>
+          <span className="text-red-600 mt-0.5 flex-shrink-0">â ï¸</span>
           <div>
             <span className="text-red-800 font-bold text-sm uppercase tracking-wide">ALLERGIES : </span>
             <span className="text-red-700 text-sm">{patient.allergies}</span>
@@ -305,9 +307,9 @@ export default function ConsultationDetailPage() {
 
       {patient?.antecedents && (
         <div className="flex items-start gap-3 bg-amber-50 border-l-4 border-amber-500 px-4 py-3 rounded-r-lg">
-          <span className="text-amber-600 mt-0.5 flex-shrink-0">📋</span>
+          <span className="text-amber-600 mt-0.5 flex-shrink-0">ð</span>
           <div>
-            <span className="text-amber-800 font-bold text-sm">Antécédents : </span>
+            <span className="text-amber-800 font-bold text-sm">AntÃ©cÃ©dents : </span>
             <span className="text-amber-700 text-sm">{patient.antecedents}</span>
           </div>
         </div>
@@ -315,11 +317,11 @@ export default function ConsultationDetailPage() {
 
       <Tabs defaultValue="anamnese" className="space-y-4">
         <TabsList className="w-full justify-start overflow-x-auto h-auto flex-wrap gap-1 p-1">
-          <TabsTrigger value="anamnese" className="text-sm">📋 Anamnèse</TabsTrigger>
-          <TabsTrigger value="examen" className="text-sm">🩺 Examen clinique</TabsTrigger>
-          <TabsTrigger value="examens-compl" className="text-sm">🔬 Examens compl.</TabsTrigger>
-          <TabsTrigger value="diagnostic" className="text-sm">🧠 Diagnostic IA</TabsTrigger>
-          <TabsTrigger value="actes" className="text-sm">💊 Ordonnance & Actes</TabsTrigger>
+          <TabsTrigger value="anamnese" className="text-sm">ð AnamnÃ¨se</TabsTrigger>
+          <TabsTrigger value="examen" className="text-sm">ð©º Examen clinique</TabsTrigger>
+          <TabsTrigger value="examens-compl" className="text-sm">ð¬ Examens compl.</TabsTrigger>
+          <TabsTrigger value="diagnostic" className="text-sm">ð§  Diagnostic IA</TabsTrigger>
+          <TabsTrigger value="actes" className="text-sm">ð Ordonnance & Actes</TabsTrigger>
         </TabsList>
 
         <TabsContent value="anamnese">
@@ -378,7 +380,7 @@ function AutoSaveIndicator({ state }: { state: "idle" | "pending" | "saved" }) {
   if (state === "idle") return null;
   return (
     <span className={`text-xs font-normal ml-2 ${state === "pending" ? "text-muted-foreground" : "text-green-600"}`}>
-      {state === "pending" ? "Enregistrement…" : "✓ Sauvegardé"}
+      {state === "pending" ? "Enregistrementâ¦" : "â SauvegardÃ©"}
     </span>
   );
 }
@@ -405,23 +407,23 @@ function EtapeAnamnese({ consultation, onAutoSave }: any) {
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <span>Anamnèse</span>
+          <span>AnamnÃ¨se</span>
           <AutoSaveIndicator state={saveState} />
         </CardTitle>
-        <p className="text-sm text-muted-foreground">Motif de consultation et historique rapporté par le propriétaire</p>
+        <p className="text-sm text-muted-foreground">Motif de consultation et historique rapportÃ© par le propriÃ©taire</p>
       </CardHeader>
       <CardContent className="space-y-4">
         <div>
           <Label>Motif de consultation</Label>
-          <Input className="mt-1" value={motif} onChange={e => setMotif(e.target.value)} placeholder="Ex: Boiterie membre antérieur droit depuis 3 jours..." />
+          <Input className="mt-1" value={motif} onChange={e => setMotif(e.target.value)} placeholder="Ex: Boiterie membre antÃ©rieur droit depuis 3 jours..." />
         </div>
         <div>
           <div className="flex items-center justify-between mb-1">
-            <Label>Anamnèse (dictée ou saisie)</Label>
+            <Label>AnamnÃ¨se (dictÃ©e ou saisie)</Label>
             <VoiceInput onTranscript={(t) => setAnamnese(prev => prev ? prev + " " + t : t)} />
           </div>
           <Textarea rows={8} value={anamnese} onChange={e => setAnamnese(e.target.value)}
-            placeholder="Décrivez l'histoire clinique du patient : début des symptômes, évolution, contexte, traitements en cours, comportement alimentaire, hydratation, etc." />
+            placeholder="DÃ©crivez l'histoire clinique du patient : dÃ©but des symptÃ´mes, Ã©volution, contexte, traitements en cours, comportement alimentaire, hydratation, etc." />
         </div>
       </CardContent>
     </Card>
@@ -458,7 +460,7 @@ function EtapeExamenClinique({ consultation, onAutoSave }: any) {
           <span>Examen clinique</span>
           <AutoSaveIndicator state={saveState} />
         </CardTitle>
-        <p className="text-sm text-muted-foreground">Constantes vitales et observations systèmes</p>
+        <p className="text-sm text-muted-foreground">Constantes vitales et observations systÃ¨mes</p>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="grid gap-4 md:grid-cols-2">
@@ -467,17 +469,17 @@ function EtapeExamenClinique({ consultation, onAutoSave }: any) {
             <Input className="mt-1" type="number" step="0.1" value={poids} onChange={e => setPoids(e.target.value)} placeholder="28.5" />
           </div>
           <div>
-            <Label>Température (°C)</Label>
+            <Label>TempÃ©rature (Â°C)</Label>
             <Input className="mt-1" type="number" step="0.1" value={temperature} onChange={e => setTemperature(e.target.value)} placeholder="38.5" />
           </div>
         </div>
         <div>
           <div className="flex items-center justify-between mb-1">
-            <Label>Examen clinique (dictée ou saisie)</Label>
+            <Label>Examen clinique (dictÃ©e ou saisie)</Label>
             <VoiceInput onTranscript={(t) => setExamenClinique(prev => prev ? prev + " " + t : t)} />
           </div>
           <Textarea rows={10} value={examenClinique} onChange={e => setExamenClinique(e.target.value)}
-            placeholder="État général, muqueuses, fréquence cardiaque, respiratoire, palpation abdominale, auscultation cardiopulmonaire, examen locomoteur, ganglions, peau et phanères..." />
+            placeholder="Ãtat gÃ©nÃ©ral, muqueuses, frÃ©quence cardiaque, respiratoire, palpation abdominale, auscultation cardiopulmonaire, examen locomoteur, ganglions, peau et phanÃ¨res..." />
         </div>
       </CardContent>
     </Card>
@@ -505,19 +507,19 @@ function EtapeExamensCompl({ consultation, onAutoSave }: any) {
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <span>Examens complémentaires</span>
+          <span>Examens complÃ©mentaires</span>
           <AutoSaveIndicator state={saveState} />
         </CardTitle>
-        <p className="text-sm text-muted-foreground">Résultats biologiques, imagerie et autres examens</p>
+        <p className="text-sm text-muted-foreground">RÃ©sultats biologiques, imagerie et autres examens</p>
       </CardHeader>
       <CardContent className="space-y-4">
         <div>
           <div className="flex items-center justify-between mb-1">
-            <Label>Résultats des examens complémentaires</Label>
+            <Label>RÃ©sultats des examens complÃ©mentaires</Label>
             <VoiceInput onTranscript={(t) => setExamens(prev => prev ? prev + " " + t : t)} />
           </div>
           <Textarea rows={10} value={examens} onChange={e => setExamens(e.target.value)}
-            placeholder="NFS, biochimie, urines, résultats radiographiques, échographiques, etc. Laissez vide si aucun examen complémentaire." />
+            placeholder="NFS, biochimie, urines, rÃ©sultats radiographiques, Ã©chographiques, etc. Laissez vide si aucun examen complÃ©mentaire." />
         </div>
       </CardContent>
     </Card>
@@ -546,24 +548,24 @@ function EtapeDiagnosticIA({ consultation, onAutoSave, onGenerateIA, isGeneratin
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Brain className="h-5 w-5 text-primary" />
-          <span>Diagnostic différentiel IA</span>
+          <span>Diagnostic diffÃ©rentiel IA</span>
           <AutoSaveIndicator state={saveState} />
         </CardTitle>
         <p className="text-sm text-muted-foreground">
-          Claude analyse l'anamnèse et l'examen clinique pour proposer des diagnostics différentiels
+          Claude analyse l'anamnÃ¨se et l'examen clinique pour proposer des diagnostics diffÃ©rentiels
         </p>
       </CardHeader>
       <CardContent className="space-y-4">
         <Button onClick={onGenerateIA} disabled={isGenerating} className="w-full" size="lg">
           <Sparkles className="mr-2 h-5 w-5" />
-          {isGenerating ? "Analyse en cours par Claude..." : "Générer le diagnostic IA avec Claude"}
+          {isGenerating ? "Analyse en cours par Claude..." : "GÃ©nÃ©rer le diagnostic IA avec Claude"}
         </Button>
 
         {consultation.diagnosticIA && (
           <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
             <div className="flex items-center gap-2 mb-2 text-primary font-medium">
               <Brain className="h-4 w-4" />
-              Diagnostic différentiel par Claude
+              Diagnostic diffÃ©rentiel par Claude
             </div>
             <pre className="whitespace-pre-wrap text-sm font-sans">{consultation.diagnosticIA}</pre>
           </div>
@@ -571,11 +573,11 @@ function EtapeDiagnosticIA({ consultation, onAutoSave, onGenerateIA, isGeneratin
 
         <div>
           <div className="flex items-center justify-between mb-1">
-            <Label>Diagnostic retenu (à compléter par le vétérinaire)</Label>
+            <Label>Diagnostic retenu (Ã  complÃ©ter par le vÃ©tÃ©rinaire)</Label>
             <VoiceInput onTranscript={(t) => setDiagnostic(prev => prev ? prev + " " + t : t)} />
           </div>
           <Textarea rows={4} value={diagnostic} onChange={e => setDiagnostic(e.target.value)}
-            placeholder="Diagnostic final retenu après analyse..." />
+            placeholder="Diagnostic final retenu aprÃ¨s analyse..." />
         </div>
       </CardContent>
     </Card>
@@ -603,7 +605,7 @@ function EtapeOrdonnanceActes({
   const handleDecrementeOrdonnance = async () => {
     const ordonnanceText = consultation?.ordonnance;
     if (!ordonnanceText) {
-      toast({ title: "Aucune ordonnance à analyser", variant: "destructive" });
+      toast({ title: "Aucune ordonnance Ã  analyser", variant: "destructive" });
       return;
     }
     setDecrementeStockLoading(true);
@@ -643,8 +645,8 @@ function EtapeOrdonnanceActes({
       if (data.ordonnance?.id) setOrdonnanceIAId(data.ordonnance.id);
       queryClient.invalidateQueries({ queryKey: ["consultation", consultation.id] });
       toast({
-        title: `Ordonnance créée`,
-        description: `${prescriptions.length} médicament${prescriptions.length > 1 ? "s" : ""} — mouvements de stock enregistrés`,
+        title: `Ordonnance crÃ©Ã©e`,
+        description: `${prescriptions.length} mÃ©dicament${prescriptions.length > 1 ? "s" : ""} â mouvements de stock enregistrÃ©s`,
       });
     } catch (e) {
       toast({ title: "Erreur lors de la confirmation", description: String(e), variant: "destructive" });
@@ -662,9 +664,9 @@ function EtapeOrdonnanceActes({
       if (!res.ok) throw new Error("Erreur serveur");
       const data = await res.json();
       setOrdonnanceIAId(data.id);
-      toast({ title: "Ordonnance créée", description: "L'ordonnance structurée a été générée par l'IA." });
+      toast({ title: "Ordonnance crÃ©Ã©e", description: "L'ordonnance structurÃ©e a Ã©tÃ© gÃ©nÃ©rÃ©e par l'IA." });
     } catch {
-      toast({ title: "Erreur", description: "Impossible de créer l'ordonnance.", variant: "destructive" });
+      toast({ title: "Erreur", description: "Impossible de crÃ©er l'ordonnance.", variant: "destructive" });
     } finally {
       setCreatingOrdonnanceIA(false);
     }
@@ -685,7 +687,7 @@ function EtapeOrdonnanceActes({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ transcript }),
     });
-    if (!res.ok) throw new Error("Erreur lors de la génération vocale de facture");
+    if (!res.ok) throw new Error("Erreur lors de la gÃ©nÃ©ration vocale de facture");
     const data = await res.json();
     setVoixPreview(data.data ?? data);
   };
@@ -715,7 +717,7 @@ function EtapeOrdonnanceActes({
       if (!res.ok) throw new Error();
       queryClient.invalidateQueries({ queryKey: getGetConsultationQueryKey(consultation.id) });
       queryClient.invalidateQueries({ queryKey: getListFacturesQueryKey() });
-      toast({ title: "Facture annulée" });
+      toast({ title: "Facture annulÃ©e" });
     } catch {
       toast({ title: "Erreur lors de la suppression de la facture", variant: "destructive" });
     } finally {
@@ -743,8 +745,8 @@ function EtapeOrdonnanceActes({
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle>Actes réalisés</CardTitle>
-              <p className="text-sm text-muted-foreground mt-1">Saisissez les actes et médicaments de cette consultation</p>
+              <CardTitle>Actes rÃ©alisÃ©s</CardTitle>
+              <p className="text-sm text-muted-foreground mt-1">Saisissez les actes et mÃ©dicaments de cette consultation</p>
             </div>
             <Button onClick={() => {
               setNewActeForm({ description: "", quantite: 1, prixHT: "", tva: "20", acteId: "" });
@@ -758,7 +760,7 @@ function EtapeOrdonnanceActes({
         <CardContent className="space-y-3">
           {actes.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground border-2 border-dashed rounded-lg">
-              <p>Aucun acte ajouté. Cliquez sur "Ajouter un acte" pour commencer.</p>
+              <p>Aucun acte ajoutÃ©. Cliquez sur "Ajouter un acte" pour commencer.</p>
             </div>
           ) : (
             actes.map((acte: ActeLine, idx: number) => (
@@ -788,12 +790,12 @@ function EtapeOrdonnanceActes({
                   )}
                 </div>
                 <div>
-                  <Label className="text-xs">Qté</Label>
+                  <Label className="text-xs">QtÃ©</Label>
                   <Input className="mt-1 h-8" type="number" min="1" value={acte.quantite}
                     onChange={e => updateActe(idx, "quantite", parseInt(e.target.value))} />
                 </div>
                 <div>
-                  <Label className="text-xs">Prix unitaire (€)</Label>
+                  <Label className="text-xs">Prix unitaire (â¬)</Label>
                   <Input className="mt-1 h-8" type="number" step="0.01" value={acte.prixUnitaire}
                     onChange={e => updateActe(idx, "prixUnitaire", parseFloat(e.target.value))} />
                 </div>
@@ -810,15 +812,15 @@ function EtapeOrdonnanceActes({
             <div className="border-t pt-3 space-y-1 text-sm">
               <div className="flex justify-between text-muted-foreground">
                 <span>Sous-total HT</span>
-                <span>{totalHT.toFixed(2)} €</span>
+                <span>{totalHT.toFixed(2)} â¬</span>
               </div>
               <div className="flex justify-between text-muted-foreground">
                 <span>TVA (20%)</span>
-                <span>{(totalTTC - totalHT).toFixed(2)} €</span>
+                <span>{(totalTTC - totalHT).toFixed(2)} â¬</span>
               </div>
               <div className="flex justify-between font-semibold text-base border-t pt-1">
                 <span>Total TTC</span>
-                <span>{totalTTC.toFixed(2)} €</span>
+                <span>{totalTTC.toFixed(2)} â¬</span>
               </div>
             </div>
           )}
@@ -844,7 +846,7 @@ function EtapeOrdonnanceActes({
               className="gap-2 border-primary/30 text-primary hover:bg-primary/10"
             >
               <Mic className="h-4 w-4" />
-              Dictée ordonnance IA
+              DictÃ©e ordonnance IA
             </Button>
           </div>
         </CardHeader>
@@ -854,12 +856,12 @@ function EtapeOrdonnanceActes({
               <pre className="whitespace-pre-wrap text-sm font-sans">{consultation.ordonnance}</pre>
             </div>
           ) : (
-            <p className="text-muted-foreground text-sm">Aucune ordonnance générée</p>
+            <p className="text-muted-foreground text-sm">Aucune ordonnance gÃ©nÃ©rÃ©e</p>
           )}
           <div className="flex gap-2 flex-wrap">
             <Button onClick={onGenerateOrdonnance} disabled={isGeneratingOrdonnance} className="flex-1 min-w-[160px]">
               <Sparkles className="mr-2 h-4 w-4" />
-              {isGeneratingOrdonnance ? "Génération en cours..." : "Générer avec Claude"}
+              {isGeneratingOrdonnance ? "GÃ©nÃ©ration en cours..." : "GÃ©nÃ©rer avec Claude"}
             </Button>
             {ordonnanceIAId ? (
               <a href={`/ordonnances/${ordonnanceIAId}/imprimer`} target="_blank" rel="noreferrer">
@@ -875,9 +877,9 @@ function EtapeOrdonnanceActes({
                 disabled={creatingOrdonnanceIA}
               >
                 {creatingOrdonnanceIA ? (
-                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Création...</>
+                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" />CrÃ©ation...</>
                 ) : (
-                  <><FileText className="mr-2 h-4 w-4" />Créer ordonnance</>
+                  <><FileText className="mr-2 h-4 w-4" />CrÃ©er ordonnance</>
                 )}
               </Button>
             )}
@@ -889,7 +891,7 @@ function EtapeOrdonnanceActes({
                 className="border-blue-200 text-blue-700 hover:bg-blue-50"
               >
                 <Package className="mr-2 h-4 w-4" />
-                {decrementeStockLoading ? "Analyse..." : "→ Décrémenter stock"}
+                {decrementeStockLoading ? "Analyse..." : "â DÃ©crÃ©menter stock"}
               </Button>
             )}
           </div>
@@ -902,7 +904,7 @@ function EtapeOrdonnanceActes({
         onConfirmed={handleDicteeConfirmed}
       />
 
-      {/* C1 — Rappels post-consultation */}
+      {/* C1 â Rappels post-consultation */}
       <RappelsPostConsultation consultationId={consultation.id} patientId={consultation.patientId ?? null} />
 
       <Card>
@@ -918,7 +920,7 @@ function EtapeOrdonnanceActes({
               <div className="flex items-center justify-between flex-wrap gap-2">
                 <div>
                   <div className="font-semibold text-green-700">{consultation.facture.numero}</div>
-                  <div className="text-sm text-green-600">Montant TTC : {consultation.facture.montantTTC?.toFixed(2)} €</div>
+                  <div className="text-sm text-green-600">Montant TTC : {consultation.facture.montantTTC?.toFixed(2)} â¬</div>
                 </div>
                 <div className="flex items-center gap-2">
                   <Link href={`/factures/${consultation.facture.id}/imprimer`}>
@@ -941,7 +943,7 @@ function EtapeOrdonnanceActes({
                       <AlertDialogHeader>
                         <AlertDialogTitle>Annuler cette facture ?</AlertDialogTitle>
                         <AlertDialogDescription>
-                          Êtes-vous sûr de vouloir annuler la facture {consultation.facture.numero} ? Cette action est irréversible. Vous pourrez en créer une nouvelle ensuite.
+                          Ãtes-vous sÃ»r de vouloir annuler la facture {consultation.facture.numero} ? Cette action est irrÃ©versible. Vous pourrez en crÃ©er une nouvelle ensuite.
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
@@ -959,7 +961,7 @@ function EtapeOrdonnanceActes({
             <>
               <VoiceRecorder
                 onAction={handleGenererFactureVoix}
-                actionLabel="Générer la facture"
+                actionLabel="GÃ©nÃ©rer la facture"
                 placeholder='Dictez les actes : "consultation, vaccin rage, amoxicilline 500mg pendant 7 jours"...'
               />
 
@@ -968,7 +970,7 @@ function EtapeOrdonnanceActes({
                   <div className="bg-violet-50 border-b border-violet-200 px-4 py-3">
                     <div className="flex items-center gap-2 text-violet-800 font-medium text-sm">
                       <Sparkles className="h-4 w-4" />
-                      Prévisualisation de la facture dictée
+                      PrÃ©visualisation de la facture dictÃ©e
                     </div>
                     {voixPreview.resume && (
                       <p className="text-xs text-violet-600 mt-1">{voixPreview.resume}</p>
@@ -979,23 +981,23 @@ function EtapeOrdonnanceActes({
                       <div key={i} className="flex items-center justify-between text-sm py-1.5 border-b last:border-0">
                         <div>
                           <span className="font-medium">{l.description}</span>
-                          <span className="text-muted-foreground ml-2">× {l.quantite}</span>
+                          <span className="text-muted-foreground ml-2">Ã {l.quantite}</span>
                           {l.acteId == null && (
                             <span className="text-xs text-amber-600 ml-2">(acte libre)</span>
                           )}
                         </div>
-                        <span className="font-medium">{l.montantHT.toFixed(2)} € HT</span>
+                        <span className="font-medium">{l.montantHT.toFixed(2)} â¬ HT</span>
                       </div>
                     ))}
                     <div className="pt-2 space-y-1 text-sm">
                       <div className="flex justify-between text-muted-foreground">
-                        <span>Total HT</span><span>{voixPreview.totalHT.toFixed(2)} €</span>
+                        <span>Total HT</span><span>{voixPreview.totalHT.toFixed(2)} â¬</span>
                       </div>
                       <div className="flex justify-between text-muted-foreground">
-                        <span>TVA (20%)</span><span>{voixPreview.totalTVA.toFixed(2)} €</span>
+                        <span>TVA (20%)</span><span>{voixPreview.totalTVA.toFixed(2)} â¬</span>
                       </div>
                       <div className="flex justify-between font-bold border-t pt-1">
-                        <span>Total TTC</span><span>{voixPreview.totalTTC.toFixed(2)} €</span>
+                        <span>Total TTC</span><span>{voixPreview.totalTTC.toFixed(2)} â¬</span>
                       </div>
                     </div>
                   </div>
@@ -1007,7 +1009,7 @@ function EtapeOrdonnanceActes({
                       className="flex-1"
                     >
                       <Check className="mr-2 h-4 w-4" />
-                      {isGeneratingFacture ? "Création..." : "Valider et créer la facture"}
+                      {isGeneratingFacture ? "CrÃ©ation..." : "Valider et crÃ©er la facture"}
                     </Button>
                     <Button type="button" variant="ghost" size="sm" onClick={() => setVoixPreview(null)}>
                       Annuler
@@ -1019,15 +1021,15 @@ function EtapeOrdonnanceActes({
               {!voixPreview && actes.length > 0 && (
                 <Button onClick={onGenerateFacture} disabled={isGeneratingFacture} className="w-full bg-blue-600 hover:bg-blue-700 text-white">
                   {isGeneratingFacture
-                    ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Création en cours…</>
-                    : <><Receipt className="mr-2 h-4 w-4" />Finaliser et facturer ({actes.length} acte{actes.length > 1 ? "s" : ""} — {totalTTC.toFixed(2)} € TTC)</>
+                    ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />CrÃ©ation en coursâ¦</>
+                    : <><Receipt className="mr-2 h-4 w-4" />Finaliser et facturer ({actes.length} acte{actes.length > 1 ? "s" : ""} â {totalTTC.toFixed(2)} â¬ TTC)</>
                   }
                 </Button>
               )}
               {!voixPreview && actes.length === 0 && (
                 <div className="text-center py-4 text-muted-foreground border-2 border-dashed rounded-lg text-sm">
                   <Receipt className="h-8 w-8 mx-auto mb-2 opacity-30" />
-                  <p>Ajoutez et enregistrez vos actes pour générer la facture.</p>
+                  <p>Ajoutez et enregistrez vos actes pour gÃ©nÃ©rer la facture.</p>
                 </div>
               )}
             </>
@@ -1035,13 +1037,13 @@ function EtapeOrdonnanceActes({
         </CardContent>
       </Card>
 
-      {/* Dialog — Résultat décrémentation stock depuis ordonnance */}
+      {/* Dialog â RÃ©sultat dÃ©crÃ©mentation stock depuis ordonnance */}
       <Dialog open={decrementeStockOpen} onOpenChange={setDecrementeStockOpen}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Package className="h-5 w-5 text-blue-600" />
-              Décrémentation stock — Ordonnance
+              DÃ©crÃ©mentation stock â Ordonnance
             </DialogTitle>
           </DialogHeader>
           {decrementeStockLoading ? (
@@ -1054,7 +1056,7 @@ function EtapeOrdonnanceActes({
               <p className="text-sm font-medium text-muted-foreground">{decrementeStockResult.message}</p>
               {decrementeStockResult.parsedMedicaments?.length > 0 && (
                 <div className="space-y-2">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Médicaments détectés</p>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">MÃ©dicaments dÃ©tectÃ©s</p>
                   {decrementeStockResult.resultats?.map((r: any, i: number) => (
                     <div key={i} className={`flex items-center justify-between rounded-lg border px-3 py-2 text-sm ${r.notFound ? "border-red-200 bg-red-50" : "border-green-200 bg-green-50"}`}>
                       <div className="flex items-center gap-2">
@@ -1062,8 +1064,8 @@ function EtapeOrdonnanceActes({
                         <span className="font-medium">{r.nom}</span>
                       </div>
                       <div className="text-right text-xs text-muted-foreground">
-                        {r.notFound ? "Non trouvé dans le stock" : `${r.qtePrise} unité(s) sorties`}
-                        {r.alerteCreee && <span className="ml-2 text-amber-600 font-semibold">⚠ Stock bas</span>}
+                        {r.notFound ? "Non trouvÃ© dans le stock" : `${r.qtePrise} unitÃ©(s) sorties`}
+                        {r.alerteCreee && <span className="ml-2 text-amber-600 font-semibold">â  Stock bas</span>}
                       </div>
                     </div>
                   ))}
@@ -1071,7 +1073,7 @@ function EtapeOrdonnanceActes({
               )}
               {decrementeStockResult.nonTrouvesDansStock?.length > 0 && (
                 <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-800">
-                  <strong>Produits non trouvés dans le stock :</strong> {decrementeStockResult.nonTrouvesDansStock.join(", ")}. Vérifiez les noms dans votre catalogue stock.
+                  <strong>Produits non trouvÃ©s dans le stock :</strong> {decrementeStockResult.nonTrouvesDansStock.join(", ")}. VÃ©rifiez les noms dans votre catalogue stock.
                 </div>
               )}
             </div>
@@ -1082,11 +1084,11 @@ function EtapeOrdonnanceActes({
         </DialogContent>
       </Dialog>
 
-      {/* Dialog — Ajouter un acte manuellement */}
+      {/* Dialog â Ajouter un acte manuellement */}
       <Dialog open={showAddActeDialog} onOpenChange={setShowAddActeDialog}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Ajouter un acte / médicament</DialogTitle>
+            <DialogTitle>Ajouter un acte / mÃ©dicament</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
             {actesList.length > 0 && (
@@ -1096,16 +1098,16 @@ function EtapeOrdonnanceActes({
                   <PopoverTrigger asChild>
                     <Button variant="outline" role="combobox" className="w-full justify-between font-normal text-sm">
                       {newActeForm.acteId
-                        ? (actesList.find((a: any) => String(a.id) === newActeForm.acteId) as any)?.nom ?? "Sélectionner…"
-                        : "Rechercher un acte ou médicament…"}
-                      <span className="ml-2 opacity-40 text-xs">▼</span>
+                        ? (actesList.find((a: any) => String(a.id) === newActeForm.acteId) as any)?.nom ?? "SÃ©lectionnerâ¦"
+                        : "Rechercher un acte ou mÃ©dicamentâ¦"}
+                      <span className="ml-2 opacity-40 text-xs">â¼</span>
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-[400px] p-0" align="start">
                     <Command>
-                      <CommandInput placeholder="Rechercher un acte…" className="text-sm" />
+                      <CommandInput placeholder="Rechercher un acteâ¦" className="text-sm" />
                       <CommandList>
-                        <CommandEmpty>Aucun acte trouvé.</CommandEmpty>
+                        <CommandEmpty>Aucun acte trouvÃ©.</CommandEmpty>
                         <CommandGroup>
                           {actesList.map((a: any) => (
                             <CommandItem
@@ -1124,7 +1126,7 @@ function EtapeOrdonnanceActes({
                             >
                               <div className="flex justify-between w-full">
                                 <span>{a.nom}</span>
-                                <span className="text-muted-foreground text-xs ml-4">{a.prixDefaut?.toFixed(2)} € HT</span>
+                                <span className="text-muted-foreground text-xs ml-4">{a.prixDefaut?.toFixed(2)} â¬ HT</span>
                               </div>
                             </CommandItem>
                           ))}
@@ -1145,7 +1147,7 @@ function EtapeOrdonnanceActes({
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
-                <Label className="text-sm">Quantité</Label>
+                <Label className="text-sm">QuantitÃ©</Label>
                 <Input
                   type="number" min="1"
                   value={newActeForm.quantite}
@@ -1153,7 +1155,7 @@ function EtapeOrdonnanceActes({
                 />
               </div>
               <div className="space-y-1">
-                <Label className="text-sm">Prix unitaire HT (€) *</Label>
+                <Label className="text-sm">Prix unitaire HT (â¬) *</Label>
                 <Input
                   type="number" step="0.01" min="0"
                   value={newActeForm.prixHT}
@@ -1170,21 +1172,21 @@ function EtapeOrdonnanceActes({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="20">20 % (standard)</SelectItem>
-                  <SelectItem value="10">10 % (réduit)</SelectItem>
+                  <SelectItem value="10">10 % (rÃ©duit)</SelectItem>
                   <SelectItem value="5.5">5,5 %</SelectItem>
-                  <SelectItem value="0">0 % (exonéré)</SelectItem>
+                  <SelectItem value="0">0 % (exonÃ©rÃ©)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             {newActeForm.prixHT && (
               <div className="bg-muted/40 rounded-lg p-3 text-sm space-y-1">
                 <div className="flex justify-between text-muted-foreground">
-                  <span>HT ({newActeForm.quantite} × {parseFloat(newActeForm.prixHT || "0").toFixed(2)} €)</span>
-                  <span>{(newActeForm.quantite * parseFloat(newActeForm.prixHT || "0")).toFixed(2)} €</span>
+                  <span>HT ({newActeForm.quantite} Ã {parseFloat(newActeForm.prixHT || "0").toFixed(2)} â¬)</span>
+                  <span>{(newActeForm.quantite * parseFloat(newActeForm.prixHT || "0")).toFixed(2)} â¬</span>
                 </div>
                 <div className="flex justify-between font-semibold">
                   <span>TTC</span>
-                  <span>{(newActeForm.quantite * parseFloat(newActeForm.prixHT || "0") * (1 + parseFloat(newActeForm.tva) / 100)).toFixed(2)} €</span>
+                  <span>{(newActeForm.quantite * parseFloat(newActeForm.prixHT || "0") * (1 + parseFloat(newActeForm.tva) / 100)).toFixed(2)} â¬</span>
                 </div>
               </div>
             )}
@@ -1223,7 +1225,7 @@ function EtapeOrdonnanceActes({
                   await queryClient.invalidateQueries({ queryKey: getGetConsultationQueryKey(consultationId) });
                   setShowAddActeDialog(false);
                   setNewActeForm({ description: "", quantite: 1, prixHT: "", tva: "20", acteId: "" });
-                  toast({ title: "Acte ajouté avec succès" });
+                  toast({ title: "Acte ajoutÃ© avec succÃ¨s" });
                 } catch {
                   toast({ title: "Erreur lors de l'ajout de l'acte", variant: "destructive" });
                 } finally {
@@ -1231,19 +1233,25 @@ function EtapeOrdonnanceActes({
                 }
               }}
             >
-              {savingActe ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Enregistrement…</> : "Ajouter l'acte"}
+              {savingActe ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Enregistrementâ¦</> : "Ajouter l'acte"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <Card>
+        <CardContent className="pt-4 space-y-4">
+          <MultiPatientSelector consultationId={id} primaryPatientId={consultation?.patientId} />
+          <AttachmentsPanel consultationId={id} />
+        </CardContent>
+      </Card>
     </div>
   );
 }
 
-// ─── C1 : Rappels post-consultation ──────────────────────────────────────────
+// âââ C1 : Rappels post-consultation ââââââââââââââââââââââââââââââââââââââââââ
 
 const RAPPELS_RAPIDES = [
-  { label: "J+7 Contrôle", joursDelai: 7 },
+  { label: "J+7 ContrÃ´le", joursDelai: 7 },
   { label: "J+14 Suivi", joursDelai: 14 },
   { label: "1 mois Bilan", joursDelai: 30 },
   { label: "6 mois Check-up", joursDelai: 180 },
@@ -1272,9 +1280,9 @@ function RappelsPostConsultation({ consultationId, patientId }: { consultationId
       if (!res.ok) throw new Error();
       queryClient.invalidateQueries({ queryKey: ["rappels-consultation", consultationId] });
       const d = new Date(); d.setDate(d.getDate() + joursDelai);
-      toast({ title: `Rappel créé`, description: `${label} — échéance le ${d.toLocaleDateString("fr-FR")}` });
+      toast({ title: `Rappel crÃ©Ã©`, description: `${label} â Ã©chÃ©ance le ${d.toLocaleDateString("fr-FR")}` });
     } catch {
-      toast({ title: "Erreur lors de la création du rappel", variant: "destructive" });
+      toast({ title: "Erreur lors de la crÃ©ation du rappel", variant: "destructive" });
     } finally {
       setCreating(null);
     }
@@ -1289,7 +1297,7 @@ function RappelsPostConsultation({ consultationId, patientId }: { consultationId
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base">
-          <span>🔔</span> Rappels post-consultation
+          <span>ð</span> Rappels post-consultation
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
@@ -1313,12 +1321,12 @@ function RappelsPostConsultation({ consultationId, patientId }: { consultationId
             {rappels.map((r: any) => (
               <div key={r.id} className="flex items-center justify-between text-sm bg-muted/40 rounded-lg px-3 py-2">
                 <div className="flex items-center gap-2">
-                  <span className="text-base">🔔</span>
+                  <span className="text-base">ð</span>
                   <div>
                     <span className="font-medium">{r.label}</span>
                     {r.dateEcheance && (
                       <span className="text-xs text-muted-foreground ml-2">
-                        — {new Date(r.dateEcheance + "T12:00:00").toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}
+                        â {new Date(r.dateEcheance + "T12:00:00").toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}
                       </span>
                     )}
                   </div>
@@ -1326,7 +1334,7 @@ function RappelsPostConsultation({ consultationId, patientId }: { consultationId
                 <button
                   className="text-muted-foreground hover:text-destructive text-xs ml-3"
                   onClick={() => deleteRappel(r.id)}
-                >✕</button>
+                >â</button>
               </div>
             ))}
           </div>
