@@ -1,4 +1,4 @@
-import { pgTable, text, serial, timestamp, integer, boolean, real, index } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp, integer, boolean, real, index, AnyPgColumn } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { ownersTable } from "./owners";
@@ -25,6 +25,8 @@ export const patientsTable = pgTable("patients", {
   consentementRgpd: boolean("consentement_rgpd").notNull().default(false),
   dateConsentement: timestamp("date_consentement", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  motherId: integer("mother_id").references((): AnyPgColumn => patientsTable.id),
+  fatherId: integer("father_id").references((): AnyPgColumn => patientsTable.id),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 }, (table) => ({
   clinicIdIdx: index("idx_clinic_id__patients").on(table.clinicId),
