@@ -33,3 +33,4 @@ export * from "./ai-outputs";
 export * from "./user-permissions";
 export * from "./consultation-patients";
 export * from "./consultation-attachments";
+export * from "./cremation-partners";
