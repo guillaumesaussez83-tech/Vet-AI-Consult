@@ -10,7 +10,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@clerk/express": "^2.1.0",
+    "@clerk/express": "^2.1.9",
     "@google-cloud/storage": "^7.19.0",
     "@sentry/node": "^10.49.0",
     "@swc/helpers": "^0.5.21",
@@ -30,7 +30,7 @@
     "pdfkit": "^0.18.0",
     "pino": "^9",
     "pino-http": "^10",
-    "resend": "^6.12.0",
+    "resend": "^6.12.2",
     "zod": "catalog:"
   },
   "devDependencies": {
