@@ -47,12 +47,14 @@ import VentesPage from "./pages/ventes/index";
 import EquipePage from "./pages/equipe/index";
 import AdminPermissionsPage from "./pages/admin/permissions";
 import AgendaCalendarPage from "./pages/agenda/calendar";
+import CremationPage from "./pages/cremation/index";
+import CataloguePrixPage from "./pages/catalogue/index";
 
 const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 
 /**
- * F-P0-3 : si la clÃÂ© Clerk manque, on AFFICHE un ÃÂ©cran propre au lieu de
+ * F-P0-3 : si la clÃÂÃÂ© Clerk manque, on AFFICHE un ÃÂÃÂ©cran propre au lieu de
  * laisser un throw crasher avant le mount ErrorBoundary.
  */
 function MissingConfigScreen({ reason }: { reason: string }) {
@@ -62,7 +64,7 @@ function MissingConfigScreen({ reason }: { reason: string }) {
         <h1 className="text-2xl font-bold">Configuration manquante</h1>
         <p className="text-gray-600">{reason}</p>
         <p className="text-sm text-gray-400">
-          Si vous ÃÂªtes administrateur, vÃÂ©rifiez les variables d'environnement du dÃÂ©ploiement.
+          Si vous ÃÂÃÂªtes administrateur, vÃÂÃÂ©rifiez les variables d'environnement du dÃÂÃÂ©ploiement.
           Sinon, contactez votre support.
         </p>
       </div>
@@ -77,9 +79,9 @@ function stripBase(path: string): string {
 }
 
 /**
- * F-P1-4 + F-P2-8 : observe les changements d'identitÃÂ© Clerk pour
- * 1. Purger le cache React Query quand l'user change (sÃÂ©cu multi-tenant
- *    cÃÂ´tÃÂ© navigateur Ã¢ÂÂ ÃÂ©vite qu'un user qui se logout/login voit les
+ * F-P1-4 + F-P2-8 : observe les changements d'identitÃÂÃÂ© Clerk pour
+ * 1. Purger le cache React Query quand l'user change (sÃÂÃÂ©cu multi-tenant
+ *    cÃÂÃÂ´tÃÂÃÂ© navigateur ÃÂ¢ÃÂÃÂ ÃÂÃÂ©vite qu'un user qui se logout/login voit les
  *    caches de l'ancien user).
  * 2. Populer Sentry.setUser pour attacher l'user context aux erreurs.
  */
@@ -114,8 +116,8 @@ function ClerkSideEffects() {
 }
 
 /**
- * F-P1-3 : handler 401 global branchÃÂ© sur le queryClient.
- * Quand le backend renvoie 401 (token Clerk expirÃÂ©), on signOut l'utilisateur
+ * F-P1-3 : handler 401 global branchÃÂÃÂ© sur le queryClient.
+ * Quand le backend renvoie 401 (token Clerk expirÃÂÃÂ©), on signOut l'utilisateur
  * et on le redirige vers /sign-in. Plus efficace qu'un toast d'erreur perdu.
  */
 function On401Redirect() {
@@ -133,9 +135,9 @@ function On401Redirect() {
 }
 
 /**
- * Branche le getter de token Clerk sur le client API auto-gÃÂ©nÃÂ©rÃÂ© (Orval).
- * Sans ÃÂ§a, tous les hooks React Query gÃÂ©nÃÂ©rÃÂ©s font leurs requÃÂªtes sans
- * Authorization header Ã¢ÂÂ 401 systÃÂ©matique sur toutes les listes.
+ * Branche le getter de token Clerk sur le client API auto-gÃÂÃÂ©nÃÂÃÂ©rÃÂÃÂ© (Orval).
+ * Sans ÃÂÃÂ§a, tous les hooks React Query gÃÂÃÂ©nÃÂÃÂ©rÃÂÃÂ©s font leurs requÃÂÃÂªtes sans
+ * Authorization header ÃÂ¢ÃÂÃÂ 401 systÃÂÃÂ©matique sur toutes les listes.
  */
 function ClerkTokenSync() {
   const { session } = useSession();
@@ -160,7 +162,7 @@ function HomeRedirect() {
 }
 
 /**
- * F-P1-5 : chaque route protÃÂ©gÃÂ©e est wrappÃÂ©e dans un ErrorBoundary local.
+ * F-P1-5 : chaque route protÃÂÃÂ©gÃÂÃÂ©e est wrappÃÂÃÂ©e dans un ErrorBoundary local.
  * Un crash d'un composant enfant montre un fallback plus granulaire, sans
  * tuer la nav.
  */
@@ -229,6 +231,8 @@ function Router() {
       <Route path="/equipe" component={() => <ProtectedRoute component={EquipePage} />} />
       <Route path="/admin/permissions" component={() => <ProtectedRoute component={AdminPermissionsPage} />} />
       <Route path="/agenda/calendar" component={() => <ProtectedRoute component={AgendaCalendarPage} />} />
+      <Route path="/cremation" component={() => <ProtectedRoute component={CremationPage} />} />
+              <Route path="/catalogue" component={() => <ProtectedRoute component={CataloguePrixPage} />} />
       <Route component={NotFound} />
     </Switch>
   );
@@ -290,14 +294,14 @@ function App() {
   // F-P0-3 : check config avant de monter quoi que ce soit.
   if (!clerkPubKey) {
     return (
-      <MissingConfigScreen reason="La clÃÂ© Clerk (VITE_CLERK_PUBLISHABLE_KEY) est introuvable." />
+      <MissingConfigScreen reason="La clÃÂÃÂ© Clerk (VITE_CLERK_PUBLISHABLE_KEY) est introuvable." />
     );
   }
   return (
     <ErrorBoundary>
       <TooltipProvider>
         {/* F-P1-1 : QueryClientProvider MONTE AVANT ClerkProvider pour survivre aux
-            changements de session et garantir que les toasters reÃÂ§oivent bien leur cache. */}
+            changements de session et garantir que les toasters reÃÂÃÂ§oivent bien leur cache. */}
         <QueryClientProvider client={queryClient}>
           <WouterRouter base={basePath}>
             <ClerkProviderWithRoutes />
