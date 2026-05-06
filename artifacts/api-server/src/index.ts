@@ -36,7 +36,7 @@ app.listen(port, async (err) => {
     logger.warn({ err: e }, "Workflow migration skipped");
   }
 
-  // Auto-migration Sprint 1 — No-Show RDV + AMM Ordonnances (idempotent)
+  // Auto-migration Sprint 1 â No-Show RDV + AMM Ordonnances (idempotent)
   try {
     await (db as any).execute(`
       ALTER TABLE rendez_vous ADD COLUMN IF NOT EXISTS no_show_at TIMESTAMPTZ;
@@ -48,29 +48,49 @@ app.listen(port, async (err) => {
     logger.warn({ err: e }, "Sprint 1 migration skipped");
   }
 
+  // Sprint 4B migration — user_permissions table
+  try {
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS user_permissions (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id VARCHAR(255) NOT NULL,
+        module VARCHAR(50) NOT NULL,
+        can_read BOOLEAN NOT NULL DEFAULT true,
+        can_write BOOLEAN NOT NULL DEFAULT false,
+        can_delete BOOLEAN NOT NULL DEFAULT false,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_user_perms_user_module ON user_permissions(user_id, module);
+    `);
+    logger.info("Sprint 4B DB migration OK");
+  } catch (e) {
+    logger.warn({ err: e }, "Sprint 4B migration skipped");
+  }
+
   // Auto-seed stock demo data if stock is empty
   runStockSeeder("default")
     .then(result => {
       if (result.inserted > 0) {
-        logger.info(result, "Stock initialisÃ© automatiquement avec les donnÃ©es dÃ©mo");
+        logger.info(result, "Stock initialisÃÂ© automatiquement avec les donnÃÂ©es dÃÂ©mo");
       }
     })
     .catch(err => {
-      logger.warn({ err }, "Auto-seeding du stock ignorÃ© (erreur non bloquante)");
+      logger.warn({ err }, "Auto-seeding du stock ignorÃÂ© (erreur non bloquante)");
     });
 
-  // Sync salle d'attente â agenda toutes les 5 min
+  // Sync salle d'attente Ã¢ÂÂ agenda toutes les 5 min
   startSyncJob();
 
   // Envoi automatique des rappels (toutes les heures)
   startRappelsJob();
 
-  // Analyse nocturne du stock â EOQ + alertes (toutes les 24h, dÃ©marrage dans 5 min)
+  // Analyse nocturne du stock Ã¢ÂÂ EOQ + alertes (toutes les 24h, dÃÂ©marrage dans 5 min)
   startStockAnalysisJob();
 
-  // Initialisation base de connaissances vÃ©tÃ©rinaires RAG (ANMV/EMA/RESAPATH)
-  // Non bloquante â dÃ©gradation gracieuse si OPENAI_API_KEY absent
+  // Initialisation base de connaissances vÃÂ©tÃÂ©rinaires RAG (ANMV/EMA/RESAPATH)
+  // Non bloquante Ã¢ÂÂ dÃÂ©gradation gracieuse si OPENAI_API_KEY absent
   setupVetKnowledge().catch(err => {
-    logger.warn({ err }, "setupVetKnowledge ignorÃ© (erreur non bloquante)");
+    logger.warn({ err }, "setupVetKnowledge ignorÃÂ© (erreur non bloquante)");
   });
 });
