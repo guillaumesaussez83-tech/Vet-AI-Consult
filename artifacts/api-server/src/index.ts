@@ -36,7 +36,7 @@ app.listen(port, async (err) => {
     logger.warn({ err: e }, "Workflow migration skipped");
   }
 
-  // Auto-migration Sprint 1 ÃÂ¢ÃÂÃÂ No-Show RDV + AMM Ordonnances (idempotent)
+  // Auto-migration Sprint 1 ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ No-Show RDV + AMM Ordonnances (idempotent)
   try {
     await (db as any).execute(`
       ALTER TABLE rendez_vous ADD COLUMN IF NOT EXISTS no_show_at TIMESTAMPTZ;
@@ -48,7 +48,7 @@ app.listen(port, async (err) => {
     logger.warn({ err: e }, "Sprint 1 migration skipped");
   }
 
-  // Sprint 4B migration Ã¢ÂÂ user_permissions table
+  // Sprint 4B migration ÃÂ¢ÃÂÃÂ user_permissions table
   try {
     await db.execute(`
       CREATE TABLE IF NOT EXISTS user_permissions (
@@ -68,7 +68,7 @@ app.listen(port, async (err) => {
     logger.warn({ err: e }, "Sprint 4B migration skipped");
   }
 
-  // Sprint 4C migration â consultation_patients + consultation_attachments
+  // Sprint 4C migration Ã¢ÂÂ consultation_patients + consultation_attachments
   try {
     await db.execute(`
       CREATE TABLE IF NOT EXISTS consultation_patients (
@@ -94,7 +94,7 @@ app.listen(port, async (err) => {
     logger.warn({ err: e }, "Sprint 4C migration skipped");
   }
 
-  // Sprint 4D migration — portées (mother_id / father_id)
+  // Sprint 4D migration â portÃ©es (mother_id / father_id)
   try {
     await db.execute(`
       ALTER TABLE patients ADD COLUMN IF NOT EXISTS mother_id INTEGER REFERENCES patients(id);
@@ -105,29 +105,53 @@ app.listen(port, async (err) => {
     logger.warn({ err: e }, "Sprint 4D migration skipped");
   }
 
+  // Sprint 4E migration — cremation_partners table
+  try {
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS cremation_partners (
+        id SERIAL PRIMARY KEY,
+        clinic_id TEXT NOT NULL,
+        nom TEXT NOT NULL,
+        adresse TEXT,
+        telephone TEXT,
+        email TEXT,
+        tarif_individuel NUMERIC(10,2),
+        tarif_collectif NUMERIC(10,2),
+        notes TEXT,
+        active BOOLEAN NOT NULL DEFAULT true,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_cremation_partners_clinic ON cremation_partners (clinic_id);
+    `);
+    logger.info("Sprint 4E DB migration OK");
+  } catch (e) {
+    logger.warn({ err: e }, "Sprint 4E migration skipped");
+  }
+
   // Auto-seed stock demo data if stock is empty
   runStockSeeder("default")
     .then(result => {
       if (result.inserted > 0) {
-        logger.info(result, "Stock initialisÃÂÃÂÃÂÃÂ© automatiquement avec les donnÃÂÃÂÃÂÃÂ©es dÃÂÃÂÃÂÃÂ©mo");
+        logger.info(result, "Stock initialisÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ© automatiquement avec les donnÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ©es dÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ©mo");
       }
     })
     .catch(err => {
-      logger.warn({ err }, "Auto-seeding du stock ignorÃÂÃÂÃÂÃÂ© (erreur non bloquante)");
+      logger.warn({ err }, "Auto-seeding du stock ignorÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ© (erreur non bloquante)");
     });
 
-  // Sync salle d'attente ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ agenda toutes les 5 min
+  // Sync salle d'attente ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ agenda toutes les 5 min
   startSyncJob();
 
   // Envoi automatique des rappels (toutes les heures)
   startRappelsJob();
 
-  // Analyse nocturne du stock ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ EOQ + alertes (toutes les 24h, dÃÂÃÂÃÂÃÂ©marrage dans 5 min)
+  // Analyse nocturne du stock ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ EOQ + alertes (toutes les 24h, dÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ©marrage dans 5 min)
   startStockAnalysisJob();
 
-  // Initialisation base de connaissances vÃÂÃÂÃÂÃÂ©tÃÂÃÂÃÂÃÂ©rinaires RAG (ANMV/EMA/RESAPATH)
-  // Non bloquante ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ dÃÂÃÂÃÂÃÂ©gradation gracieuse si OPENAI_API_KEY absent
+  // Initialisation base de connaissances vÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ©tÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ©rinaires RAG (ANMV/EMA/RESAPATH)
+  // Non bloquante ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ dÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ©gradation gracieuse si OPENAI_API_KEY absent
   setupVetKnowledge().catch(err => {
-    logger.warn({ err }, "setupVetKnowledge ignorÃÂÃÂÃÂÃÂ© (erreur non bloquante)");
+    logger.warn({ err }, "setupVetKnowledge ignorÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ© (erreur non bloquante)");
   });
 });
