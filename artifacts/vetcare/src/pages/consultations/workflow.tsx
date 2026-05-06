@@ -1,343 +1,798 @@
-import { useState, useEffect, useRef, useCallback } from "react";
-import { useRoute, Link } from "wouter";
-import { useAuth } from "@clerk/react";
+import { useState, useEffect, useCallback } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { useAuth } from "@clerk/clerk-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
-import { useToast } from "@/hooks/use-toast";
-import { Mic, MicOff, Loader2, ChevronRight, Check, Stethoscope, ClipboardList, FlaskConical, FileCheck, Receipt , ArrowLeft} from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { toast } from "sonner";
+import {
+  Mic,
+  MicOff,
+  Loader2,
+  CheckCircle,
+  AlertTriangle,
+  AlertCircle,
+  ChevronRight,
+  FileText,
+  Pill,
+  ClipboardList,
+  ShieldCheck,
+  Stethoscope,
+} from "lucide-react";
+import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
 
-type DevisActe = { id: number; description: string | null; prixUnitaire: number; quantite: number; tvaRate: number | null };
+// ── Types ─────────────────────────────────────────────────────────────────────
 
-const API_BASE = "/api/consultations";
-const PHASES = ["ANAMNESE", "EXAMEN", "SYNTHESE", "TERMINEE"];
+interface AnamneseIA {
+  resume?: string;
+  signes_rapportes?: string[];
+  duree_evolution?: string;
+  contexte?: string;
+  hypotheses_initiales?: { diagnostic: string; probabilite: string; justification: string }[];
+  points_cles_examen?: string[];
+  urgence?: "normale" | "moderee" | "elevee";
+}
 
-export default function ConsultationWorkflow() {
-  const [, params] = useRoute("/consultations/:id/workflow");
-  const consultationId = params?.id;
-  const { getToken } = useAuth();
-  const { toast } = useToast();
-  const [workflowState, setWorkflowState] = useState<any>(null);
+interface ExamenIA {
+  resume_examen?: string;
+  parametres?: { temperature?: string; fc?: string; fr?: string; muqueuses?: string; autres?: string };
+  concordance_anamnesee?: string;
+  hypotheses_affinees?: { diagnostic: string; probabilite: string; pour: string[]; contre: string[] }[];
+  examens_proposes?: { examen: string; priorite: string; justification: string }[];
+  diagnostic_probable?: string;
+  traitement_initial?: string;
+}
+
+interface OrdonnanceLigne {
+  molecule: string;
+  specialite: string;
+  dose_mg: number;
+  forme: string;
+  posologie: string;
+  frequence_jour: number;
+  duree_jours: number;
+  voie: string;
+  prix_estime: number;
+}
+
+interface SyntheseIA {
+  diagnostic_final?: string;
+  diagnostics_differentiels?: string[];
+  ordonnance_suggeree?: OrdonnanceLigne[];
+  examens_a_facturer?: { acte: string; quantite: number; prix_estime: number }[];
+  suivi?: string;
+  pronostic?: "favorable" | "reserve" | "defavorable";
+  alerte_antibiotique?: boolean;
+}
+
+interface WorkflowState {
+  phase: "ANAMNESE" | "EXAMEN" | "SYNTHESE" | "TERMINEE";
+  anamneseIA: AnamneseIA | null;
+  examenIA: ExamenIA | null;
+  syntheseIA: SyntheseIA | null;
+  examensComplementairesValides: { examen: string; priorite: string }[] | null;
+  ordonnance: { id: number; numero: string; contenu: string } | null;
+  devisActes: { id: number; description: string; prixUnitaire: number; quantite: number; tvaRate: number }[] | null;
+  validation: { wasValidated: boolean; validatedBy: string | null } | null;
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+const URGENCE_CONFIG = {
+  elevee: { label: "⚠️ URGENCE ÉLEVÉE", cls: "bg-red-100 border-red-400 text-red-800" },
+  moderee: { label: "🟠 URGENCE MODÉRÉE", cls: "bg-orange-100 border-orange-300 text-orange-800" },
+  normale: { label: "✅ Urgence normale", cls: "bg-green-100 border-green-300 text-green-800" },
+};
+
+const PRONOSTIC_CONFIG = {
+  defavorable: { label: "⚫ Pronostic défavorable", cls: "bg-gray-900 text-white border-gray-700" },
+  reserve: { label: "🔴 Pronostic réservé", cls: "bg-red-100 text-red-900 border-red-400" },
+  favorable: { label: "🟢 Pronostic favorable", cls: "bg-green-100 text-green-800 border-green-300" },
+};
+
+function UrgenceBanner({ urgence }: { urgence?: string }) {
+  if (!urgence || urgence === "normale") return null;
+  const cfg = URGENCE_CONFIG[urgence as keyof typeof URGENCE_CONFIG] ?? URGENCE_CONFIG.normale;
+  return (
+    <div className={`border-l-4 px-4 py-2 rounded mb-3 font-semibold text-sm ${cfg.cls}`}>
+      {cfg.label}
+    </div>
+  );
+}
+
+function PronosticBanner({ pronostic }: { pronostic?: string }) {
+  if (!pronostic) return null;
+  const cfg = PRONOSTIC_CONFIG[pronostic as keyof typeof PRONOSTIC_CONFIG];
+  if (!cfg) return null;
+  return (
+    <div className={`border px-4 py-2 rounded mb-3 font-semibold text-sm ${cfg.cls}`}>
+      {cfg.label}
+    </div>
+  );
+}
+
+function AntibioAlert({ alerte }: { alerte?: boolean }) {
+  if (!alerte) return null;
+  return (
+    <div className="border-l-4 border-yellow-500 bg-yellow-50 px-4 py-2 rounded mb-3 text-sm text-yellow-800 flex items-center gap-2">
+      <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+      <span>
+        <strong>Alerte antibiotique :</strong> Traitement antibiotique proposé — vérifier l'antibiogramme et respecter les bonnes pratiques AMR.
+      </span>
+    </div>
+  );
+}
+
+function JsonPreviewCard({ title, icon, data }: { title: string; icon: React.ReactNode; data: object | null }) {
+  const [expanded, setExpanded] = useState(false);
+  if (!data) return null;
+  return (
+    <Card className="mb-3">
+      <CardHeader className="py-3 px-4 cursor-pointer flex flex-row items-center justify-between" onClick={() => setExpanded(v => !v)}>
+        <div className="flex items-center gap-2 text-sm font-medium">
+          {icon}
+          {title}
+        </div>
+        <span className="text-xs text-muted-foreground">{expanded ? "Réduire ▲" : "Développer ▼"}</span>
+      </CardHeader>
+      {expanded && (
+        <CardContent className="pt-0 pb-3 px-4">
+          <pre className="text-xs bg-muted p-3 rounded overflow-auto max-h-64 whitespace-pre-wrap">
+            {JSON.stringify(data, null, 2)}
+          </pre>
+        </CardContent>
+      )}
+    </Card>
+  );
+}
+
+function OrdonnanceEditor({
+  lignes,
+  onChange,
+}: {
+  lignes: OrdonnanceLigne[];
+  onChange: (l: OrdonnanceLigne[]) => void;
+}) {
+  const update = (idx: number, field: keyof OrdonnanceLigne, value: string | number) => {
+    const next = lignes.map((l, i) => (i === idx ? { ...l, [field]: value } : l));
+    onChange(next);
+  };
+  const remove = (idx: number) => onChange(lignes.filter((_, i) => i !== idx));
+  const add = () =>
+    onChange([
+      ...lignes,
+      { molecule: "", specialite: "", dose_mg: 0, forme: "cp", posologie: "", frequence_jour: 1, duree_jours: 7, voie: "oral", prix_estime: 0 },
+    ]);
+
+  return (
+    <div className="space-y-3">
+      {lignes.map((l, i) => (
+        <div key={i} className="border rounded p-3 bg-white space-y-2">
+          <div className="flex gap-2">
+            <Input
+              placeholder="Molécule"
+              value={l.molecule}
+              onChange={e => update(i, "molecule", e.target.value)}
+              className="text-sm"
+            />
+            <Input
+              placeholder="Spécialité commerciale"
+              value={l.specialite}
+              onChange={e => update(i, "specialite", e.target.value)}
+              className="text-sm"
+            />
+          </div>
+          <div className="flex gap-2 flex-wrap">
+            <Input
+              placeholder="Dose mg"
+              type="number"
+              value={l.dose_mg || ""}
+              onChange={e => update(i, "dose_mg", Number(e.target.value))}
+              className="text-sm w-24"
+            />
+            <Input
+              placeholder="Forme (cp/inj…)"
+              value={l.forme}
+              onChange={e => update(i, "forme", e.target.value)}
+              className="text-sm w-28"
+            />
+            <Input
+              placeholder="x/jour"
+              type="number"
+              value={l.frequence_jour || ""}
+              onChange={e => update(i, "frequence_jour", Number(e.target.value))}
+              className="text-sm w-20"
+            />
+            <Input
+              placeholder="Durée (jours)"
+              type="number"
+              value={l.duree_jours || ""}
+              onChange={e => update(i, "duree_jours", Number(e.target.value))}
+              className="text-sm w-24"
+            />
+            <Input
+              placeholder="Voie"
+              value={l.voie}
+              onChange={e => update(i, "voie", e.target.value)}
+              className="text-sm w-24"
+            />
+          </div>
+          <div className="flex gap-2 items-center">
+            <Input
+              placeholder="Posologie complète"
+              value={l.posologie}
+              onChange={e => update(i, "posologie", e.target.value)}
+              className="text-sm flex-1"
+            />
+            <Button size="sm" variant="ghost" onClick={() => remove(i)} className="text-red-500 px-2">
+              ✕
+            </Button>
+          </div>
+        </div>
+      ))}
+      <Button variant="outline" size="sm" onClick={add} className="w-full">
+        + Ajouter un médicament
+      </Button>
+    </div>
+  );
+}
+
+// ── Main Component ─────────────────────────────────────────────────────────────
+
+export default function WorkflowPage() {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const { userId } = useAuth();
+
+  const [state, setState] = useState<WorkflowState | null>(null);
   const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
-  const [transcript, setTranscript] = useState("");
-  const [isRecording, setIsRecording] = useState(false);
-  const [examensValides, setExamensValides] = useState<string[]>([]);
-  const [ordonnanceInfo, setOrdonnanceInfo] = useState<any>(null);
-  const [ordonnanceData, setOrdonnanceData] = useState<any>(null);
-  const [devisActes, setDevisActes] = useState<DevisActe[] | null>(null);
-  const recognitionRef = useRef<any>(null);
+  const [processing, setProcessing] = useState(false);
 
-  const authHeaders = useCallback(async () => {
-    const token = await getToken();
-    return { Authorization: "Bearer " + token, "Content-Type": "application/json" };
-  }, [getToken]);
+  // Ordonnance editor state (editable copy)
+  const [editedOrdonnance, setEditedOrdonnance] = useState<OrdonnanceLigne[]>([]);
+  const [ordonnanceEdited, setOrdonnanceEdited] = useState(false);
 
-  const fetchWorkflowState = useCallback(async () => {
-    if (!consultationId) return;
+  // Speech recognition for each phase
+  const {
+    transcript: anamneseTranscript,
+    isListening: anamneseListening,
+    startListening: startAnamnese,
+    stopListening: stopAnamnese,
+    setTranscript: setAnamneseTranscript,
+  } = useSpeechRecognition();
+
+  const {
+    transcript: examenTranscript,
+    isListening: examenListening,
+    startListening: startExamen,
+    stopListening: stopExamen,
+    setTranscript: setExamenTranscript,
+  } = useSpeechRecognition();
+
+  const apiBase = `/api/consultations/${id}/workflow`;
+
+  // ── Fetch state ──────────────────────────────────────────────────────────────
+
+  const fetchState = useCallback(async () => {
     try {
-      const headers = await authHeaders();
-      const r = await fetch(API_BASE + "/" + consultationId + "/workflow-state", { headers });
-      if (r.ok) {
-        const data = await r.json();
-        setWorkflowState(data.data);
-        if (data.ordonnance) setOrdonnanceData(data.ordonnance);
-        if (data.data.devisActes) setDevisActes(data.data.devisActes);
-        if (data.phase === "SYNTHESE" && data.examenIA?.examens_proposes) {
-          setExamensValides(data.examenIA.examens_proposes.map((e: any) => e.examen));
-        }
+      const resp = await fetch(`${apiBase}-state`, { credentials: "include" });
+      if (!resp.ok) throw new Error("Erreur chargement");
+      const data: WorkflowState = await resp.json();
+      setState(data);
+
+      // Init ordonnance editor from syntheseIA
+      if (data.syntheseIA?.ordonnance_suggeree && !ordonnanceEdited) {
+        setEditedOrdonnance(data.syntheseIA.ordonnance_suggeree);
       }
-    } catch (e) {
-      console.error("workflow fetch error", e);
+    } catch {
+      toast.error("Impossible de charger l'état de la consultation");
     } finally {
       setLoading(false);
     }
-  }, [consultationId, authHeaders]);
+  }, [id, ordonnanceEdited]);
 
-  useEffect(() => { fetchWorkflowState(); }, [fetchWorkflowState]);
+  useEffect(() => {
+    fetchState();
+  }, [fetchState]);
 
-  const startRecording = () => {
-    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SR) { toast({ title: "Micro non supporte", description: "Utilisez Chrome ou Edge", variant: "destructive" }); return; }
-    const rec = new SR();
-    rec.lang = "fr-FR"; rec.continuous = true; rec.interimResults = false;
-    rec.onresult = (e: any) => {
-      const text = Array.from(e.results).map((r: any) => r[0].transcript).join(" ");
-      setTranscript(prev => prev ? prev + " " + text : text);
-    };
-    rec.onerror = rec.onend = () => setIsRecording(false);
-    recognitionRef.current = rec; rec.start(); setIsRecording(true);
-  };
+  // ── Phase handlers ────────────────────────────────────────────────────────────
 
-  const stopRecording = () => { recognitionRef.current?.stop(); setIsRecording(false); };
-
-  const callAPI = async (endpoint: string, method: string, body: any) => {
-    const headers = await authHeaders();
-    const r = await fetch(API_BASE + "/" + consultationId + "/" + endpoint, { method, headers, body: JSON.stringify(body) });
-    if (!r.ok) throw new Error("API error " + r.status);
-    return r.json();
-  };
-
-  const submitPhase = async (endpoint: string, body: any, successMsg: string) => {
-    setSubmitting(true);
+  const handleAnamnese = async () => {
+    if (!anamneseTranscript.trim()) return toast.error("Dictez d'abord l'anamnèse");
+    setProcessing(true);
     try {
-      const result = await callAPI(endpoint, "POST", body);
-      if (endpoint === "valider-examens" && result.ordonnanceId) {
-        setOrdonnanceInfo({ id: result.ordonnanceId, numero: result.ordonnanceNumero });
-      }
-      toast({ title: successMsg });
-      setTranscript("");
-      await fetchWorkflowState();
-    } catch (e) {
-      toast({ title: "Erreur", description: "Requete echouee", variant: "destructive" });
-    } finally { setSubmitting(false); }
+      const resp = await fetch(`/api/consultations/${id}/workflow/anamnese`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ transcription: anamneseTranscript }),
+      });
+      if (!resp.ok) throw new Error("Erreur anamnèse");
+      await fetchState();
+      toast.success("Anamnèse analysée par l'IA ✓");
+    } catch {
+      toast.error("Erreur lors de l'analyse de l'anamnèse");
+    } finally {
+      setProcessing(false);
+    }
   };
 
-  const creerFacture = async () => {
-    setSubmitting(true);
+  const handleExamen = async () => {
+    if (!examenTranscript.trim()) return toast.error("Dictez d'abord l'examen clinique");
+    setProcessing(true);
     try {
-      const headers = await authHeaders();
-      const r = await fetch(API_BASE + "/" + consultationId + "/facture", { method: "POST", headers });
-      const data = await r.json();
-      const factureId = data.id || data.data?.id;
-      if (factureId) {
-        toast({ title: "Facture creee ✓" });
-        window.location.href = "/factures/" + factureId;
-      } else {
-        toast({ title: "Erreur", description: data.error?.message || "Erreur creation facture", variant: "destructive" });
-      }
-    } catch (e) { toast({ title: "Erreur", variant: "destructive" }); }
-    finally { setSubmitting(false); }
+      const resp = await fetch(`/api/consultations/${id}/workflow/examen`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ transcription: examenTranscript }),
+      });
+      if (!resp.ok) throw new Error("Erreur examen");
+      await fetchState();
+      toast.success("Examen clinique croisé ✓");
+    } catch {
+      toast.error("Erreur lors de l'analyse de l'examen");
+    } finally {
+      setProcessing(false);
+    }
   };
 
-  if (loading) return (
-    <div className="p-6 space-y-4">
-      <Skeleton className="h-8 w-48" /><Skeleton className="h-32 w-full" /><Skeleton className="h-32 w-full" />
-    </div>
-  );
+  const handleValiderExamens = async (examensValides: { examen: string; priorite: string }[]) => {
+    setProcessing(true);
+    try {
+      const resp = await fetch(`/api/consultations/${id}/workflow/valider-examens`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ examensValides }),
+      });
+      if (!resp.ok) throw new Error("Erreur synthèse");
+      const data = await resp.json();
+      // Init editable ordonnance from new synthèse
+      if (data.syntheseIA?.ordonnance_suggeree) {
+        setEditedOrdonnance(data.syntheseIA.ordonnance_suggeree);
+        setOrdonnanceEdited(false);
+      }
+      await fetchState();
+      toast.success("Synthèse IA générée — en attente de validation vétérinaire ✓");
+    } catch {
+      toast.error("Erreur lors de la synthèse");
+    } finally {
+      setProcessing(false);
+    }
+  };
 
-  const phase = workflowState?.phase || "ANAMNESE";
-  const phaseIdx = PHASES.indexOf(phase);
-  const phaseLabels: Record<string, string> = { ANAMNESE: "Anamnese", EXAMEN: "Examen clinique", SYNTHESE: "Examens compl.", TERMINEE: "Terminee" };
+  const handleTerminer = async () => {
+    if (!userId) return toast.error("Identifiant vétérinaire introuvable (Clerk non connecté)");
+    setProcessing(true);
+    try {
+      const validationChanges = ordonnanceEdited
+        ? { ordonnance_modifiee: editedOrdonnance }
+        : null;
+
+      const resp = await fetch(`/api/consultations/${id}/workflow/terminer`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          validated_by: userId,
+          validation_changes: validationChanges,
+        }),
+      });
+      if (!resp.ok) throw new Error("Erreur validation");
+      await fetchState();
+      toast.success("Consultation validée et terminée ✓");
+      setTimeout(() => navigate(`/consultations/${id}`), 1500);
+    } catch {
+      toast.error("Erreur lors de la validation finale");
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  // ── Render ────────────────────────────────────────────────────────────────────
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!state) return <div className="p-6 text-red-500">Consultation introuvable</div>;
+
+  const { phase, anamneseIA, examenIA, syntheseIA, examensComplementairesValides } = state;
+
+  const urgence = anamneseIA?.urgence ?? examenIA?.hypotheses_affinees?.[0] as any;
+  const pronostic = syntheseIA?.pronostic;
 
   return (
-    <div className="p-6 max-w-4xl mx-auto space-y-6">
-      <div className="flex items-center gap-4">
-        <Link href={"/consultations/" + consultationId}><Button variant="ghost" size="sm"><ArrowLeft className="h-4 w-4 mr-1" />Retour</Button></Link>
-        <h1 className="text-2xl font-bold">Consultation guidee par IA</h1>
+    <div className="max-w-3xl mx-auto p-4 space-y-4">
+      {/* ── Header ── */}
+      <div className="flex items-center justify-between">
+        <h1 className="text-xl font-bold flex items-center gap-2">
+          <Stethoscope className="h-5 w-5" />
+          Consultation #{id} — Workflow IA
+        </h1>
+        <Badge
+          variant={phase === "TERMINEE" ? "default" : "secondary"}
+          className={phase === "TERMINEE" ? "bg-green-600" : ""}
+        >
+          {phase}
+        </Badge>
       </div>
 
-      <div className="flex items-center gap-2 overflow-x-auto pb-2">
-        {["ANAMNESE", "EXAMEN", "SYNTHESE"].map((p, i) => {
-          const done = i < phaseIdx; const active = p === phase;
-          return (
-            <div key={p} className="flex items-center gap-2">
-              <div className={"flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium whitespace-nowrap " + (done ? "bg-green-100 text-green-700" : active ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-400")}>
-                {done ? <Check className="h-3 w-3" /> : null}{phaseLabels[p]}
+      {/* ── Urgency & Pronostic banners (always visible once known) ── */}
+      <UrgenceBanner urgence={anamneseIA?.urgence} />
+      <PronosticBanner pronostic={pronostic} />
+      <AntibioAlert alerte={syntheseIA?.alerte_antibiotique} />
+
+      {/* ══════════════════════════════════════════════════════════════
+          PHASE 1 — ANAMNÈSE
+      ══════════════════════════════════════════════════════════════ */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base flex items-center gap-2">
+            <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+              phase !== "ANAMNESE" ? "bg-green-500 text-white" : "bg-primary text-white"
+            }`}>
+              {phase !== "ANAMNESE" ? "✓" : "1"}
+            </span>
+            Anamnèse (dictée propriétaire)
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {phase === "ANAMNESE" && (
+            <>
+              <Textarea
+                placeholder="La transcription apparaîtra ici après la dictée..."
+                value={anamneseTranscript}
+                onChange={e => setAnamneseTranscript(e.target.value)}
+                rows={4}
+                className="text-sm"
+              />
+              <div className="flex gap-2">
+                <Button
+                  variant={anamneseListening ? "destructive" : "outline"}
+                  size="sm"
+                  onClick={anamneseListening ? stopAnamnese : startAnamnese}
+                >
+                  {anamneseListening ? (
+                    <><MicOff className="h-4 w-4 mr-1" /> Arrêter</>
+                  ) : (
+                    <><Mic className="h-4 w-4 mr-1" /> Dicter</>
+                  )}
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={handleAnamnese}
+                  disabled={processing || !anamneseTranscript.trim()}
+                >
+                  {processing ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <ChevronRight className="h-4 w-4 mr-1" />}
+                  Analyser par l'IA
+                </Button>
               </div>
-              {i < 2 && <ChevronRight className="h-4 w-4 text-gray-300 flex-shrink-0" />}
-            </div>
-          );
-        })}
-      </div>
+            </>
+          )}
 
-      {phase === "ANAMNESE" && (
-        <Card>
-          <CardHeader><CardTitle className="flex items-center gap-2"><ClipboardList className="h-5 w-5 text-blue-500" />Phase 1 — Anamnese du proprietaire</CardTitle></CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-sm text-gray-600">Dictez ce que rapporte le proprietaire : symptomes, duree, alimentation, antecedents...</p>
-            <div className="flex gap-3 items-center">
-              <Button onClick={isRecording ? stopRecording : startRecording} variant={isRecording ? "destructive" : "default"}>
-                {isRecording ? <><MicOff className="h-4 w-4 mr-2" />Arreter</> : <><Mic className="h-4 w-4 mr-2" />Dicter</>}
-              </Button>
-              {isRecording && <Badge variant="outline" className="text-red-500 border-red-300 animate-pulse">En ecoute...</Badge>}
-            </div>
-            <Textarea value={transcript} onChange={e => setTranscript(e.target.value)} placeholder="Transcription automatique ou saisie manuelle..." rows={5} />
-            <Button onClick={() => submitPhase("anamnese", { transcription: transcript }, "Anamnese analysee par l'IA")} disabled={!transcript.trim() || submitting} className="w-full">
-              {submitting ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Analyse IA...</> : "Analyser avec l'IA ->"}
-            </Button>
-          </CardContent>
-        </Card>
-      )}
-
-      {phaseIdx > 0 && workflowState?.anamneseIA && (
-        <Card className="border-green-200 bg-green-50">
-          <CardHeader><CardTitle className="text-green-800 text-base flex items-center gap-2"><Check className="h-4 w-4" />Anamnese analysee</CardTitle></CardHeader>
-          <CardContent className="space-y-2">
-            <p className="text-sm">{workflowState.anamneseIA.resume}</p>
-            <div className="flex flex-wrap gap-2">
-              {(workflowState.anamneseIA.hypotheses_initiales || []).slice(0, 3).map((h: any, i: number) => (
-                <Badge key={i} variant={h.probabilite === "haute" ? "default" : "outline"}>{h.diagnostic} ({h.probabilite})</Badge>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {phase === "EXAMEN" && (
-        <Card>
-          <CardHeader><CardTitle className="flex items-center gap-2"><Stethoscope className="h-5 w-5 text-purple-500" />Phase 2 — Examen clinique</CardTitle></CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-sm text-gray-600">Dictez vos constatations : temperature, muqueuses, auscultation, palpation, reflexes...</p>
-            {workflowState?.anamneseIA?.points_cles_examen?.length > 0 && (
-              <div className="bg-blue-50 border border-blue-200 p-3 rounded text-sm">
-                <p className="font-semibold text-blue-700 mb-1">Points a verifier :</p>
-                <ul className="list-disc list-inside text-blue-600 space-y-0.5">
-                  {workflowState.anamneseIA.points_cles_examen.map((p: string, i: number) => <li key={i}>{p}</li>)}
-                </ul>
-              </div>
-            )}
-            <div className="flex gap-3 items-center">
-              <Button onClick={isRecording ? stopRecording : startRecording} variant={isRecording ? "destructive" : "default"}>
-                {isRecording ? <><MicOff className="h-4 w-4 mr-2" />Arreter</> : <><Mic className="h-4 w-4 mr-2" />Dicter</>}
-              </Button>
-              {isRecording && <Badge variant="outline" className="text-red-500 border-red-300 animate-pulse">En ecoute...</Badge>}
-            </div>
-            <Textarea value={transcript} onChange={e => setTranscript(e.target.value)} placeholder="Ex: Temperature 39.8, muqueuses rosees, FC 100/min..." rows={5} />
-            <Button onClick={() => submitPhase("examen", { transcription: transcript }, "Examen analyse")} disabled={!transcript.trim() || submitting} className="w-full">
-              {submitting ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Croisement IA...</> : "Croiser anamnese + examen ->"}
-            </Button>
-          </CardContent>
-        </Card>
-      )}
-
-      {phaseIdx > 1 && workflowState?.examenIA && (
-        <Card className="border-purple-200 bg-purple-50">
-          <CardHeader><CardTitle className="text-purple-800 text-base flex items-center gap-2"><Check className="h-4 w-4" />Examen analyse</CardTitle></CardHeader>
-          <CardContent className="space-y-2">
-            <p className="text-sm">{workflowState.examenIA.resume_examen}</p>
-            <p className="text-sm font-medium">Diagnostic probable : <strong>{workflowState.examenIA.diagnostic_probable}</strong></p>
-          </CardContent>
-        </Card>
-      )}
-
-      {phase === "SYNTHESE" && workflowState?.examenIA && (
-        <Card>
-          <CardHeader><CardTitle className="flex items-center gap-2"><FlaskConical className="h-5 w-5 text-orange-500" />Phase 3 — Examens complementaires</CardTitle></CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-sm text-gray-600">Selectionnez les examens a realiser :</p>
-            <div className="space-y-2">
-              {(workflowState.examenIA.examens_proposes || []).map((ex: any, i: number) => (
-                <label key={i} className="flex items-start gap-3 p-3 border rounded cursor-pointer hover:bg-gray-50 transition-colors">
-                  <input type="checkbox" className="mt-1 h-4 w-4" checked={examensValides.includes(ex.examen)}
-                    onChange={e => setExamensValides(prev => e.target.checked ? [...prev, ex.examen] : prev.filter(x => x !== ex.examen))} />
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium">{ex.examen}</span>
-                      <Badge variant={ex.priorite === "urgent" ? "destructive" : ex.priorite === "recommande" ? "default" : "outline"} className="text-xs">{ex.priorite}</Badge>
-                    </div>
-                    <p className="text-xs text-gray-500 mt-0.5">{ex.justification}</p>
+          {anamneseIA && (
+            <>
+              <div className="text-sm bg-blue-50 rounded p-3 border border-blue-200">
+                <p className="font-medium text-blue-900 mb-1">Résumé IA</p>
+                <p className="text-blue-800">{anamneseIA.resume || "—"}</p>
+                {anamneseIA.urgence && anamneseIA.urgence !== "normale" && (
+                  <UrgenceBanner urgence={anamneseIA.urgence} />
+                )}
+                {anamneseIA.points_cles_examen && anamneseIA.points_cles_examen.length > 0 && (
+                  <div className="mt-2">
+                    <p className="text-xs font-semibold text-blue-700 mb-1">Points clés à examiner :</p>
+                    <ul className="list-disc list-inside text-xs text-blue-700">
+                      {anamneseIA.points_cles_examen.map((p, i) => <li key={i}>{p}</li>)}
+                    </ul>
                   </div>
-                </label>
-              ))}
-            </div>
-            <Button onClick={() => submitPhase("valider-examens", { examensValides }, "Synthese finale generee")} disabled={submitting} className="w-full">
-              {submitting ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Generation synthese...</> : "Generer la synthese finale ->"}
-            </Button>
+                )}
+              </div>
+              <JsonPreviewCard
+                title="Données structurées — Anamnèse IA"
+                icon={<FileText className="h-4 w-4" />}
+                data={anamneseIA}
+              />
+            </>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* ══════════════════════════════════════════════════════════════
+          PHASE 2 — EXAMEN CLINIQUE
+      ══════════════════════════════════════════════════════════════ */}
+      {(phase === "EXAMEN" || phase === "SYNTHESE" || phase === "TERMINEE") && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+                phase !== "EXAMEN" ? "bg-green-500 text-white" : "bg-primary text-white"
+              }`}>
+                {phase !== "EXAMEN" ? "✓" : "2"}
+              </span>
+              Examen clinique
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {phase === "EXAMEN" && (
+              <>
+                <Textarea
+                  placeholder="Dictez l'examen clinique..."
+                  value={examenTranscript}
+                  onChange={e => setExamenTranscript(e.target.value)}
+                  rows={4}
+                  className="text-sm"
+                />
+                <div className="flex gap-2">
+                  <Button
+                    variant={examenListening ? "destructive" : "outline"}
+                    size="sm"
+                    onClick={examenListening ? stopExamen : startExamen}
+                  >
+                    {examenListening ? (
+                      <><MicOff className="h-4 w-4 mr-1" /> Arrêter</>
+                    ) : (
+                      <><Mic className="h-4 w-4 mr-1" /> Dicter</>
+                    )}
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={handleExamen}
+                    disabled={processing || !examenTranscript.trim()}
+                  >
+                    {processing ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <ChevronRight className="h-4 w-4 mr-1" />}
+                    Croiser avec l'anamnèse
+                  </Button>
+                </div>
+              </>
+            )}
+
+            {examenIA && (
+              <>
+                <div className="text-sm bg-purple-50 rounded p-3 border border-purple-200">
+                  <p className="font-medium text-purple-900 mb-1">Diagnostic probable IA</p>
+                  <p className="text-purple-800 font-semibold">{examenIA.diagnostic_probable || "—"}</p>
+                  {examenIA.parametres && (
+                    <div className="mt-2 grid grid-cols-3 gap-1 text-xs text-purple-700">
+                      {examenIA.parametres.temperature && <span>T° {examenIA.parametres.temperature}</span>}
+                      {examenIA.parametres.fc && <span>FC {examenIA.parametres.fc}</span>}
+                      {examenIA.parametres.fr && <span>FR {examenIA.parametres.fr}</span>}
+                      {examenIA.parametres.muqueuses && <span className="col-span-2">Muq. {examenIA.parametres.muqueuses}</span>}
+                    </div>
+                  )}
+                </div>
+
+                {examenIA.examens_proposes && examenIA.examens_proposes.length > 0 && phase === "SYNTHESE" && (
+                  <ExamensCheckbox
+                    examens={examenIA.examens_proposes}
+                    onValider={handleValiderExamens}
+                    processing={processing}
+                  />
+                )}
+
+                <JsonPreviewCard
+                  title="Données structurées — Examen clinique IA"
+                  icon={<ClipboardList className="h-4 w-4" />}
+                  data={examenIA}
+                />
+              </>
+            )}
           </CardContent>
         </Card>
       )}
 
-      {phase === "TERMINEE" && workflowState?.syntheseIA && (
-        <div className="space-y-4">
-          <Card className="border-green-300 bg-green-50">
-            <CardContent className="pt-4">
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Diagnostic final</p>
-              <p className="text-xl font-bold text-green-800">{workflowState.syntheseIA.diagnostic_final}</p>
-              {workflowState.syntheseIA.pronostic && (
-                <Badge className="mt-2" variant={workflowState.syntheseIA.pronostic === "bon" ? "default" : "outline"}>
-                  Pronostic : {workflowState.syntheseIA.pronostic}
+      {/* ══════════════════════════════════════════════════════════════
+          PHASE 3 — SYNTHÈSE + ORDONNANCE ÉDITABLE
+      ══════════════════════════════════════════════════════════════ */}
+      {(phase === "SYNTHESE" || phase === "TERMINEE") && syntheseIA && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+                phase === "TERMINEE" ? "bg-green-500 text-white" : "bg-amber-500 text-white"
+              }`}>
+                {phase === "TERMINEE" ? "✓" : "3"}
+              </span>
+              Synthèse IA &amp; Ordonnance
+              {phase === "SYNTHESE" && (
+                <Badge variant="outline" className="text-amber-600 border-amber-400 ml-2 text-xs">
+                  En attente de validation
                 </Badge>
               )}
-            </CardContent>
-          </Card>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Diagnostic final */}
+            <div className="text-sm bg-green-50 rounded p-3 border border-green-200">
+              <p className="font-medium text-green-900 mb-1">Diagnostic final</p>
+              <p className="text-green-800 font-semibold">{syntheseIA.diagnostic_final || "—"}</p>
+              {syntheseIA.diagnostics_differentiels && syntheseIA.diagnostics_differentiels.length > 0 && (
+                <div className="mt-2">
+                  <p className="text-xs text-green-700 font-semibold">Diagnostics différentiels :</p>
+                  <ul className="list-disc list-inside text-xs text-green-700">
+                    {syntheseIA.diagnostics_differentiels.map((d, i) => <li key={i}>{d}</li>)}
+                  </ul>
+                </div>
+              )}
+              {syntheseIA.suivi && (
+                <p className="mt-2 text-xs text-green-700 italic">Suivi : {syntheseIA.suivi}</p>
+              )}
+            </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <Card className="border-blue-200 bg-blue-50">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-blue-800 text-base flex items-center gap-2">
-                  <FileCheck className="h-4 w-4" />
-                  Ordonnance
-                  {ordonnanceData && <Badge variant="outline" className="text-green-600 border-green-500 text-xs">{ordonnanceData.numero}</Badge>}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {ordonnanceData ? (
-                  <>
-                    <Textarea value={ordonnanceData.contenu} rows={10} className="font-mono text-xs bg-white" readOnly />
-                    <Link href={"/ordonnances/" + ordonnanceData.id}>
-                      <Button variant="outline" size="sm" className="w-full border-blue-400 text-blue-700 hover:bg-blue-100">
-                        <FileCheck className="h-4 w-4 mr-1" />Voir / Modifier l'ordonnance
-                      </Button>
-                    </Link>
-                  </>
-                ) : (
-                  <p className="text-sm text-gray-500 italic">L'ordonnance sera generee apres la synthese.</p>
-                )}
-              </CardContent>
-            </Card>
+            {/* Ordonnance éditable */}
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <Pill className="h-4 w-4 text-primary" />
+                <p className="text-sm font-semibold">
+                  Ordonnance suggérée
+                  {ordonnanceEdited && (
+                    <span className="ml-2 text-xs text-amber-600 font-normal">(modifiée)</span>
+                  )}
+                </p>
+              </div>
+              {phase === "SYNTHESE" ? (
+                <OrdonnanceEditor
+                  lignes={editedOrdonnance}
+                  onChange={l => { setEditedOrdonnance(l); setOrdonnanceEdited(true); }}
+                />
+              ) : (
+                <div className="text-sm text-muted-foreground whitespace-pre-line bg-muted rounded p-3">
+                  {state.ordonnance?.contenu || "—"}
+                </div>
+              )}
+            </div>
 
-            <Card className="border-orange-200 bg-orange-50">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-orange-800 text-base flex items-center gap-2">
-                  <Receipt className="h-4 w-4" />
-                  Devis pre-rempli par l'IA
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {devisActes && devisActes.length > 0 ? (
-                  <>
-                    <div className="space-y-1">
-                      {devisActes.map((a, i) => (
-                        <div key={i} className="flex justify-between items-center text-sm bg-white rounded px-3 py-2 border border-orange-100">
-                          <span className="flex-1 text-gray-700">{a.description}</span>
-                          <span className="text-gray-500 ml-2">x{a.quantite}</span>
-                          <span className="font-medium ml-3 text-gray-800">{(a.prixUnitaire * a.quantite).toFixed(2)} EUR</span>
-                        </div>
-                      ))}
+            {/* Devis actes */}
+            {state.devisActes && state.devisActes.length > 0 && (
+              <div>
+                <p className="text-sm font-semibold mb-2 flex items-center gap-2">
+                  <FileText className="h-4 w-4" />
+                  Actes à facturer
+                </p>
+                <div className="rounded border divide-y text-sm">
+                  {state.devisActes.map((a, i) => (
+                    <div key={i} className="flex justify-between px-3 py-2">
+                      <span>{a.description}</span>
+                      <span className="text-muted-foreground">
+                        {a.quantite} × {a.prixUnitaire}€ HT
+                      </span>
                     </div>
-                    <div className="border-t border-orange-200 pt-2 space-y-1">
-                      <div className="flex justify-between text-sm text-gray-600">
-                        <span>Total HT</span>
-                        <span>{devisActes.reduce((s, a) => s + a.prixUnitaire * a.quantite, 0).toFixed(2)} EUR</span>
-                      </div>
-                      <div className="flex justify-between text-base font-bold text-orange-800">
-                        <span>Total TTC (TVA 20%)</span>
-                        <span>{(devisActes.reduce((s, a) => s + a.prixUnitaire * a.quantite, 0) * 1.2).toFixed(2)} EUR</span>
-                      </div>
-                    </div>
-                    <Button onClick={creerFacture} disabled={submitting} className="w-full bg-orange-600 hover:bg-orange-700 text-white">
-                      {submitting ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Creation...</> : <><Receipt className="h-4 w-4 mr-2" />Valider et creer la facture</>}
-                    </Button>
-                  </>
-                ) : (
-                  <div className="text-sm text-gray-500 space-y-3">
-                    <p className="italic">Aucun acte IA disponible.</p>
-                    <Link href={"/consultations/" + consultationId + "/facture"}>
-                      <Button variant="outline" size="sm" className="w-full">Creer la facture manuellement</Button>
-                    </Link>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-
-          <div className="flex gap-3 flex-wrap">
-            <Link href={"/consultations/" + consultationId}>
-              <Button variant="outline"><ArrowLeft className="h-4 w-4 mr-2" />Voir la consultation</Button>
-            </Link>
-            {ordonnanceInfo && (
-              <Link href={"/ordonnances/" + ordonnanceInfo.id}>
-                <Button variant="outline" className="border-green-500 text-green-700 hover:bg-green-50">
-                  <FileCheck className="h-4 w-4 mr-2" />Ordonnance ({ordonnanceInfo.numero})
-                </Button>
-              </Link>
+                  ))}
+                </div>
+              </div>
             )}
-          </div>
-        </div>
+
+            <JsonPreviewCard
+              title="Données structurées — Synthèse IA"
+              icon={<ClipboardList className="h-4 w-4" />}
+              data={syntheseIA}
+            />
+
+            {/* ── Validation checkpoint (SYNTHESE → TERMINEE) ── */}
+            {phase === "SYNTHESE" && (
+              <div className="border-2 border-dashed border-amber-300 rounded-lg p-4 bg-amber-50">
+                <div className="flex items-start gap-3">
+                  <ShieldCheck className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" />
+                  <div className="flex-1">
+                    <p className="font-semibold text-amber-900 text-sm mb-1">
+                      Validation vétérinaire requise
+                    </p>
+                    <p className="text-xs text-amber-700 mb-3">
+                      Vérifiez et modifiez si nécessaire l'ordonnance ci-dessus, puis validez pour terminer la consultation. Votre identifiant Clerk sera enregistré comme validateur.
+                    </p>
+                    {!userId && (
+                      <div className="flex items-center gap-1 text-xs text-red-600 mb-2">
+                        <AlertCircle className="h-3.5 w-3.5" />
+                        Identifiant vétérinaire non disponible — assurez-vous d'être connecté.
+                      </div>
+                    )}
+                    <Button
+                      onClick={handleTerminer}
+                      disabled={processing || !userId}
+                      className="bg-green-600 hover:bg-green-700 text-white"
+                    >
+                      {processing ? (
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      ) : (
+                        <CheckCircle className="h-4 w-4 mr-2" />
+                      )}
+                      Valider et terminer la consultation
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Validation confirmée */}
+            {phase === "TERMINEE" && state.validation?.wasValidated && (
+              <div className="flex items-center gap-2 text-sm text-green-700 bg-green-50 rounded p-3 border border-green-200">
+                <CheckCircle className="h-4 w-4 flex-shrink-0" />
+                <span>
+                  Consultation validée par le vétérinaire{" "}
+                  {state.validation.validatedBy ? (
+                    <code className="text-xs bg-green-100 px-1 rounded">{state.validation.validatedBy}</code>
+                  ) : ""}
+                </span>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       )}
+    </div>
+  );
+}
+
+// ── ExamensCheckbox sub-component ─────────────────────────────────────────────
+
+function ExamensCheckbox({
+  examens,
+  onValider,
+  processing,
+}: {
+  examens: { examen: string; priorite: string; justification?: string }[];
+  onValider: (selected: { examen: string; priorite: string }[]) => void;
+  processing: boolean;
+}) {
+  const [selected, setSelected] = useState<Set<number>>(
+    () => new Set(examens.map((_, i) => i)) // all selected by default
+  );
+
+  const toggle = (i: number) =>
+    setSelected(prev => {
+      const next = new Set(prev);
+      next.has(i) ? next.delete(i) : next.add(i);
+      return next;
+    });
+
+  const handleSubmit = () => {
+    const chosen = examens.filter((_, i) => selected.has(i));
+    onValider(chosen);
+  };
+
+  return (
+    <div className="border rounded-lg p-3 space-y-2 bg-slate-50">
+      <p className="text-sm font-semibold text-slate-700">
+        Examens complémentaires proposés — sélectionnez ceux à retenir :
+      </p>
+      {examens.map((ex, i) => (
+        <label key={i} className="flex items-start gap-2 cursor-pointer text-sm">
+          <input
+            type="checkbox"
+            checked={selected.has(i)}
+            onChange={() => toggle(i)}
+            className="mt-0.5"
+          />
+          <span>
+            <span className="font-medium">{ex.examen}</span>
+            <Badge
+              variant="outline"
+              className={`ml-2 text-xs ${
+                ex.priorite === "urgent"
+                  ? "border-red-400 text-red-700"
+                  : ex.priorite === "recommande"
+                  ? "border-blue-400 text-blue-700"
+                  : "border-gray-300 text-gray-500"
+              }`}
+            >
+              {ex.priorite}
+            </Badge>
+            {ex.justification && (
+              <span className="block text-xs text-muted-foreground mt-0.5">{ex.justification}</span>
+            )}
+          </span>
+        </label>
+      ))}
+      <Button size="sm" onClick={handleSubmit} disabled={processing} className="mt-2">
+        {processing ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <ChevronRight className="h-3 w-3 mr-1" />}
+        Générer la synthèse IA (Claude Sonnet + ANMV)
+      </Button>
     </div>
   );
 }
