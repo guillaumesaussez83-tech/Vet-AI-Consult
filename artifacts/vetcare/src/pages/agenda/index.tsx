@@ -35,7 +35,7 @@ type Slot = { heure: string; disponible: boolean };
 
 type RDV = {
   id: number; dateHeure: string; dureeMinutes: number;
-  motif?: string; typeRdv?: string; statut: string; statutSalle?: string;
+  motif?: string; typeRdv?: string; statut: string; noShowAt?: string; noShowReason?: string; statutSalle?: string;
   veterinaire?: string; veterinaireId?: string;
   animalNom?: string; animalEspece?: string;
   proprietaireNom?: string; proprietaireTelephone?: string;
@@ -201,6 +201,7 @@ function AgendaTab({ vets, vetsLoading, toast, qc }: {
   const [weekOffset, setWeekOffset] = useState(0);
   const [showNewRdv, setShowNewRdv] = useState(false);
   const [selectedRdv, setSelectedRdv] = useState<RDV | null>(null);
+  const [noShowRdv, setNoShowRdv] = useState<RDV | null>(null);
   const [selectedDate, setSelectedDate] = useState<string>("");
   const [selectedSlot, setSelectedSlot] = useState<string>("");
   const [selectedVetId, setSelectedVetId] = useState<string>("");
@@ -246,6 +247,25 @@ function AgendaTab({ vets, vetsLoading, toast, qc }: {
     setSelectedRdv(null);
     setShowNewRdv(true);
   }
+
+  const noShowMut = useMutation({
+    mutationFn: async () => {
+      if (!noShowRdv) return;
+      const res = await fetch(`${API}/rendez-vous/${noShowRdv.id}/no-show`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      if (!res.ok) throw new Error("no-show failed");
+      return res.json();
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["rdvs", weekStart] });
+      toast({ title: "RDV no-show" });
+      setNoShowRdv(null);
+    },
+    onError: () => toast({ title: "Erreur no-show", variant: "destructive" }),
+  });
 
   return (
     <>
@@ -440,11 +460,13 @@ function WeekGrid({ weekDates, vets, rdvByDate, onSlotClick, onRdvClick }: {
                       left: `${leftPct}%`,
                       width: `${widthPct}%`,
                       backgroundColor: vet?.couleur ?? "#2563EB",
+                      opacity: rdv.statut?.startsWith('non_honor') ? 0.45 : 1,
                     }}
                     onClick={e => { e.stopPropagation(); onRdvClick(rdv); }}
                     title={`${rdv.animalNom ?? rdv.patient?.nom ?? ""} — ${rdv.proprietaireNom ?? ""}`}
                   >
                     <div className="text-[10px] font-semibold leading-tight truncate">
+                      {!rdv.statut?.startsWith('non_honor') && height >= 30 && (<button className="absolute top-0.5 right-0.5 text-[10px] leading-none z-20 opacity-70 hover:opacity-100" onClick={e=>{e.stopPropagation();setNoShowRdv(rdv);}} title="No-show">&#x1F407;</button>)}
                       {rdv.animalNom ?? rdv.patient?.nom ?? rdv.motif ?? "RDV libre"}
                     </div>
                     {height >= 40 && (
@@ -900,6 +922,20 @@ function PlanningTab({ vets, toast, qc }: {
             toast({ title: "Exception ajoutée" });
           }}
         />
+      )}
+      {noShowRdv && (
+        <Dialog open={!!noShowRdv} onOpenChange={open => { if (!open) setNoShowRdv(null); }}>
+          <DialogContent>
+            <DialogHeader><DialogTitle>Marquer no-show ?</DialogTitle></DialogHeader>
+            <p className="text-sm text-muted-foreground">Ce RDV sera marque comme non-honore. Cette action peut etre annulee en modifiant le RDV.</p>
+            <DialogFooter className="gap-2">
+              <button className="px-3 py-1 rounded border text-sm" onClick={() => setNoShowRdv(null)}>Annuler</button>
+              <button className="px-3 py-1 rounded bg-destructive text-white text-sm" onClick={() => noShowMut.mutate()} disabled={noShowMut.isPending}>
+                {noShowMut.isPending ? "..." : "Confirmer no-show"}
+              </button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       )}
     </>
   );
