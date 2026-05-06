@@ -28,3 +28,5 @@ export * from "./registre-stupefiants";
 export * from "./assistants";
 export * from "./ventes";
 export * from "./ai-usage-logs";
+export * from "./medications-anmv";
+export * from "./ai-outputs";
