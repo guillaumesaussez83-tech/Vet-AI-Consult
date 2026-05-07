@@ -28,7 +28,7 @@ export type AITask =
   | "resume_client"
   | "commande_stock";
 
-/** Tasks routed to Claude Sonnet Ã¢ÂÂ high clinical value */
+/** Tasks routed to Claude Sonnet ÃÂ¢ÃÂÃÂ high clinical value */
 const CLAUDE_TASKS = new Set<AITask>(["diagnostic_differentiel", "drug_interactions"]);
 
 export interface RunAITaskOptions {
@@ -40,8 +40,8 @@ export interface RunAITaskOptions {
 
 /**
  * Main AI router.
- * - Claude Sonnet  Ã¢ÂÂ diagnostic_differentiel, drug_interactions
- * - GPT-4o-mini   Ã¢ÂÂ everything else (anamnese, examen, facturation, resume_client, commande_stock)
+ * - Claude Sonnet  ÃÂ¢ÃÂÃÂ diagnostic_differentiel, drug_interactions
+ * - GPT-4o-mini   ÃÂ¢ÃÂÃÂ everything else (anamnese, examen, facturation, resume_client, commande_stock)
  * Logs cost + latency to ai_usage_logs for every call.
  */
 export async function runAITask(
@@ -62,7 +62,7 @@ export async function runAITask(
     result = await withAITimeout(callGPT(safePrompt, maxTokens, options.jsonMode ?? false));
   }
 
-  void logAIUsage({
+  logAIUsage({
     clinicId: options.clinicId,
     consultationId: options.consultationId,
     taskType: task,
@@ -70,7 +70,7 @@ export async function runAITask(
     inputTokens: result.usage.inputTokens,
     outputTokens: result.usage.outputTokens,
     durationMs: Date.now() - start,
-  });
+  }).catch((err) => logger.warn({ err }, "AI usage log failed"));
 
   return result.text;
 }
