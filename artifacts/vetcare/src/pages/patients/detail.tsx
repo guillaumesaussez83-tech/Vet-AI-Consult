@@ -4,10 +4,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, Plus, Dog, Cat, Rabbit, Bird, Syringe, ShieldCheck, ShieldAlert, ChevronRight, FileText, Loader2, Check, Download } from "lucide-react";
+import { ArrowLeft, Plus, Dog, Cat, Rabbit, Bird, Syringe, ShieldCheck, ShieldAlert, ChevronRight, FileText, Loader2, Check, Download, Heart } from "lucide-react";
 import { formatDateFR } from "@/lib/utils";
 import { PatientTimeline } from "@/components/PatientTimeline";
 import { WeightChart } from "@/components/WeightChart";
+import { PorteeForm } from "@/components/PorteeForm";
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
@@ -19,6 +20,7 @@ const especeIcon: Record<string, React.ElementType> = {
 type Tab = "timeline" | "infos";
 
 export default function PatientDetailPage() {
+  const [showPorteeForm, setShowPorteeForm] = useState(false);
   const [, params] = useRoute("/patients/:id");
   const id = parseInt(params?.id ?? "0");
   const [activeTab, setActiveTab] = useState<Tab>("timeline");
@@ -47,10 +49,10 @@ export default function PatientDetailPage() {
       a.click();
       a.remove();
       URL.revokeObjectURL(url);
-      toast({ title: "Formulaire RGPD généré", description: "Le PDF a été téléchargé pour impression et signature." });
+      toast({ title: "Formulaire RGPD gÃ©nÃ©rÃ©", description: "Le PDF a Ã©tÃ© tÃ©lÃ©chargÃ© pour impression et signature." });
       queryClient.invalidateQueries({ queryKey: getGetPatientQueryKey(id) });
     } catch (e) {
-      toast({ title: "Erreur", description: "Impossible de générer le formulaire RGPD.", variant: "destructive" });
+      toast({ title: "Erreur", description: "Impossible de gÃ©nÃ©rer le formulaire RGPD.", variant: "destructive" });
     } finally {
       setRgpdLoading(null);
     }
@@ -61,7 +63,7 @@ export default function PatientDetailPage() {
     try {
       const r = await fetch(`/api/owners/${ownerId}/rgpd/confirm`, { method: "POST" });
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
-      toast({ title: "Consentement enregistré", description: "Le consentement RGPD a été marqué comme obtenu." });
+      toast({ title: "Consentement enregistrÃ©", description: "Le consentement RGPD a Ã©tÃ© marquÃ© comme obtenu." });
       queryClient.invalidateQueries({ queryKey: getGetPatientQueryKey(id) });
       queryClient.invalidateQueries({ queryKey: ["/api/patients"] });
     } catch (e) {
@@ -79,7 +81,7 @@ export default function PatientDetailPage() {
     </div>
   );
 
-  if (!patient) return <div className="text-center py-16 text-muted-foreground">Patient non trouvé</div>;
+  if (!patient) return <div className="text-center py-16 text-muted-foreground">Patient non trouvÃ©</div>;
 
   const Icon = especeIcon[patient.espece] ?? Dog;
   const p = patient as any;
@@ -113,9 +115,9 @@ export default function PatientDetailPage() {
                 )}
               </div>
               <p className="text-muted-foreground text-sm mt-0.5">
-                {patient.race || patient.espece} • {patient.sexe}
-                {patient.poids && ` • ${patient.poids} kg`}
-                {patient.dateNaissance && ` • Né(e) le ${formatDateFR(patient.dateNaissance)}`}
+                {patient.race || patient.espece} â¢ {patient.sexe}
+                {patient.poids && ` â¢ ${patient.poids} kg`}
+                {patient.dateNaissance && ` â¢ NÃ©(e) le ${formatDateFR(patient.dateNaissance)}`}
               </p>
             </div>
           </div>
@@ -136,12 +138,12 @@ export default function PatientDetailPage() {
         </div>
       </div>
 
-      {/* Alertes médicales */}
+      {/* Alertes mÃ©dicales */}
       {(patient.allergies || patient.antecedents) && (
         <div className="grid gap-3 md:grid-cols-2">
           {patient.allergies && (
             <div className="flex items-start gap-2 bg-destructive/10 border border-destructive/20 rounded-lg px-4 py-3">
-              <span className="text-destructive font-bold text-sm mt-0.5">⚠</span>
+              <span className="text-destructive font-bold text-sm mt-0.5">â </span>
               <div>
                 <p className="text-xs font-semibold text-destructive uppercase tracking-wide">Allergies</p>
                 <p className="text-sm text-destructive mt-0.5">{patient.allergies}</p>
@@ -150,9 +152,9 @@ export default function PatientDetailPage() {
           )}
           {patient.antecedents && (
             <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3">
-              <span className="text-amber-600 font-bold text-sm mt-0.5">📋</span>
+              <span className="text-amber-600 font-bold text-sm mt-0.5">ð</span>
               <div>
-                <p className="text-xs font-semibold text-amber-700 uppercase tracking-wide">Antécédents</p>
+                <p className="text-xs font-semibold text-amber-700 uppercase tracking-wide">AntÃ©cÃ©dents</p>
                 <p className="text-sm text-amber-800 mt-0.5">{patient.antecedents}</p>
               </div>
             </div>
@@ -163,7 +165,7 @@ export default function PatientDetailPage() {
       {/* Tabs */}
       <div className="flex gap-1 border-b">
         {([
-          { id: "timeline", label: "Timeline médicale" },
+          { id: "timeline", label: "Timeline mÃ©dicale" },
           { id: "infos", label: "Informations" },
         ] as { id: Tab; label: string }[]).map(tab => (
           <button
@@ -187,7 +189,7 @@ export default function PatientDetailPage() {
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-base flex items-center gap-2">
-                📈 Évolution du poids
+                ð Ãvolution du poids
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -221,7 +223,7 @@ export default function PatientDetailPage() {
             </CardHeader>
             <CardContent className="space-y-3 text-sm">
               <div className="grid grid-cols-2 gap-y-2 gap-x-4">
-                <span className="text-muted-foreground">Espèce</span>
+                <span className="text-muted-foreground">EspÃ¨ce</span>
                 <span className="capitalize">{patient.espece}</span>
                 {patient.race && <>
                   <span className="text-muted-foreground">Race</span>
@@ -230,7 +232,7 @@ export default function PatientDetailPage() {
                 <span className="text-muted-foreground">Sexe</span>
                 <span>
                   {patient.sexe}
-                  {patient.sterilise && <Badge variant="secondary" className="ml-2 text-xs">Stérilisé(e)</Badge>}
+                  {patient.sterilise && <Badge variant="secondary" className="ml-2 text-xs">StÃ©rilisÃ©(e)</Badge>}
                 </span>
                 {patient.dateNaissance && <>
                   <span className="text-muted-foreground">Naissance</span>
@@ -282,14 +284,14 @@ export default function PatientDetailPage() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center justify-between">
-                <span>Propriétaire</span>
+                <span>PropriÃ©taire</span>
                 {patient.owner && ((patient.owner as any).rgpdAccepted ? (
                   <Badge variant="secondary" className="gap-1 bg-green-100 text-green-700 hover:bg-green-100">
-                    <ShieldCheck className="h-3 w-3" /> RGPD signé
+                    <ShieldCheck className="h-3 w-3" /> RGPD signÃ©
                   </Badge>
                 ) : (
                   <Badge variant="secondary" className="gap-1 bg-amber-100 text-amber-800 hover:bg-amber-100">
-                    <ShieldAlert className="h-3 w-3" /> RGPD à recueillir
+                    <ShieldAlert className="h-3 w-3" /> RGPD Ã  recueillir
                   </Badge>
                 ))}
               </CardTitle>
@@ -300,16 +302,16 @@ export default function PatientDetailPage() {
                   <div className="text-xl font-semibold">{patient.owner.prenom} {patient.owner.nom}</div>
                   {patient.owner.telephone && (
                     <a href={`tel:${patient.owner.telephone}`} className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
-                      📞 {patient.owner.telephone}
+                      ð {patient.owner.telephone}
                     </a>
                   )}
                   {patient.owner.email && (
                     <a href={`mailto:${patient.owner.email}`} className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
-                      ✉ {patient.owner.email}
+                      â {patient.owner.email}
                     </a>
                   )}
                   {patient.owner.adresse && (
-                    <p className="text-muted-foreground">📍 {patient.owner.adresse}</p>
+                    <p className="text-muted-foreground">ð {patient.owner.adresse}</p>
                   )}
 
                   <div className="border-t pt-3 space-y-2">
@@ -328,7 +330,7 @@ export default function PatientDetailPage() {
                     ) : (
                       <p className="text-xs text-amber-700 flex items-center gap-1.5">
                         <ShieldAlert className="h-3.5 w-3.5" />
-                        Non recueilli — à imprimer et faire signer
+                        Non recueilli â Ã  imprimer et faire signer
                       </p>
                     )}
                     <div className="flex flex-wrap gap-2 pt-1">
@@ -339,9 +341,9 @@ export default function PatientDetailPage() {
                         disabled={rgpdLoading !== null}
                       >
                         {rgpdLoading === "generate" ? (
-                          <><Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />Génération…</>
+                          <><Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />GÃ©nÃ©rationâ¦</>
                         ) : (
-                          <><Download className="mr-2 h-3.5 w-3.5" />Générer formulaire RGPD</>
+                          <><Download className="mr-2 h-3.5 w-3.5" />GÃ©nÃ©rer formulaire RGPD</>
                         )}
                       </Button>
                       {!(patient.owner as any).rgpdAccepted && (
@@ -351,7 +353,7 @@ export default function PatientDetailPage() {
                           disabled={rgpdLoading !== null}
                         >
                           {rgpdLoading === "confirm" ? (
-                            <><Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />Enregistrement…</>
+                            <><Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />Enregistrementâ¦</>
                           ) : (
                             <><Check className="mr-2 h-3.5 w-3.5" />Marquer comme obtenu</>
                           )}
@@ -361,23 +363,41 @@ export default function PatientDetailPage() {
                   </div>
                 </>
               ) : (
-                <p className="text-muted-foreground">Aucun propriétaire</p>
+                <p className="text-muted-foreground">Aucun propriÃ©taire</p>
               )}
             </CardContent>
           </Card>
 
-          {/* Accès rapides */}
+                   {/* Portées & Reproducteurs */}
+          <Card className="col-span-full">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="flex items-center gap-2">
+                <Heart className="h-4 w-4 text-pink-500" />
+                Portées &amp; Reproducteurs
+              </CardTitle>
+              <Button variant="outline" size="sm" onClick={() => setShowPorteeForm(v => !v)}>
+                {showPorteeForm ? "Annuler" : "Enregistrer une portée"}
+              </Button>
+            </CardHeader>
+            {showPorteeForm && (
+              <CardContent>
+                <PorteeForm motherPatient={patient} onSuccess={() => setShowPorteeForm(false)} />
+              </CardContent>
+            )}
+          </Card>
+
+ {/* AccÃ¨s rapides */}
           <Card className="md:col-span-2">
             <CardHeader>
-              <CardTitle className="text-base">Accès rapides</CardTitle>
+              <CardTitle className="text-base">AccÃ¨s rapides</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 {[
-                  { href: `/consultations?patientId=${id}`, label: "Consultations", count: consultations.length, icon: "🩺" },
-                  { href: `/patients/${id}/vaccinations`, label: "Vaccinations", count: null, icon: "💉" },
-                  { href: `/ordonnances?patientId=${id}`, label: "Ordonnances", count: null, icon: "📋" },
-                  { href: `/consultations/nouvelle?patientId=${id}`, label: "Nouvelle consultation", count: null, icon: "➕" },
+                  { href: `/consultations?patientId=${id}`, label: "Consultations", count: consultations.length, icon: "ð©º" },
+                  { href: `/patients/${id}/vaccinations`, label: "Vaccinations", count: null, icon: "ð" },
+                  { href: `/ordonnances?patientId=${id}`, label: "Ordonnances", count: null, icon: "ð" },
+                  { href: `/consultations/nouvelle?patientId=${id}`, label: "Nouvelle consultation", count: null, icon: "â" },
                 ].map(item => (
                   <Link key={item.href} href={item.href}>
                     <div className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 cursor-pointer transition-colors group">
