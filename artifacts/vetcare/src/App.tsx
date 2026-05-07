@@ -1,1 +1,328 @@
-Ly8gdjItd29ya2Zsb3cKaW1wb3J0IHsgU3dpdGNoLCBSb3V0ZSwgUmVkaXJlY3QsIHVzZUxvY2F0aW9uLCBSb3V0ZXIgYXMgV291dGVyUm91dGVyIH0gZnJvbSAid291dGVyIjsKaW1wb3J0IHsgUXVlcnlDbGllbnRQcm92aWRlciB9IGZyb20gIkB0YW5zdGFjay9yZWFjdC1xdWVyeSI7CmltcG9ydCB7IENsZXJrUHJvdmlkZXIsIFNob3csIHVzZUNsZXJrLCB1c2VVc2VyLCB1c2VTZXNzaW9uIH0gZnJvbSAiQGNsZXJrL3JlYWN0IjsKaW1wb3J0IHsgdXNlRWZmZWN0LCB1c2VSZWYsIHVzZVN0YXRlIH0gZnJvbSAicmVhY3QiOwppbXBvcnQgKiBhcyBTZW50cnkgZnJvbSAiQHNlbnRyeS9yZWFjdCI7CmltcG9ydCB7IHNldEF1dGhUb2tlbkdldHRlciB9IGZyb20gIkB3b3Jrc3BhY2UvYXBpLWNsaWVudC1yZWFjdCI7CmltcG9ydCB7IHF1ZXJ5Q2xpZW50LCBzZXRPbjQwMSB9IGZyb20gIi4vbGliL3F1ZXJ5Q2xpZW50IjsKaW1wb3J0IHsgVG9hc3RlciB9IGZyb20gIkAvY29tcG9uZW50cy91aS90b2FzdGVyIjsKaW1wb3J0IHsgVG9vbHRpcFByb3ZpZGVyIH0gZnJvbSAiQC9jb21wb25lbnRzL3VpL3Rvb2x0aXAiOwppbXBvcnQgSG9tZSBmcm9tICIuL3BhZ2VzL2hvbWUiOwppbXBvcnQgU2lnbkluUGFnZSBmcm9tICIuL3BhZ2VzL2F1dGgvc2lnbi1pbiI7CmltcG9ydCBTaWduVXBQYWdlIGZyb20gIi4vcGFnZXMvYXV0aC9zaWduLXVwIjsKaW1wb3J0IERhc2hib2FyZCBmcm9tICIuL3BhZ2VzL2Rhc2hib2FyZCI7CmltcG9ydCBQYXRpZW50c1BhZ2UgZnJvbSAiLi9wYWdlcy9wYXRpZW50cy9pbmRleCI7CmltcG9ydCBOb3V2ZWF1UGF0aWVudFBhZ2UgZnJvbSAiLi9wYWdlcy9wYXRpZW50cy9ub3V2ZWF1IjsKaW1wb3J0IFBhdGllbnREZXRhaWxQYWdlIGZyb20gIi4vcGFnZXMvcGF0aWVudHMvZGV0YWlsIjsKaW1wb3J0IENvbnN1bHRhdGlvbnNQYWdlIGZyb20gIi4vcGFnZXMvY29uc3VsdGF0aW9ucy9pbmRleCI7CmltcG9ydCBOb3V2ZWxsZUNvbnN1bHRhdGlvblBhZ2UgZnJvbSAiLi9wYWdlcy9jb25zdWx0YXRpb25zL25vdXZlbGxlIjsKaW1wb3J0IENvbnN1bHRhdGlvbkRldGFpbFBhZ2UgZnJvbSAiLi9wYWdlcy9jb25zdWx0YXRpb25zL2RldGFpbCI7CmltcG9ydCBDb25zdWx0YXRpb25Xb3JrZmxvd1BhZ2UgZnJvbSAiLi9wYWdlcy9jb25zdWx0YXRpb25zL3dvcmtmbG93IjsKaW1wb3J0IEZhY3R1cmVzUGFnZSBmcm9tICIuL3BhZ2VzL2ZhY3R1cmVzL2luZGV4IjsKaW1wb3J0IEZhY3R1cmVEZXRhaWxQYWdlIGZyb20gIi4vcGFnZXMvZmFjdHVyZXMvZGV0YWlsIjsKaW1wb3J0IEZhY3R1cmVJbXByaW1lclBhZ2UgZnJvbSAiLi9wYWdlcy9mYWN0dXJlcy9pbXByaW1lciI7CmltcG9ydCBBY3Rlc1BhZ2UgZnJvbSAiLi9wYWdlcy9hY3Rlcy9pbmRleCI7CmltcG9ydCBQYXJhbWV0cmVzUGFnZSBmcm9tICIuL3BhZ2VzL3BhcmFtZXRyZXMvaW5kZXgiOwppbXBvcnQgRW5jYWlzc2VtZW50c1BhZ2UgZnJvbSAiLi9wYWdlcy9lbmNhaXNzZW1lbnRzL2luZGV4IjsKaW1wb3J0IFJhcHBlbHNQYWdlIGZyb20gIi4vcGFnZXMvcmFwcGVscy9pbmRleCI7CmltcG9ydCBTdGF0aXN0aXF1ZXNQYWdlIGZyb20gIi4vcGFnZXMvc3RhdGlzdGlxdWVzL2luZGV4IjsKaW1wb3J0IFN0b2NrUGFnZSBmcm9tICIuL3BhZ2VzL3N0b2NrL2luZGV4IjsKaW1wb3J0IFN0dXBlZmlhbnRzUGFnZSBmcm9tICIuL3BhZ2VzL3N0dXBlZmlhbnRzL2luZGV4IjsKaW1wb3J0IE9yZG9ubmFuY2VzUGFnZSBmcm9tICIuL3BhZ2VzL29yZG9ubmFuY2VzL2luZGV4IjsKaW1wb3J0IE9yZG9ubmFuY2VJbXByaW1lclBhZ2UgZnJvbSAiLi9wYWdlcy9vcmRvbm5hbmNlcy9pbXByaW1lciI7CmltcG9ydCBBZ2VuZGFQYWdlIGZyb20gIi4vcGFnZXMvYWdlbmRhL2luZGV4IjsKaW1wb3J0IFNhbGxlQXR0ZW50ZVBhZ2UgZnJvbSAiLi9wYWdlcy9zYWxsZS1hdHRlbnRlL2luZGV4IjsKaW1wb3J0IENlcnRpZmljYXRzUGFnZSBmcm9tICIuL3BhZ2VzL2NlcnRpZmljYXRzL2luZGV4IjsKaW1wb3J0IFZhY2NpbmF0aW9uc1BhZ2UgZnJvbSAiLi9wYWdlcy92YWNjaW5hdGlvbnMvaW5kZXgiOwppbXBvcnQgUG9ydGFpbFBhZ2UgZnJvbSAiLi9wYWdlcy9wb3J0YWlsL2luZGV4IjsKaW1wb3J0IENvbmZpZGVudGlhbGl0ZVBhZ2UgZnJvbSAiLi9wYWdlcy9jb25maWRlbnRpYWxpdGUiOwppbXBvcnQgTGVnYWxQYWdlIGZyb20gIi4vcGFnZXMvTGVnYWwiOwppbXBvcnQgeyBBcHBMYXlvdXQgfSBmcm9tICIuL2NvbXBvbmVudHMvbGF5b3V0L0FwcExheW91dCI7CmltcG9ydCBJYURpc2NsYWltZXJNb2RhbCBmcm9tICIuL2NvbXBvbmVudHMvSWFEaXNjbGFpbWVyTW9kYWwiOwppbXBvcnQgeyBDb21tYW5kUGFsZXR0ZSB9IGZyb20gIi4vY29tcG9uZW50cy9Db21tYW5kUGFsZXR0ZSI7CmltcG9ydCBOb3RGb3VuZCBmcm9tICJAL3BhZ2VzL25vdC1mb3VuZCI7CmltcG9ydCB7IEVycm9yQm91bmRhcnkgfSBmcm9tICJAL2NvbXBvbmVudHMvRXJyb3JCb3VuZGFyeSI7CmltcG9ydCBWZW50ZXNQYWdlIGZyb20gIi4vcGFnZXMvdmVudGVzL2luZGV4IjsKaW1wb3J0IEVxdWlwZVBhZ2UgZnJvbSAiLi9wYWdlcy9lcXVpcGUvaW5kZXgiOwppbXBvcnQgQWRtaW5QZXJtaXNzaW9uc1BhZ2UgZnJvbSAiLi9wYWdlcy9hZG1pbi9wZXJtaXNzaW9ucyI7CmltcG9ydCBBZ2VuZGFDYWxlbmRhclBhZ2UgZnJvbSAiLi9wYWdlcy9hZ2VuZGEvY2FsZW5kYXIiOwppbXBvcnQgQ3JlbWF0aW9uUGFnZSBmcm9tICIuL3BhZ2VzL2NyZW1hdGlvbi9pbmRleCI7CmltcG9ydCBDYXRhbG9ndWVQcml4UGFnZSBmcm9tICIuL3BhZ2VzL2NhdGFsb2d1ZS9pbmRleCI7CmltcG9ydCBDb21wdGFiaWxpdGVQYWdlIGZyb20gIi4vcGFnZXMvY29tcHRhYmlsaXRlL2luZGV4IjsKaW1wb3J0IEltcGF5ZXNQYWdlIGZyb20gIi4vcGFnZXMvY29tcHRhYmlsaXRlL2ltcGF5ZXMiOwoKY29uc3QgY2xlcmtQdWJLZXkgPSBpbXBvcnQubWV0YS5lbnYuVklURV9DTEVSS19QVUJMSVNIQUJMRV9LRVk7CmNvbnN0IGJhc2VQYXRoID0gaW1wb3J0Lm1ldGEuZW52LkJBU0VfVVJMLnJlcGxhY2UoL1wvJC8sICIiKTsKCi8qKgogKiBGLVAwLTMgOiBzaSBsYSBjbMODwoPDgsKDw4PCgsOCwqkgQ2xlcmsgbWFucXVlLCBvbiBBRkZJQ0hFIHVuIMODwoPDgsKDw4PCgsOCwqljcmFuIHByb3ByZSBhdSBsaWV1IGRlCiAqIGxhaXNzZXIgdW4gdGhyb3cgY3Jhc2hlciBhdmFudCBsZSBtb3VudCBFcnJvckJvdW5kYXJ5LgogKi8KZnVuY3Rpb24gTWlzc2luZ0NvbmZpZ1NjcmVlbih7IHJlYXNvbiB9OiB7IHJlYXNvbjogc3RyaW5nIH0pIHsKICByZXR1cm4gKAogICAgPGRpdiBjbGFzc05hbWU9Im1pbi1oLXNjcmVlbiBmbGV4IGl0ZW1zLWNlbnRlciBqdXN0aWZ5LWNlbnRlciBiZy1ncmF5LTUwIHAtNiI+CiAgICAgIDxkaXYgY2xhc3NOYW1lPSJtYXgtdy1tZCB0ZXh0LWNlbnRlciBzcGFjZS15LTMiPgogICAgICAgIDxoMSBjbGFzc05hbWU9InRleHQtMnhsIGZvbnQtYm9sZCI+Q29uZmlndXJhdGlvbiBtYW5xdWFudGU8L2gxPgogICAgICAgIDxwIGNsYXNzTmFtZT0idGV4dC1ncmF5LTYwMCI+e3JlYXNvbn08L3A+CiAgICAgICAgPHAgY2xhc3NOYW1lPSJ0ZXh0LXNtIHRleHQtZ3JheS00MDAiPgogICAgICAgICAgU2kgdm91cyDDg8KDw4LCg8ODwoLDgsKqdGVzIGFkbWluaXN0cmF0ZXVyLCB2w4PCg8OCwoPDg8KCw4LCqXJpZmlleiBsZXMgdmFyaWFibGVzIGQnZW52aXJvbm5lbWVudCBkdSBkw4PCg8OCwoPDg8KCw4LCqXBsb2llbWVudC4KICAgICAgICAgIFNpbm9uLCBjb250YWN0ZXogdm90cmUgc3VwcG9ydC4KICAgICAgICA8L3A+CiAgICAgIDwvZGl2PgogICAgPC9kaXY+CiAgKTsKfQoKZnVuY3Rpb24gc3RyaXBCYXNlKHBhdGg6IHN0cmluZyk6IHN0cmluZyB7CiAgcmV0dXJuIGJhc2VQYXRoICYmIHBhdGguc3RhcnRzV2l0aChiYXNlUGF0aCkKICAgID8gcGF0aC5zbGljZShiYXNlUGF0aC5sZW5ndGgpIHx8ICIvIgogICAgOiBwYXRoOwp9CgovKioKICogRi1QMS00ICsgRi1QMi04IDogb2JzZXJ2ZSBsZXMgY2hhbmdlbWVudHMgZCdpZGVudGl0w4PCg8OCwoPDg8KCw4LCqSBDbGVyayBwb3VyCiAqIDEuIFB1cmdlciBsZSBjYWNoZSBSZWFjdCBRdWVyeSBxdWFuZCBsJ3VzZXIgY2hhbmdlIChzw4PCg8OCwoPDg8KCw4LCqWN1IG11bHRpLXRlbmFudAogKiAgICBjw4PCg8OCwoPDg8KCw4LCtHTDg8KDw4LCg8ODwoLDgsKpIG5hdmlnYXRldXIgw4PCg8OCwqLDg8KCw4LCgMODwoLDgsKUIMODwoPDgsKDw4PCgsOCwql2aXRlIHF1J3VuIHVzZXIgcXVpIHNlIGxvZ291dC9sb2dpbiB2b2l0IGxlcwogKiAgICBjYWNoZXMgZGUgbCdhbmNpZW4gdXNlcikuCiAqIDIuIFBvcHVsZXIgU2VudHJ5LnNldFVzZXIgcG91ciBhdHRhY2hlciBsJ3VzZXIgY29udGV4dCBhdXggZXJyZXVycy4KICovCmZ1bmN0aW9uIENsZXJrU2lkZUVmZmVjdHMoKSB7CiAgY29uc3QgeyBhZGRMaXN0ZW5lciB9ID0gdXNlQ2xlcmsoKTsKICBjb25zdCB7IHVzZXIgfSA9IHVzZVVzZXIoKTsKICBjb25zdCBwcmV2VXNlcklkUmVmID0gdXNlUmVmPHN0cmluZyB8IG51bGwgfCB1bmRlZmluZWQ+KHVuZGVmaW5lZCk7CgogIHVzZUVmZmVjdCgoKSA9PiB7CiAgICBjb25zdCB1bnN1YnNjcmliZSA9IGFkZExpc3RlbmVyKCh7IHVzZXI6IHUgfSkgPT4gewogICAgICBjb25zdCB1c2VySWQgPSB1Py5pZCA/PyBudWxsOwogICAgICBpZiAocHJldlVzZXJJZFJlZi5jdXJyZW50ICE9PSB1bmRlZmluZWQgJiYgcHJldlVzZXJJZFJlZi5jdXJyZW50ICE9PSB1c2VySWQpIHsKICAgICAgICBxdWVyeUNsaWVudC5jbGVhcigpOwogICAgICB9CiAgICAgIHByZXZVc2VySWRSZWYuY3VycmVudCA9IHVzZXJJZDsKICAgIH0pOwogICAgcmV0dXJuIHVuc3Vic2NyaWJlOwogIH0sIFthZGRMaXN0ZW5lcl0pOwoKICB1c2VFZmZlY3QoKCkgPT4gewogICAgaWYgKHVzZXIpIHsKICAgICAgU2VudHJ5LnNldFVzZXIoewogICAgICAgIGlkOiB1c2VyLmlkLAogICAgICAgIGVtYWlsOiB1c2VyLnByaW1hcnlFbWFpbEFkZHJlc3M/LmVtYWlsQWRkcmVzcywKICAgICAgfSk7CiAgICB9IGVsc2UgewogICAgICBTZW50cnkuc2V0VXNlcihudWxsKTsKICAgIH0KICB9LCBbdXNlcl0pOwoKICByZXR1cm4gbnVsbDsKfQoKLyoqCiAqIEYtUDEtMyA6IGhhbmRsZXIgNDAxIGdsb2JhbCBicmFuY2jDg8KDw4LCg8ODwoLDgsKpIHN1ciBsZSBxdWVyeUNsaWVudC4KICogUXVhbmQgbGUgYmFja2VuZCByZW52b2llIDQwMSAodG9rZW4gQ2xlcmsgZXhwaXLDg8KDw4LCg8ODwoLDgsKpKSwgb24gc2lnbk91dCBsJ3V0aWxpc2F0ZXVyCiAqIGV0IG9uIGxlIHJlZGlyaWdlIHZlcnMgL3NpZ24taW4uIFBsdXMgZWZmaWNhY2UgcXUndW4gdG9hc3QgZCdlcnJldXIgcGVyZHUuCiAqLwpmdW5jdGlvbiBPbjQwMVJlZGlyZWN0KCkgewogIGNvbnN0IHsgc2lnbk91dCB9ID0gdXNlQ2xlcmsoKTsKICBjb25zdCBbLCBzZXRMb2NhdGlvbl0gPSB1c2VMb2NhdGlvbigpOwoKICB1c2VFZmZlY3QoKCkgPT4gewogICAgc2V0T240MDEoKCkgPT4gewogICAgICB2b2lkIHNpZ25PdXQoKCkgPT4gc2V0TG9jYXRpb24oIi9zaWduLWluIikpOwogICAgfSk7CiAgICByZXR1cm4gKCkgPT4gc2V0T240MDEoKCkgPT4ge30pOwogIH0sIFtzaWduT3V0LCBzZXRMb2NhdGlvbl0pOwoKICByZXR1cm4gbnVsbDsKfQoKLyoqCiAqIEJyYW5jaGUgbGUgZ2V0dGVyIGRlIHRva2VuIENsZXJrIHN1ciBsZSBjbGllbnQgQVBJIGF1dG8tZ8ODwoPDgsKDw4PCgsOCwqluw4PCg8OCwoPDg8KCw4LCqXLDg8KDw4LCg8ODwoLDgsKpIChPcnZhbCkuCiAqIFNhbnMgw4PCg8OCwoPDg8KCw4LCp2EsIHRvdXMgbGVzIGhvb2tzIFJlYWN0IFF1ZXJ5IGfDg8KDw4LCg8ODwoLDgsKpbsODwoPDgsKDw4PCgsOCwqlyw4PCg8OCwoPDg8KCw4LCqXMgZm9udCBsZXVycyByZXF1w4PCg8OCwoPDg8KCw4LCqnRlcyBzYW5zCiAqIEF1dGhvcml6YXRpb24gaGVhZGVyIMODwoPDgsKiw4PCgsOCwobDg8KCw4LCkiA0MDEgc3lzdMODwoPDgsKDw4PCgsOCwqltYXRpcXVlIHN1ciB0b3V0ZXMgbGVzIGxpc3Rlcy4KICovCmZ1bmN0aW9uIENsZXJrVG9rZW5TeW5jKCkgewogIGNvbnN0IHsgc2Vzc2lvbiB9ID0gdXNlU2Vzc2lvbigpOwogIHVzZUVmZmVjdCgoKSA9PiB7CiAgICBzZXRBdXRoVG9rZW5HZXR0ZXIoc2Vzc2lvbiA/ICgpID0+IHNlc3Npb24uZ2V0VG9rZW4oKSA6IG51bGwpOwogICAgcmV0dXJuICgpID0+IHNldEF1dGhUb2tlbkdldHRlcihudWxsKTsKICB9LCBbc2Vzc2lvbl0pOwogIHJldHVybiBudWxsOwp9CgpmdW5jdGlvbiBIb21lUmVkaXJlY3QoKSB7CiAgcmV0dXJuICgKICAgIDw+CiAgICAgIDxTaG93IHdoZW49InNpZ25lZC1pbiI+CiAgICAgICAgPFJlZGlyZWN0IHRvPSIvZGFzaGJvYXJkIiAvPgogICAgICA8L1Nob3c+CiAgICAgIDxTaG93IHdoZW49InNpZ25lZC1vdXQiPgogICAgICAgIDxIb21lIC8+CiAgICAgIDwvU2hvdz4KICAgIDwvPgogICk7Cn0KCi8qKgogKiBGLVAxLTUgOiBjaGFxdWUgcm91dGUgcHJvdMODwoPDgsKDw4PCgsOCwqlnw4PCg8OCwoPDg8KCw4LCqWUgZXN0IHdyYXBww4PCg8OCwoPDg8KCw4LCqWUgZGFucyB1biBFcnJvckJvdW5kYXJ5IGxvY2FsLgogKiBVbiBjcmFzaCBkJ3VuIGNvbXBvc2FudCBlbmZhbnQgbW9udHJlIHVuIGZhbGxiYWNrIHBsdXMgZ3JhbnVsYWlyZSwgc2FucwogKiB0dWVyIGxhIG5hdi4KICovCmZ1bmN0aW9uIFByb3RlY3RlZFJvdXRlKHsgY29tcG9uZW50OiBDb21wb25lbnQgfTogeyBjb21wb25lbnQ6IFJlYWN0LkNvbXBvbmVudFR5cGUgfSkgewogIHJldHVybiAoCiAgICA8PgogICAgICA8U2hvdyB3aGVuPSJzaWduZWQtaW4iPgogICAgICAgIDxBcHBMYXlvdXQ+CiAgICAgICAgICA8RXJyb3JCb3VuZGFyeT4KICAgICAgICAgICAgPElhRGlzY2xhaW1lck1vZGFsIC8+CiAgICAgICAgICAgIDxDb21wb25lbnQgLz4KICAgICAgICAgIDwvRXJyb3JCb3VuZGFyeT4KICAgICAgICA8L0FwcExheW91dD4KICAgICAgPC9TaG93PgogICAgICA8U2hvdyB3aGVuPSJzaWduZWQtb3V0Ij4KICAgICAgICA8UmVkaXJlY3QgdG89Ii9zaWduLWluIiAvPgogICAgICA8L1Nob3c+CiAgICA8Lz4KICApOwp9CgpmdW5jdGlvbiBSb3V0ZXIoKSB7CiAgcmV0dXJuICgKICAgIDxTd2l0Y2g+CiAgICAgIDxSb3V0ZSBwYXRoPSIvIiBjb21wb25lbnQ9e0hvbWVSZWRpcmVjdH0gLz4KICAgICAgPFJvdXRlIHBhdGg9Ii9zaWduLWluLyo/IiBjb21wb25lbnQ9e1NpZ25JblBhZ2V9IC8+CiAgICAgIDxSb3V0ZSBwYXRoPSIvc2lnbi11cC8qPyIgY29tcG9uZW50PXtTaWduVXBQYWdlfSAvPgogICAgICA8Um91dGUgcGF0aD0iL2Rhc2hib2FyZCIgY29tcG9uZW50PXsoKSA9PiA8UHJvdGVjdGVkUm91dGUgY29tcG9uZW50PXtEYXNoYm9hcmR9IC8+fSAvPgogICAgICA8Um91dGUgcGF0aD0iL3BhdGllbnRzL25vdXZlYXUiIGNvbXBvbmVudD17KCkgPT4gPFByb3RlY3RlZFJvdXRlIGNvbXBvbmVudD17Tm91dmVhdVBhdGllbnRQYWdlfSAvPn0gLz4KICAgICAgPFJvdXRlIHBhdGg9Ii9wYXRpZW50cy86aWQiIGNvbXBvbmVudD17KCkgPT4gPFByb3RlY3RlZFJvdXRlIGNvbXBvbmVudD17UGF0aWVudERldGFpbFBhZ2V9IC8+fSAvPgogICAgICA8Um91dGUgcGF0aD0iL3BhdGllbnRzIiBjb21wb25lbnQ9eygpID0+IDxQcm90ZWN0ZWRSb3V0ZSBjb21wb25lbnQ9e1BhdGllbnRzUGFnZX0gLz59IC8+CiAgICAgIDxSb3V0ZSBwYXRoPSIvY29uc3VsdGF0aW9ucy9ub3V2ZWxsZSIgY29tcG9uZW50PXsoKSA9PiA8UHJvdGVjdGVkUm91dGUgY29tcG9uZW50PXtOb3V2ZWxsZUNvbnN1bHRhdGlvblBhZ2V9IC8+fSAvPgogICAgICA8Um91dGUgcGF0aD0iL2NvbnN1bHRhdGlvbnMvOmlkL3dvcmtmbG93IiBjb21wb25lbnQ9eygpID0+IDxQcm90ZWN0ZWRSb3V0ZSBjb21wb25lbnQ9e0NvbnN1bHRhdGlvbldvcmtmbG93UGFnZX0gLz59IC8+CiAgICAgIDxSb3V0ZSBwYXRoPSIvY29uc3VsdGF0aW9ucy86aWQiIGNvbXBvbmVudD17KCkgPT4gPFByb3RlY3RlZFJvdXRlIGNvbXBvbmVudD17Q29uc3VsdGF0aW9uRGV0YWlsUGFnZX0gLz59IC8+CiAgICAgIDxSb3V0ZSBwYXRoPSIvY29uc3VsdGF0aW9ucyIgY29tcG9uZW50PXsoKSA9PiA8UHJvdGVjdGVkUm91dGUgY29tcG9uZW50PXtDb25zdWx0YXRpb25zUGFnZX0gLz59IC8+CiAgICAgIDxSb3V0ZSBwYXRoPSIvZmFjdHVyZXMvOmlkL2ltcHJpbWVyIiBjb21wb25lbnQ9eygpID0+ICgKICAgICAgICA8PgogICAgICAgICAgPFNob3cgd2hlbj0ic2lnbmVkLWluIj48RmFjdHVyZUltcHJpbWVyUGFnZSAvPjwvU2hvdz4KICAgICAgICAgIDxTaG93IHdoZW49InNpZ25lZC1vdXQiPjxSZWRpcmVjdCB0bz0iL3NpZ24taW4iIC8+PC9TaG93PgogICAgICAgIDwvPgogICAgICApfSAvPgogICAgICA8Um91dGUgcGF0aD0iL2ZhY3R1cmVzLzppZCIgY29tcG9uZW50PXsoKSA9PiA8UHJvdGVjdGVkUm91dGUgY29tcG9uZW50PXtGYWN0dXJlRGV0YWlsUGFnZX0gLz59IC8+CiAgICAgIDxSb3V0ZSBwYXRoPSIvZmFjdHVyZXMiIGNvbXBvbmVudD17KCkgPT4gPFByb3RlY3RlZFJvdXRlIGNvbXBvbmVudD17RmFjdHVyZXNQYWdlfSAvPn0gLz4KICAgICAgPFJvdXRlIHBhdGg9Ii9hY3RlcyIgY29tcG9uZW50PXsoKSA9PiA8UHJvdGVjdGVkUm91dGUgY29tcG9uZW50PXtBY3Rlc1BhZ2V9IC8+fSAvPgogICAgICA8Um91dGUgcGF0aD0iL2VuY2Fpc3NlbWVudHMiIGNvbXBvbmVudD17KCkgPT4gPFByb3RlY3RlZFJvdXRlIGNvbXBvbmVudD17RW5jYWlzc2VtZW50c1BhZ2V9IC8+fSAvPgogICAgICA8Um91dGUgcGF0aD0iL3JhcHBlbHMiIGNvbXBvbmVudD17KCkgPT4gPFByb3RlY3RlZFJvdXRlIGNvbXBvbmVudD17UmFwcGVsc1BhZ2V9IC8+fSAvPgogICAgICA8Um91dGUgcGF0aD0iL3BhcmFtZXRyZXMiIGNvbXBvbmVudD17KCkgPT4gPFByb3RlY3RlZFJvdXRlIGNvbXBvbmVudD17UGFyYW1ldHJlc1BhZ2V9IC8+fSAvPgogICAgICA8Um91dGUgcGF0aD0iL3N0YXRpc3RpcXVlcyIgY29tcG9uZW50PXsoKSA9PiA8UHJvdGVjdGVkUm91dGUgY29tcG9uZW50PXtTdGF0aXN0aXF1ZXNQYWdlfSAvPn0gLz4KICAgICAgPFJvdXRlIHBhdGg9Ii9zdG9jayIgY29tcG9uZW50PXsoKSA9PiA8UHJvdGVjdGVkUm91dGUgY29tcG9uZW50PXtTdG9ja1BhZ2V9IC8+fSAvPgogICAgICA8Um91dGUgcGF0aD0iL3N0dXBlZmlhbnRzIiBjb21wb25lbnQ9eygpID0+IDxQcm90ZWN0ZWRSb3V0ZSBjb21wb25lbnQ9e1N0dXBlZmlhbnRzUGFnZX0gLz59IC8+CiAgICAgIDxSb3V0ZSBwYXRoPSIvb3Jkb25uYW5jZXMvOmlkL2ltcHJpbWVyIiBjb21wb25lbnQ9eygpID0+ICgKICAgICAgICA8PgogICAgICAgICAgPFNob3cgd2hlbj0ic2lnbmVkLWluIj48T3Jkb25uYW5jZUltcHJpbWVyUGFnZSAvPjwvU2hvdz4KICAgICAgICAgIDxTaG93IHdoZW49InNpZ25lZC1vdXQiPjxSZWRpcmVjdCB0bz0iL3NpZ24taW4iIC8+PC9TaG93PgogICAgICAgIDwvPgogICAgICApfSAvPgogICAgICA8Um91dGUgcGF0aD0iL29yZG9ubmFuY2VzIiBjb21wb25lbnQ9eygpID0+IDxQcm90ZWN0ZWRSb3V0ZSBjb21wb25lbnQ9e09yZG9ubmFuY2VzUGFnZX0gLz59IC8+CiAgICAgIDxSb3V0ZSBwYXRoPSIvc2FsbGUtYXR0ZW50ZSIgY29tcG9uZW50PXsoKSA9PiA8UHJvdGVjdGVkUm91dGUgY29tcG9uZW50PXtTYWxsZUF0dGVudGVQYWdlfSAvPn0gLz4KICAgICAgPFJvdXRlIHBhdGg9Ii9hZ2VuZGEiIGNvbXBvbmVudD17KCkgPT4gPFByb3RlY3RlZFJvdXRlIGNvbXBvbmVudD17QWdlbmRhUGFnZX0gLz59IC8+CiAgICAgIDxSb3V0ZSBwYXRoPSIvY2VydGlmaWNhdHMiIGNvbXBvbmVudD17KCkgPT4gPFByb3RlY3RlZFJvdXRlIGNvbXBvbmVudD17Q2VydGlmaWNhdHNQYWdlfSAvPn0gLz4KICAgICAgPFJvdXRlIHBhdGg9Ii9wYXRpZW50cy86aWQvdmFjY2luYXRpb25zIiBjb21wb25lbnQ9eygpID0+IDxQcm90ZWN0ZWRSb3V0ZSBjb21wb25lbnQ9e1ZhY2NpbmF0aW9uc1BhZ2V9IC8+fSAvPgogICAgICA8Um91dGUgcGF0aD0iL3BvcnRhaWwvOnRva2VuIiBjb21wb25lbnQ9e1BvcnRhaWxQYWdlfSAvPgogICAgICA8Um91dGUgcGF0aD0iL2NvbmZpZGVudGlhbGl0ZSIgY29tcG9uZW50PXtDb25maWRlbnRpYWxpdGVQYWdlfSAvPgogICAgICA8Um91dGUgcGF0aD0iL2xlZ2FsIiBjb21wb25lbnQ9e0xlZ2FsUGFnZX0gLz4KICAgICAgPFJvdXRlIHBhdGg9Ii92ZW50ZXMiIGNvbXBvbmVudD17KCkgPT4gPFByb3RlY3RlZFJvdXRlIGNvbXBvbmVudD17VmVudGVzUGFnZX0gLz59IC8+CiAgICAgIDxSb3V0ZSBwYXRoPSIvZXF1aXBlIiBjb21wb25lbnQ9eygpID0+IDxQcm90ZWN0ZWRSb3V0ZSBjb21wb25lbnQ9e0VxdWlwZVBhZ2V9IC8+fSAvPgogICAgICA8Um91dGUgcGF0aD0iL2FkbWluL3Blcm1pc3Npb25zIiBjb21wb25lbnQ9eygpID0+IDxQcm90ZWN0ZWRSb3V0ZSBjb21wb25lbnQ9e0FkbWluUGVybWlzc2lvbnNQYWdlfSAvPn0gLz4KICAgICAgPFJvdXRlIHBhdGg9Ii9hZ2VuZGEvY2FsZW5kYXIiIGNvbXBvbmVudD17KCkgPT4gPFByb3RlY3RlZFJvdXRlIGNvbXBvbmVudD17QWdlbmRhQ2FsZW5kYXJQYWdlfSAvPn0gLz4KICAgICAgPFJvdXRlIHBhdGg9Ii9jcmVtYXRpb24iIGNvbXBvbmVudD17KCkgPT4gPFByb3RlY3RlZFJvdXRlIGNvbXBvbmVudD17Q3JlbWF0aW9uUGFnZX0gLz59IC8+CiAgICAgICAgICAgICAgPFJvdXRlIHBhdGg9Ii9jYXRhbG9ndWUiIGNvbXBvbmVudD17KCkgPT4gPFByb3RlY3RlZFJvdXRlIGNvbXBvbmVudD17Q2F0YWxvZ3VlUHJpeFBhZ2V9IC8+CiAgICAgICAgICA8Um91dGUgcGF0aD0iL2NvbXB0YWJpbGl0ZS9pbXBheWVzIiBjb21wb25lbnQ9eygpID0+IDxQcm90ZWN0ZWRSb3V0ZSBjb21wb25lbnQ9e0ltcGF5ZXNQYWdlfSAvPn0gLz4KICAgICAgICAgIDxSb3V0ZSBwYXRoPSIvY29tcHRhYmlsaXRlIiBjb21wb25lbnQ9eygpID0+IDxQcm90ZWN0ZWRSb3V0ZSBjb21wb25lbnQ9e0NvbXB0YWJpbGl0ZVBhZ2V9IC8+fSAvPn0gLz4KICAgICAgPFJvdXRlIGNvbXBvbmVudD17Tm90Rm91bmR9IC8+CiAgICA8L1N3aXRjaD4KICApOwp9CgpmdW5jdGlvbiBDbGVya1Byb3ZpZGVyV2l0aFJvdXRlcygpIHsKICBjb25zdCBbLCBzZXRMb2NhdGlvbl0gPSB1c2VMb2NhdGlvbigpOwogIGNvbnN0IFtjbWRPcGVuLCBzZXRDbWRPcGVuXSA9IHVzZVN0YXRlKGZhbHNlKTsKCiAgdXNlRWZmZWN0KCgpID0+IHsKICAgIGNvbnN0IGhhbmRsZXIgPSAoZTogS2V5Ym9hcmRFdmVudCkgPT4gewogICAgICBjb25zdCB0YWcgPSAoZS50YXJnZXQgYXMgSFRNTEVsZW1lbnQpPy50YWdOYW1lID8/ICIiOwogICAgICBjb25zdCBlZGl0YWJsZSA9IChlLnRhcmdldCBhcyBIVE1MRWxlbWVudCk/LmlzQ29udGVudEVkaXRhYmxlOwogICAgICBjb25zdCBpbklucHV0ID0gWyJJTlBVVCIsICJURVhUQVJFQSIsICJTRUxFQ1QiXS5pbmNsdWRlcyh0YWcpIHx8IGVkaXRhYmxlOwogICAgICBpZiAoKGUuY3RybEtleSB8fCBlLm1ldGFLZXkpICYmIGUua2V5ID09PSAiayIpIHsKICAgICAgICBlLnByZXZlbnREZWZhdWx0KCk7CiAgICAgICAgc2V0Q21kT3BlbigocHJldikgPT4gIXByZXYpOwogICAgICAgIHJldHVybjsKICAgICAgfQogICAgICBpZiAoaW5JbnB1dCB8fCBlLmN0cmxLZXkgfHwgZS5tZXRhS2V5IHx8IGUuYWx0S2V5KSByZXR1cm47CiAgICAgIGlmIChlLmtleSA9PT0gIm4iKSB7CiAgICAgICAgZS5wcmV2ZW50RGVmYXVsdCgpOwogICAgICAgIHNldExvY2F0aW9uKCIvY29uc3VsdGF0aW9ucy9ub3V2ZWxsZSIpOwogICAgICB9IGVsc2UgaWYgKGUua2V5ID09PSAicCIpIHsKICAgICAgICBlLnByZXZlbnREZWZhdWx0KCk7CiAgICAgICAgc2V0TG9jYXRpb24oIi9wYXRpZW50cy9ub3V2ZWF1Iik7CiAgICAgIH0gZWxzZSBpZiAoZS5rZXkgPT09ICJmIikgewogICAgICAgIGUucHJldmVudERlZmF1bHQoKTsKICAgICAgICBzZXRMb2NhdGlvbigiL2ZhY3R1cmVzIik7CiAgICAgIH0gZWxzZSBpZiAoZS5rZXkgPT09ICI/IikgewogICAgICAgIGUucHJldmVudERlZmF1bHQoKTsKICAgICAgICBzZXRDbWRPcGVuKHRydWUpOwogICAgICB9CiAgICB9OwogICAgd2luZG93LmFkZEV2ZW50TGlzdGVuZXIoImtleWRvd24iLCBoYW5kbGVyKTsKICAgIHJldHVybiAoKSA9PiB3aW5kb3cucmVtb3ZlRXZlbnRMaXN0ZW5lcigia2V5ZG93biIsIGhhbmRsZXIpOwogIH0sIFtzZXRMb2NhdGlvbl0pOwoKICByZXR1cm4gKAogICAgPENsZXJrUHJvdmlkZXIKICAgICAgcHVibGlzaGFibGVLZXk9e2NsZXJrUHViS2V5IX0KICAgICAgcm91dGVyUHVzaD17KHRvKSA9PiBzZXRMb2NhdGlvbihzdHJpcEJhc2UodG8pKX0KICAgICAgcm91dGVyUmVwbGFjZT17KHRvKSA9PiBzZXRMb2NhdGlvbihzdHJpcEJhc2UodG8pLCB7IHJlcGxhY2U6IHRydWUgfSl9CiAgICAgIGNsZXJrSlNVcmw9Imh0dHBzOi8vdW5wa2cuY29tL0BjbGVyay9jbGVyay1qc0A2L2Rpc3QvY2xlcmsuYnJvd3Nlci5qcyIKICAgICAgICBhZnRlclNpZ25JblVybD0iL2Rhc2hib2FyZCIKICAgICAgICBhZnRlclNpZ25VcFVybD0iL2Rhc2hib2FyZCIKICAgID4KICAgICAgPENsZXJrU2lkZUVmZmVjdHMgLz4KICAgICAgPE9uNDAxUmVkaXJlY3QgLz4KICAgICAgPENsZXJrVG9rZW5TeW5jIC8+CiAgICAKICAgICAgPFJvdXRlciAvPgogICAgICA8Q29tbWFuZFBhbGV0dGUgb3Blbj17Y21kT3Blbn0gb25PcGVuQ2hhbmdlPXtzZXRDbWRPcGVufSAvPgogICAgPC9DbGVya1Byb3ZpZGVyPgogICk7Cn0KCmZ1bmN0aW9uIEFwcCgpIHsKICAvLyBGLVAwLTMgOiBjaGVjayBjb25maWcgYXZhbnQgZGUgbW9udGVyIHF1b2kgcXVlIGNlIHNvaXQuCiAgaWYgKCFjbGVya1B1YktleSkgewogICAgcmV0dXJuICgKICAgICAgPE1pc3NpbmdDb25maWdTY3JlZW4gcmVhc29uPSJMYSBjbMODwoPDgsKDw4PCgsOCwqkgQ2xlcmsgKFZJVEVfQ0xFUktfUFVCTElTSEFCTEVfS0VZKSBlc3QgaW50cm91dmFibGUuIiAvPgogICAgKTsKICB9CiAgcmV0dXJuICgKICAgIDxFcnJvckJvdW5kYXJ5PgogICAgICA8VG9vbHRpcFByb3ZpZGVyPgogICAgICAgIHsvKiBGLVAxLTEgOiBRdWVyeUNsaWVudFByb3ZpZGVyIE1PTlRFIEFWQU5UIENsZXJrUHJvdmlkZXIgcG91ciBzdXJ2aXZyZSBhdXgKICAgICAgICAgICAgY2hhbmdlbWVudHMgZGUgc2Vzc2lvbiBldCBnYXJhbnRpciBxdWUgbGVzIHRvYXN0ZXJzIHJlw4PCg8OCwoPDg8KCw4LCp29pdmVudCBiaWVuIGxldXIgY2FjaGUuICovfQogICAgICAgIDxRdWVyeUNsaWVudFByb3ZpZGVyIGNsaWVudD17cXVlcnlDbGllbnR9PgogICAgICAgICAgPFdvdXRlclJvdXRlciBiYXNlPXtiYXNlUGF0aH0+CiAgICAgICAgICAgIDxDbGVya1Byb3ZpZGVyV2l0aFJvdXRlcyAvPgogICAgICAgICAgPC9Xb3V0ZXJSb3V0ZXI+CiAgICAgICAgICA8VG9hc3RlciAvPgogICAgICAgIDwvUXVlcnlDbGllbnRQcm92aWRlcj4KICAgICAgPC9Ub29sdGlwUHJvdmlkZXI+CiAgICA8L0Vycm9yQm91bmRhcnk+CiAgKTsKfQoKZXhwb3J0IGRlZmF1bHQgQXBwOwo=
+// v2-workflow
+import { Switch, Route, Redirect, useLocation, Router as WouterRouter } from "wouter";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { ClerkProvider, Show, useClerk, useUser, useSession } from "@clerk/react";
+import { useEffect, useRef, useState } from "react";
+import * as Sentry from "@sentry/react";
+import { setAuthTokenGetter } from "@workspace/api-client-react";
+import { queryClient, setOn401 } from "./lib/queryClient";
+import { Toaster } from "@/components/ui/toaster";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import Home from "./pages/home";
+import SignInPage from "./pages/auth/sign-in";
+import SignUpPage from "./pages/auth/sign-up";
+import Dashboard from "./pages/dashboard";
+import PatientsPage from "./pages/patients/index";
+import NouveauPatientPage from "./pages/patients/nouveau";
+import PatientDetailPage from "./pages/patients/detail";
+import ConsultationsPage from "./pages/consultations/index";
+import NouvelleConsultationPage from "./pages/consultations/nouvelle";
+import ConsultationDetailPage from "./pages/consultations/detail";
+import ConsultationWorkflowPage from "./pages/consultations/workflow";
+import FacturesPage from "./pages/factures/index";
+import FactureDetailPage from "./pages/factures/detail";
+import FactureImprimerPage from "./pages/factures/imprimer";
+import ActesPage from "./pages/actes/index";
+import ParametresPage from "./pages/parametres/index";
+import EncaissementsPage from "./pages/encaissements/index";
+import RappelsPage from "./pages/rappels/index";
+import StatistiquesPage from "./pages/statistiques/index";
+import StockPage from "./pages/stock/index";
+import StupefiantsPage from "./pages/stupefiants/index";
+import OrdonnancesPage from "./pages/ordonnances/index";
+import OrdonnanceImprimerPage from "./pages/ordonnances/imprimer";
+import AgendaPage from "./pages/agenda/index";
+import SalleAttentePage from "./pages/salle-attente/index";
+import CertificatsPage from "./pages/certificats/index";
+import VaccinationsPage from "./pages/vaccinations/index";
+import PortailPage from "./pages/portail/index";
+import ConfidentialitePage from "./pages/confidentialite";
+import LegalPage from "./pages/Legal";
+import { AppLayout } from "./components/layout/AppLayout";
+import IaDisclaimerModal from "./components/IaDisclaimerModal";
+import { CommandPalette } from "./components/CommandPalette";
+import NotFound from "@/pages/not-found";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
+import VentesPage from "./pages/ventes/index";
+import EquipePage from "./pages/equipe/index";
+import AdminPermissionsPage from "./pages/admin/permissions";
+import AgendaCalendarPage from "./pages/agenda/calendar";
+import CremationPage from "./pages/cremation/index";
+import CataloguePrixPage from "./pages/catalogue/index";
+import ComptabilitePage from "./pages/comptabilite/index";
+import ImpayesPage from "./pages/comptabilite/impayes";
+import StockPage from "./pages/stock/index";
+import FournisseursPage from "./pages/fournisseurs/index";
+import VaccinationsPage from "./pages/vaccinations/index";
+import CaissePage from "./pages/caisse/index";
+
+const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
+const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
+
+/**
+ * F-P0-3 : si la clÃÂÃÂ© Clerk manque, on AFFICHE un ÃÂÃÂ©cran propre au lieu de
+ * laisser un throw crasher avant le mount ErrorBoundary.
+ */
+function MissingConfigScreen({ reason }: { reason: string }) {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-6">
+      <div className="max-w-md text-center space-y-3">
+        <h1 className="text-2xl font-bold">Configuration manquante</h1>
+        <p className="text-gray-600">{reason}</p>
+        <p className="text-sm text-gray-400">
+          Si vous ÃÂÃÂªtes administrateur, vÃÂÃÂ©rifiez les variables d'environnement du dÃÂÃÂ©ploiement.
+          Sinon, contactez votre support.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function stripBase(path: string): string {
+  return basePath && path.startsWith(basePath)
+    ? path.slice(basePath.length) || "/"
+    : path;
+}
+
+/**
+ * F-P1-4 + F-P2-8 : observe les changements d'identitÃÂÃÂ© Clerk pour
+ * 1. Purger le cache React Query quand l'user change (sÃÂÃÂ©cu multi-tenant
+ *    cÃÂÃÂ´tÃÂÃÂ© navigateur ÃÂ¢ÃÂÃÂ ÃÂÃÂ©vite qu'un user qui se logout/login voit les
+ *    caches de l'ancien user).
+ * 2. Populer Sentry.setUser pour attacher l'user context aux erreurs.
+ */
+function ClerkSideEffects() {
+  const { addListener } = useClerk();
+  const { user } = useUser();
+  const prevUserIdRef = useRef<string | null | undefined>(undefined);
+
+  useEffect(() => {
+    const unsubscribe = addListener(({ user: u }) => {
+      const userId = u?.id ?? null;
+      if (prevUserIdRef.current !== undefined && prevUserIdRef.current !== userId) {
+        queryClient.clear();
+      }
+      prevUserIdRef.current = userId;
+    });
+    return unsubscribe;
+  }, [addListener]);
+
+  useEffect(() => {
+    if (user) {
+      Sentry.setUser({
+        id: user.id,
+        email: user.primaryEmailAddress?.emailAddress,
+      });
+    } else {
+      Sentry.setUser(null);
+    }
+  }, [user]);
+
+  return null;
+}
+
+/**
+ * F-P1-3 : handler 401 global branchÃÂÃÂ© sur le queryClient.
+ * Quand le backend renvoie 401 (token Clerk expirÃÂÃÂ©), on signOut l'utilisateur
+ * et on le redirige vers /sign-in. Plus efficace qu'un toast d'erreur perdu.
+ */
+function On401Redirect() {
+  const { signOut } = useClerk();
+  const [, setLocation] = useLocation();
+
+  useEffect(() => {
+    setOn401(() => {
+      void signOut(() => setLocation("/sign-in"));
+    });
+    return () => setOn401(() => {});
+  }, [signOut, setLocation]);
+
+  return null;
+}
+
+/**
+ * Branche le getter de token Clerk sur le client API auto-gÃÂÃÂ©nÃÂÃÂ©rÃÂÃÂ© (Orval).
+ * Sans ÃÂÃÂ§a, tous les hooks React Query gÃÂÃÂ©nÃÂÃÂ©rÃÂÃÂ©s font leurs requÃÂÃÂªtes sans
+ * Authorization header ÃÂ¢ÃÂÃÂ 401 systÃÂÃÂ©matique sur toutes les listes.
+ */
+function ClerkTokenSync() {
+  const { session } = useSession();
+  useEffect(() => {
+    setAuthTokenGetter(session ? () => session.getToken() : null);
+    return () => setAuthTokenGetter(null);
+  }, [session]);
+  return null;
+}
+
+function HomeRedirect() {
+  return (
+    <>
+      <Show when="signed-in">
+        <Redirect to="/dashboard" />
+      </Show>
+      <Show when="signed-out">
+        <Home />
+      </Show>
+    </>
+  );
+}
+
+/**
+ * F-P1-5 : chaque route protÃÂÃÂ©gÃÂÃÂ©e est wrappÃÂÃÂ©e dans un ErrorBoundary local.
+ * Un crash d'un composant enfant montre un fallback plus granulaire, sans
+ * tuer la nav.
+ */
+function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
+  return (
+    <>
+      <Show when="signed-in">
+        <AppLayout>
+          <ErrorBoundary>
+            <IaDisclaimerModal />
+            <Component />
+          </ErrorBoundary>
+        </AppLayout>
+      </Show>
+      <Show when="signed-out">
+        <Redirect to="/sign-in" />
+      </Show>
+    </>
+  );
+}
+
+function Router() {
+  return (
+    <Switch>
+      <Route path="/" component={HomeRedirect} />
+      <Route path="/sign-in/*?" component={SignInPage} />
+      <Route path="/sign-up/*?" component={SignUpPage} />
+      <Route path="/dashboard" component={() => <ProtectedRoute component={Dashboard} />} />
+      <Route path="/patients/nouveau" component={() => <ProtectedRoute component={NouveauPatientPage} />} />
+      <Route path="/patients/:id" component={() => <ProtectedRoute component={PatientDetailPage} />} />
+      <Route path="/patients" component={() => <ProtectedRoute component={PatientsPage} />} />
+      <Route path="/consultations/nouvelle" component={() => <ProtectedRoute component={NouvelleConsultationPage} />} />
+      <Route path="/consultations/:id/workflow" component={() => <ProtectedRoute component={ConsultationWorkflowPage} />} />
+      <Route path="/consultations/:id" component={() => <ProtectedRoute component={ConsultationDetailPage} />} />
+      <Route path="/consultations" component={() => <ProtectedRoute component={ConsultationsPage} />} />
+      <Route path="/factures/:id/imprimer" component={() => (
+        <>
+          <Show when="signed-in"><FactureImprimerPage /></Show>
+          <Show when="signed-out"><Redirect to="/sign-in" /></Show>
+        </>
+      )} />
+      <Route path="/factures/:id" component={() => <ProtectedRoute component={FactureDetailPage} />} />
+      <Route path="/factures" component={() => <ProtectedRoute component={FacturesPage} />} />
+      <Route path="/actes" component={() => <ProtectedRoute component={ActesPage} />} />
+      <Route path="/encaissements" component={() => <ProtectedRoute component={EncaissementsPage} />} />
+      <Route path="/rappels" component={() => <ProtectedRoute component={RappelsPage} />} />
+      <Route path="/parametres" component={() => <ProtectedRoute component={ParametresPage} />} />
+      <Route path="/statistiques" component={() => <ProtectedRoute component={StatistiquesPage} />} />
+      <Route path="/stock" component={() => <ProtectedRoute component={StockPage} />} />
+      <Route path="/stupefiants" component={() => <ProtectedRoute component={StupefiantsPage} />} />
+      <Route path="/ordonnances/:id/imprimer" component={() => (
+        <>
+          <Show when="signed-in"><OrdonnanceImprimerPage /></Show>
+          <Show when="signed-out"><Redirect to="/sign-in" /></Show>
+        </>
+      )} />
+      <Route path="/ordonnances" component={() => <ProtectedRoute component={OrdonnancesPage} />} />
+      <Route path="/salle-attente" component={() => <ProtectedRoute component={SalleAttentePage} />} />
+      <Route path="/agenda" component={() => <ProtectedRoute component={AgendaPage} />} />
+      <Route path="/certificats" component={() => <ProtectedRoute component={CertificatsPage} />} />
+      <Route path="/patients/:id/vaccinations" component={() => <ProtectedRoute component={VaccinationsPage} />} />
+      <Route path="/portail/:token" component={PortailPage} />
+      <Route path="/confidentialite" component={ConfidentialitePage} />
+      <Route path="/legal" component={LegalPage} />
+      <Route path="/ventes" component={() => <ProtectedRoute component={VentesPage} />} />
+      <Route path="/equipe" component={() => <ProtectedRoute component={EquipePage} />} />
+      <Route path="/admin/permissions" component={() => <ProtectedRoute component={AdminPermissionsPage} />} />
+      <Route path="/agenda/calendar" component={() => <ProtectedRoute component={AgendaCalendarPage} />} />
+      <Route path="/cremation" component={() => <ProtectedRoute component={CremationPage} />} />
+              <Route path="/catalogue" component={() => <ProtectedRoute component={CataloguePrixPage} />
+          <Route path="/comptabilite/impayes" component={() => <ProtectedRoute component={ImpayesPage} />
+          <Route path="/stock" component={() => <ProtectedRoute component={StockPage} />} />
+          <Route path="/fournisseurs" component={() => <ProtectedRoute component={FournisseursPage} />} />
+          <Route path="/vaccinations" component={() => <ProtectedRoute component={VaccinationsPage} />} />
+          <Route path="/caisse" component={() => <ProtectedRoute component={CaissePage} />} />} />
+          <Route path="/comptabilite" component={() => <ProtectedRoute component={ComptabilitePage} />} />} />
+      <Route component={NotFound} />
+    </Switch>
+  );
+}
+
+function ClerkProviderWithRoutes() {
+  const [, setLocation] = useLocation();
+  const [cmdOpen, setCmdOpen] = useState(false);
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement)?.tagName ?? "";
+      const editable = (e.target as HTMLElement)?.isContentEditable;
+      const inInput = ["INPUT", "TEXTAREA", "SELECT"].includes(tag) || editable;
+      if ((e.ctrlKey || e.metaKey) && e.key === "k") {
+        e.preventDefault();
+        setCmdOpen((prev) => !prev);
+        return;
+      }
+      if (inInput || e.ctrlKey || e.metaKey || e.altKey) return;
+      if (e.key === "n") {
+        e.preventDefault();
+        setLocation("/consultations/nouvelle");
+      } else if (e.key === "p") {
+        e.preventDefault();
+        setLocation("/patients/nouveau");
+      } else if (e.key === "f") {
+        e.preventDefault();
+        setLocation("/factures");
+      } else if (e.key === "?") {
+        e.preventDefault();
+        setCmdOpen(true);
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [setLocation]);
+
+  return (
+    <ClerkProvider
+      publishableKey={clerkPubKey!}
+      routerPush={(to) => setLocation(stripBase(to))}
+      routerReplace={(to) => setLocation(stripBase(to), { replace: true })}
+      clerkJSUrl="https://unpkg.com/@clerk/clerk-js@6/dist/clerk.browser.js"
+        afterSignInUrl="/dashboard"
+        afterSignUpUrl="/dashboard"
+    >
+      <ClerkSideEffects />
+      <On401Redirect />
+      <ClerkTokenSync />
+    
+      <Router />
+      <CommandPalette open={cmdOpen} onOpenChange={setCmdOpen} />
+    </ClerkProvider>
+  );
+}
+
+function App() {
+  // F-P0-3 : check config avant de monter quoi que ce soit.
+  if (!clerkPubKey) {
+    return (
+      <MissingConfigScreen reason="La clÃÂÃÂ© Clerk (VITE_CLERK_PUBLISHABLE_KEY) est introuvable." />
+    );
+  }
+  return (
+    <ErrorBoundary>
+      <TooltipProvider>
+        {/* F-P1-1 : QueryClientProvider MONTE AVANT ClerkProvider pour survivre aux
+            changements de session et garantir que les toasters reÃÂÃÂ§oivent bien leur cache. */}
+        <QueryClientProvider client={queryClient}>
+          <WouterRouter base={basePath}>
+            <ClerkProviderWithRoutes />
+          </WouterRouter>
+          <Toaster />
+        </QueryClientProvider>
+      </TooltipProvider>
+    </ErrorBoundary>
+  );
+}
+
+export default App;
