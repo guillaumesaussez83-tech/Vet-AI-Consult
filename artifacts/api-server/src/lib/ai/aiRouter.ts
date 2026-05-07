@@ -4,6 +4,21 @@ import { logAIUsage } from "./aiMetrics";
 import { AI_MODEL, GPT_MODEL } from "../constants";
 import type { AIResponse } from "./claudeClient";
 
+
+const AI_TIMEOUT_MS = 30_000; // 30s -- audit Phase 0
+
+function withAITimeout<T>(promise: Promise<T>): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<never>((_, reject) =>
+      setTimeout(
+        () => reject(Object.assign(new Error("AI_TIMEOUT"), { status: 504, code: "AI_TIMEOUT" })),
+        AI_TIMEOUT_MS,
+      )
+    ),
+  ]);
+}
+
 export type AITask =
   | "diagnostic_differentiel"
   | "drug_interactions"
@@ -13,7 +28,7 @@ export type AITask =
   | "resume_client"
   | "commande_stock";
 
-/** Tasks routed to Claude Sonnet — high clinical value */
+/** Tasks routed to Claude Sonnet â high clinical value */
 const CLAUDE_TASKS = new Set<AITask>(["diagnostic_differentiel", "drug_interactions"]);
 
 export interface RunAITaskOptions {
@@ -25,8 +40,8 @@ export interface RunAITaskOptions {
 
 /**
  * Main AI router.
- * - Claude Sonnet  → diagnostic_differentiel, drug_interactions
- * - GPT-4o-mini   → everything else (anamnese, examen, facturation, resume_client, commande_stock)
+ * - Claude Sonnet  â diagnostic_differentiel, drug_interactions
+ * - GPT-4o-mini   â everything else (anamnese, examen, facturation, resume_client, commande_stock)
  * Logs cost + latency to ai_usage_logs for every call.
  */
 export async function runAITask(
@@ -41,9 +56,9 @@ export async function runAITask(
 
   let result: AIResponse;
   if (useClaude) {
-    result = await callClaude(prompt, maxTokens);
+    result = await withAITimeout(callClaude(prompt, maxTokens));
   } else {
-    result = await callGPT(prompt, maxTokens, options.jsonMode ?? false);
+    result = await withAITimeout(callGPT(prompt, maxTokens, options.jsonMode ?? false));
   }
 
   void logAIUsage({
