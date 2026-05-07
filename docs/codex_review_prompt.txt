@@ -1,0 +1,2396 @@
+# PROMPT CODEX -- REVUE DE CODE SECURITE + QUALITE
+# VetoAI -- Express 5 / Drizzle ORM / PostgreSQL / Clerk Auth
+# ============================================================
+#
+# CONTEXTE :
+# Application SaaS veterinaire multi-tenant deployee sur Railway.
+# Stack : Node.js 20 + Express 5 + Drizzle ORM + PostgreSQL + Clerk (auth JWT).
+# Un audit a deja ete realise et 9 corrections prioritaires ont ete appliquees :
+#   P1 -- Middlewares Phase 0 cables (requireClinicId, auditLogger, errorHandler)
+#   P2-P4 -- Routes et schema DB consolides
+#   P5 -- Timeout + circuit-breaker sur appels IA (30s)
+#   P6 -- pg Pool configure + pagination Drizzle systematique
+#   P7 -- Validation Zod sur routes critiques (POST patients/consultations/factures/ordonnances)
+#   P8 -- Prompt IA tronque a 10 000 chars + pdfLimiter 5 req/min
+#   P9 -- Tests E2E Playwright crees
+#
+# MISSION :
+# En tant que senior engineer, analyse ces fichiers et identifie TOUT ce qui reste a corriger.
+# Concentre-toi sur :
+#   1. SECURITE : injections SQL/NoSQL, XSS, CSRF, header leaks, secrets exposes, privilege escalation
+#   2. MULTI-TENANT : fuite de donnees inter-cliniques (clinic_id missing, bypasses possibles)
+#   3. PERFORMANCE : N+1 queries, manque index DB, transactions manquantes, memory leaks
+#   4. ROBUSTESSE : error handling incomplet, types any, race conditions, null/undefined crashes
+#   5. MAINTENABILITE : code duplique, abstractions manquantes, dead code
+#
+# FORMAT DE REPONSE :
+# Pour chaque probleme :
+#   FICHIER   : <nom>
+#   LIGNE     : <numero>
+#   CATEGORIE : SECURITE | MULTI-TENANT | PERFORMANCE | ROBUSTESSE | MAINTENABILITE
+#   SEVERITE  : CRITIQUE | HAUTE | MOYENNE | FAIBLE
+#   PROBLEME  : description
+#   FIX       : correction recommandee (code si possible)
+#
+# ============================================================
+
+======================================================================
+## app.ts -- Point entree Express (middlewares, routing)
+======================================================================
+
+import express, { type Express } from "express";
+import * as Sentry from "@sentry/node";
+import cors from "cors";
+import helmet from "helmet";
+import path from "path";
+import { fileURLToPath } from "url";
+import { existsSync } from "fs";
+import pinoHttp from "pino-http";
+import { clerkMiddleware } from "@clerk/express";
+import { CLERK_PROXY_PATH, clerkProxyMiddleware } from "./middlewares/clerkProxyMiddleware";
+import { requireClinicId } from "./middleware/requireClinicId";
+import router from "./routes";
+import { logger } from "./lib/logger";
+import { errorHandler } from "./middleware/errorHandler";
+import { auditLogger } from "./middleware/auditLogger";
+import { apiLimiter } from "./middlewares/rateLimiter";
+import { responseWrapper } from "./middlewares/responseWrapper";
+import { fail } from "./lib/response";
+
+const app: Express = express();
+app.set("trust proxy", 1);
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: [
+          "'self'",
+          "'unsafe-inline'",
+          "'unsafe-eval'",
+          "https://clerk.com",
+          "https://*.clerk.accounts.dev",
+          "https://clerk.vetoai.fr",
+          "https://*.vetoai.fr",
+                    "https://unpkg.com",
+            "https://challenges.cloudflare.com",
+        ],
+        connectSrc: [
+          "'self'",
+          "https://api.clerk.com",
+          "https://*.clerk.accounts.dev",
+          "https://clerk.vetoai.fr",
+          "https://*.vetoai.fr",
+          "https://api.anthropic.com",
+          "https://api.openai.com",
+                    "https://unpkg.com",
+            "https://challenges.cloudflare.com",
+        ],
+        imgSrc: ["'self'", "data:", "https:", "blob:"],
+        frameSrc: ["'self'", "https://clerk.com", "https://*.clerk.accounts.dev", "https://clerk.vetoai.fr", "https://*.vetoai.fr", "https://challenges.cloudflare.com"],
+        fontSrc: ["'self'", "https:", "data:"],
+        styleSrc: ["'self'", "'unsafe-inline'", "https:"],
+      },
+    },
+    crossOriginEmbedderPolicy: false,
+  }),
+);
+
+app.use(
+  pinoHttp({
+    logger,
+    serializers: {
+      req(req) {
+        return {
+          id: req.id,
+          method: req.method,
+          url: req.url?.split("?")[0],
+        };
+      },
+      res(res) {
+        return {
+          statusCode: res.statusCode,
+        };
+      },
+    },
+    // EmpÃÂªcher la fuite de headers sensibles dans les logs.
+    redact: {
+      paths: [
+        'req.headers.authorization',
+        'req.headers.cookie',
+        'req.headers["set-cookie"]',
+        'req.headers["x-api-key"]',
+      ],
+      remove: true,
+    },
+  }),
+);
+
+app.use(CLERK_PROXY_PATH, clerkProxyMiddleware());
+
+// =============== CORS strict Ã¢ÂÂ whitelist pilotÃÂ©e par env ===============
+// En prod, CORS_ALLOWED_ORIGINS="https://app.vetoai.fr".
+// Plusieurs origines sÃÂ©parÃÂ©es par virgule, ex: "https://app.vetoai.fr,https://staging.vetoai.fr".
+const ALLOWED_ORIGINS = (process.env["CORS_ALLOWED_ORIGINS"] ?? "https://app.vetoai.fr")
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
+
+app.use("/api",
+  cors({
+    credentials: true,
+    origin: (origin, cb) => {
+      // Pas d'Origin Ã¢ÂÂ appel same-origin (navigation directe, Postman, curl). OK.
+      if (!origin) return cb(null, true);
+      if (ALLOWED_ORIGINS.includes(origin)) return cb(null, true);
+      logger.warn({ origin }, "CORS blocked");
+      return cb(new Error(`CORS blocked: ${origin}`));
+    },
+  }),
+);
+
+app.use(express.json({ limit: "1mb" }));
+app.use(express.urlencoded({ extended: true, limit: "1mb" }));
+
+app.use(clerkMiddleware());
+
+app.use("/api", apiLimiter);
+app.use("/api", responseWrapper);
+app.use("/api", requireClinicId);
+app.use("/api", auditLogger);
+app.use("/api", router);
+
+// === Servir le frontend en production (dÃÂ©ploiement monolithique) ===
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const frontendDist = path.resolve(__dirname, "../../vetcare/dist/public");
+
+if (existsSync(frontendDist)) {
+  logger.info({ frontendDist }, "Serving frontend static files");
+  app.use(express.static(frontendDist));
+
+  // SPA fallback : toute route non-API renvoie index.html (compatible Express 5)
+  app.use((req, res, next) => {
+    if (req.method !== "GET" || req.path.startsWith("/api/") || req.path.startsWith(CLERK_PROXY_PATH)) {
+      return next();
+    }
+    res.sendFile(path.join(frontendDist, "index.html"));
+  });
+}
+
+// Handler 404 pour toute route inconnue (doit retourner JSON, pas du HTML)
+app.use((req, res) => {
+  res.status(404).json(fail("NOT_FOUND", `Route ${req.method} ${req.path} introuvable`));
+});
+
+// Sentry error handler Ã¢ÂÂ doit ÃÂªtre enregistrÃÂ© avant tout autre error middleware
+Sentry.setupExpressErrorHandler(app);
+
+app.use(errorHandler);
+
+export default app;
+
+
+
+======================================================================
+## routes/index.ts -- Barrel des routes API
+======================================================================
+
+// artifacts/api-server/src/routes/index.ts
+// MODIFIE -- fix imports + ajout routes manquantes (audit Phase 0)
+
+import { Router } from "express";
+import rendezVousRouter from "./rendez-vous";
+import agendaRouter from "./agenda";
+import patientsRouter from "./patients";
+import ownersRouter from "./owners";
+import consultationsRouter from "./consultations";
+import facturesRouter from "./factures";
+import ordonnancesRouter from "./ordonnances";
+import stockRouter from "./stock";
+import rappelsRouter from "./rappels";
+// NOTE: import clinicRouter supprime -- repertoire inexistant
+
+// Sprint 7 -- Phase 1 MVP Clinique
+import permissionsRouter from "./permissions";
+import smsRouter from "./sms";
+import recurringAppointmentsRouter from "./recurring-appointments";
+import weightHistoryRouter from "./weight-history";
+import clientLettersRouter from "./client-letters";
+
+// Routes Phase 2 -- branchees (audit Phase 0)
+import encaissementsRouter from "./encaissements";
+import equipeRouter from "./equipe";
+import ventesRouter from "./ventes";
+import statistiquesRouter from "./statistiques";
+import vaccinationsRouter from "./vaccinations";
+import fournisseursRouter from "./fournisseurs";
+
+
+// Routes orphelines branchees -- audit Phase 0
+import actesRouter from "./actes";
+import adminRouter from "./admin";
+import aiRouter from "./ai";
+import anesthesieRouter from "./anesthesie";
+import communicationsRouter from "./communications";
+import comptabiliteRouter from "./comptabilite";
+import cremationRouter from "./cremation";
+import dashboardRouter from "./dashboard";
+import parametresClinique from "./parametres-clinique";
+import portailRouter from "./portail";
+import searchRouter from "./search";
+import vetKnowledgeRouter from "./vet-knowledge";
+
+const router = Router();
+
+// Routes existantes
+router.use("/rendez-vous", rendezVousRouter);
+router.use("/agenda", agendaRouter);
+router.use("/patients", patientsRouter);
+router.use("/owners", ownersRouter);
+router.use("/consultations", consultationsRouter);
+router.use("/factures", facturesRouter);
+router.use("/ordonnances", ordonnancesRouter);
+router.use("/stocks", stockRouter);
+router.use("/rappels", rappelsRouter);
+// NOTE: route /clinic supprimee -- module inexistant
+
+// Sprint 7 -- nouvelles routes
+router.use("/permissions", permissionsRouter);
+router.use("/sms", smsRouter);
+router.use("/recurring-appointments", recurringAppointmentsRouter);
+router.use("/weight-history", weightHistoryRouter);
+router.use("/client-letters", clientLettersRouter);
+
+// Routes Phase 2 -- branchees (audit Phase 0)
+router.use("/encaissements", encaissementsRouter);
+router.use("/equipe", equipeRouter);
+router.use("/ventes", ventesRouter);
+router.use("/statistiques", statistiquesRouter);
+router.use("/vaccinations", vaccinationsRouter);
+router.use("/fournisseurs", fournisseursRouter);
+
+
+// Routes orphelines -- audit Phase 0
+router.use("/actes", actesRouter);
+router.use("/admin", adminRouter);
+router.use("/ai", aiRouter);
+router.use("/anesthesie", anesthesieRouter);
+router.use("/communications", communicationsRouter);
+router.use("/comptabilite", comptabiliteRouter);
+router.use("/cremation", cremationRouter);
+router.use("/dashboard", dashboardRouter);
+router.use("/parametres-clinique", parametresClinique);
+router.use("/portail", portailRouter);
+router.use("/search", searchRouter);
+router.use("/vet-knowledge", vetKnowledgeRouter);
+
+export default router;
+
+
+
+======================================================================
+## middlewares/requireClinicId.ts -- Isolation multi-tenant
+======================================================================
+
+ERROR: Not Found
+
+
+======================================================================
+## middlewares/errorHandler.ts -- Gestion erreurs centralisee
+======================================================================
+
+import type { Request, Response, NextFunction } from "express";
+import { logger } from "../lib/logger";
+import { fail } from "../lib/response";
+
+export class AppError extends Error {
+  constructor(
+    public readonly statusCode: number,
+    public override readonly message: string,
+    public readonly code?: string,
+    public readonly details?: unknown,
+  ) {
+    super(message);
+    this.name = "AppError";
+    Object.setPrototypeOf(this, AppError.prototype);
+  }
+}
+
+export class NotFoundError extends AppError {
+  constructor(resource: string) {
+    super(404, `${resource} introuvable`, "NOT_FOUND");
+    Object.setPrototypeOf(this, NotFoundError.prototype);
+  }
+}
+
+export class UnauthorizedError extends AppError {
+  constructor(message = "Non autorisÃ©") {
+    super(401, message, "UNAUTHORIZED");
+    Object.setPrototypeOf(this, UnauthorizedError.prototype);
+  }
+}
+
+export class ForbiddenError extends AppError {
+  constructor(message = "AccÃ¨s interdit") {
+    super(403, message, "FORBIDDEN");
+    Object.setPrototypeOf(this, ForbiddenError.prototype);
+  }
+}
+
+export class ValidationError extends AppError {
+  constructor(message: string, details?: unknown) {
+    super(400, message, "VALIDATION_ERROR", details);
+    Object.setPrototypeOf(this, ValidationError.prototype);
+  }
+}
+
+export class ConflictError extends AppError {
+  constructor(message: string) {
+    super(409, message, "CONFLICT");
+    Object.setPrototypeOf(this, ConflictError.prototype);
+  }
+}
+
+interface PostgresError extends Error {
+  code: string;
+  constraint?: string;
+}
+
+function isPostgresError(err: unknown): err is PostgresError {
+  return err instanceof Error && "code" in err;
+}
+
+export function errorHandler(
+  err: Error,
+  _req: Request,
+  res: Response,
+  _next: NextFunction,
+): void {
+  if (err instanceof AppError) {
+    res
+      .status(err.statusCode)
+      .json(fail(err.code ?? "ERROR", err.message, err.details));
+    return;
+  }
+
+  if (isPostgresError(err) && err.code === "23505") {
+    res
+      .status(409)
+      .json(fail("DUPLICATE_ERROR", "Cette ressource existe dÃ©jÃ "));
+    return;
+  }
+
+  if (isPostgresError(err) && err.code === "23503") {
+    res
+      .status(400)
+      .json(fail("FOREIGN_KEY_ERROR", "RÃ©fÃ©rence invalide â ressource liÃ©e introuvable"));
+    return;
+  }
+
+  logger.error({ err }, "Erreur serveur non gÃ©rÃ©e");
+
+  const isDev = process.env["NODE_ENV"] !== "production";
+  res
+    .status(500)
+    .json(
+      fail(
+        "INTERNAL_ERROR",
+        isDev ? err.message : "Erreur serveur interne",
+        isDev ? { stack: err.stack } : undefined,
+      ),
+    );
+}
+
+
+
+======================================================================
+## middlewares/validate.ts -- Validation Zod
+======================================================================
+
+import type { Request, Response, NextFunction, RequestHandler } from "express";
+import { z } from "zod";
+import { fail } from "../lib/response";
+
+/**
+ * Valide req.body contre un schÃ©ma Zod.
+ * Ãmet une rÃ©ponse 400 au format enveloppe standard : fail("VALIDATION_ERROR", ...).
+ */
+export function validate<T>(schema: z.ZodSchema<T>): RequestHandler {
+  return (req: Request, res: Response, next: NextFunction): void => {
+    const result = schema.safeParse(req.body);
+    if (!result.success) {
+      res.status(400).json(
+        fail("VALIDATION_ERROR", "DonnÃ©es invalides", result.error.flatten().fieldErrors),
+      );
+      return;
+    }
+    req.body = result.data;
+    next();
+  };
+}
+
+/**
+ * Valide req.query contre un schÃ©ma Zod.
+ */
+export function validateQuery<T>(schema: z.ZodSchema<T>): RequestHandler {
+  return (req: Request, res: Response, next: NextFunction): void => {
+    const result = schema.safeParse(req.query);
+    if (!result.success) {
+      res.status(400).json(
+        fail(
+          "VALIDATION_ERROR",
+          "ParamÃ¨tres de requÃªte invalides",
+          result.error.flatten().fieldErrors,
+        ),
+      );
+      return;
+    }
+    req.query = result.data as Record<string, string>;
+    next();
+  };
+}
+
+
+
+======================================================================
+## middlewares/aiRateLimiter.ts -- Rate limiting IA + PDF
+======================================================================
+
+import rateLimit from "express-rate-limit";
+import type { RequestHandler } from "express";
+
+/**
+ * Rate-limit specifique aux endpoints IA (P2-7).
+ *
+ * Objectif : proteger le budget Anthropic. Une clinique qui boucle sur
+ * l'endpoint /api/ai/diagnostic sans limite peut cramer plusieurs centaines
+ * de dollars en quelques minutes.
+ *
+ * Cle : clinicId (si present, sinon IP). Les appels sont comptes par
+ * clinique pour que plusieurs utilisateurs d'une meme clinique partagent le
+ * quota.
+ *
+ * Configurable via env :
+ * AI_RATE_LIMIT_PER_MIN (defaut 30)
+ */
+const PER_MIN = Number(process.env["AI_RATE_LIMIT_PER_MIN"] ?? "30");
+
+export const aiLimiter: RequestHandler = rateLimit({
+  windowMs: 60_000,
+  limit: Number.isFinite(PER_MIN) && PER_MIN > 0 ? PER_MIN : 30,
+  standardHeaders: "draft-7",
+  legacyHeaders: false,
+  validate: false,
+  keyGenerator: (req) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const clinicId = (req as any).clinicId as string | undefined;
+    return clinicId ? `clinic:${clinicId}` : `ip:${req.ip ?? "unknown"}`;
+  },
+  handler: (req, res) => {
+    res.status(429).json({
+      success: false,
+      error: {
+        code: "AI_RATE_LIMIT",
+        message:
+          "Trop d'appels IA en peu de temps. Reessaie dans une minute. " +
+          "Si c'est un besoin legitime, augmente AI_RATE_LIMIT_PER_MIN.",
+      },
+    });
+  },
+});
+
+export const pdfLimiter = rateLimit({
+  windowMs: 60_000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many PDF requests, please wait before retrying." },
+});
+
+
+
+======================================================================
+## lib/ai/aiRouter.ts -- Router IA (runAITask)
+======================================================================
+
+import { callClaude, callClaudeMultimodal } from "./claudeClient";
+import { callGPT } from "./openaiClient";
+import { logAIUsage } from "./aiMetrics";
+import { AI_MODEL, GPT_MODEL } from "../constants";
+import type { AIResponse } from "./claudeClient";
+
+
+const AI_TIMEOUT_MS = 30_000; // 30s -- audit Phase 0
+
+function withAITimeout<T>(promise: Promise<T>): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<never>((_, reject) =>
+      setTimeout(
+        () => reject(Object.assign(new Error("AI_TIMEOUT"), { status: 504, code: "AI_TIMEOUT" })),
+        AI_TIMEOUT_MS,
+      )
+    ),
+  ]);
+}
+
+export type AITask =
+  | "diagnostic_differentiel"
+  | "drug_interactions"
+  | "anamnese"
+  | "examen_clinique"
+  | "facturation"
+  | "resume_client"
+  | "commande_stock";
+
+/** Tasks routed to Claude Sonnet ÃÂ¢ÃÂÃÂ high clinical value */
+const CLAUDE_TASKS = new Set<AITask>(["diagnostic_differentiel", "drug_interactions"]);
+
+export interface RunAITaskOptions {
+  clinicId: string;
+  consultationId?: number;
+  maxTokens?: "long" | "short";
+  jsonMode?: boolean;
+}
+
+/**
+ * Main AI router.
+ * - Claude Sonnet  ÃÂ¢ÃÂÃÂ diagnostic_differentiel, drug_interactions
+ * - GPT-4o-mini   ÃÂ¢ÃÂÃÂ everything else (anamnese, examen, facturation, resume_client, commande_stock)
+ * Logs cost + latency to ai_usage_logs for every call.
+ */
+export async function runAITask(
+  task: AITask,
+  prompt: string,
+  options: RunAITaskOptions,
+): Promise<string> {
+  const start = Date.now();
+  const safePrompt = typeof prompt === "string" ? prompt.slice(0, 10_000) : String(prompt);
+  const useClaude = CLAUDE_TASKS.has(task);
+  const maxTokens = options.maxTokens ?? "short";
+  const model = useClaude ? AI_MODEL : GPT_MODEL;
+
+  let result: AIResponse;
+  if (useClaude) {
+    result = await withAITimeout(callClaude(safePrompt, maxTokens));
+  } else {
+    result = await withAITimeout(callGPT(safePrompt, maxTokens, options.jsonMode ?? false));
+  }
+
+  void logAIUsage({
+    clinicId: options.clinicId,
+    consultationId: options.consultationId,
+    taskType: task,
+    model,
+    inputTokens: result.usage.inputTokens,
+    outputTokens: result.usage.outputTokens,
+    durationMs: Date.now() - start,
+  });
+
+  return result.text;
+}
+
+export { callClaudeMultimodal };
+
+
+
+======================================================================
+## schemas/index.ts -- Schemas Zod critiques
+======================================================================
+
+import { z } from "zod";
+
+// âââ Patients âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+export const CreatePatientSchema = z.object({
+  nom:             z.string().min(1).max(100),
+  espece:          z.string().min(1).max(50),
+  race:            z.string().max(100).optional(),
+  dateNaissance:   z.string().optional(),
+  sexe:            z.string().optional(),
+  proprietaireId:  z.string().uuid(),
+  poids:           z.number().positive().optional(),
+  couleur:         z.string().max(100).optional(),
+  numeroMicrochip: z.string().max(50).optional(),
+  notes:           z.string().optional(),
+}).passthrough();
+
+export const UpdatePatientSchema = CreatePatientSchema.partial().passthrough();
+
+// âââ Consultations âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+export const CreateConsultationSchema = z.object({
+  patientId: z.string().uuid(),
+  motif:     z.string().min(1).max(500),
+  statut:    z.string().optional(),
+  date:      z.string().optional(),
+  notes:     z.string().optional(),
+}).passthrough();
+
+export const UpdateConsultationSchema = CreateConsultationSchema.partial().passthrough();
+
+// âââ Factures ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+export const LigneFactureSchema = z.object({
+  description: z.string().min(1),
+  quantite:    z.number().positive(),
+  prixUnitaire: z.number().nonnegative(),
+  tvaRate:     z.number().nonnegative().optional(),
+}).passthrough();
+
+export const CreateFactureSchema = z.object({
+  consultationId: z.string().uuid().optional(),
+  lignes:         z.array(LigneFactureSchema).min(1),
+  patientId:      z.string().uuid().optional(),
+  statut:         z.string().optional(),
+  notes:          z.string().optional(),
+}).passthrough();
+
+// âââ Ordonnances âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+export const MedicamentSchema = z.object({
+  nom:          z.string().min(1),
+  dose:         z.string().optional(),
+  duree:        z.string().optional(),
+  instructions: z.string().optional(),
+}).passthrough();
+
+export const CreateOrdonnanceSchema = z.object({
+  consultationId: z.string().uuid().optional(),
+  patientId:      z.string().uuid().optional(),
+  medicaments:    z.array(MedicamentSchema).optional(),
+  contenu:        z.string().optional(),
+  notes:          z.string().optional(),
+}).passthrough();
+
+
+
+======================================================================
+## routes/ai/index.ts -- Endpoints IA (diagnostic, facture, certificat)
+======================================================================
+
+import { Router } from "express";
+import {
+  db,
+  actesTable,
+  stockMedicamentsTable,
+  ordonnancesTable,
+  facturesTable,
+  mouvementsStockTable,
+  consultationsTable,
+} from "@workspace/db"; // actesTable used by generer-facture-voix
+import { GetDiagnosticIABody } from "@workspace/api-zod";
+import { eq, and, ilike, desc, sql as drizzleSql } from "drizzle-orm";
+import { ObjectStorageService } from "../../lib/objectStorage";
+import { aiLimiter, pdfLimiter } from "../../middlewares/aiRateLimiter";
+import {
+  reformulerAnamnese,
+  structurerExamenClinique,
+  diagnosticDifferentiel,
+  diagnosticEnrichi,
+  resumeClient,
+  genererFactureVoix,
+} from "../../lib/aiService";
+
+const router = Router();
+router.use(aiLimiter);
+const storage = new ObjectStorageService();
+
+router.post("/diagnostic", async (req, res) => {
+  try {
+    const body = GetDiagnosticIABody.safeParse(req.body);
+    if (!body.success) return res.status(400).json({ error: "DonnÃÂ©es invalides" });
+    const result = await diagnosticDifferentiel(body.data);
+    return res.json(result);
+  } catch (err) {
+    req.log.error(err);
+    return res.status(500).json({ error: "Erreur lors de la gÃÂ©nÃÂ©ration du diagnostic IA" });
+  }
+});
+
+router.post("/diagnostic-enrichi", async (req, res) => {
+  try {
+    const { espece, race, age, poids, sexe, sterilise, anamnese, examenClinique, examensComplementaires, antecedents, allergies, objectPaths } = req.body;
+    if (!anamnese || !examenClinique) {
+      return res.status(400).json({ error: "AnamnÃÂ¨se et examen clinique requis" });
+    }
+    const result = await diagnosticEnrichi(
+      { espece, race, age, poids, sexe, sterilise, anamnese, examenClinique, examensComplementaires, antecedents, allergies, objectPaths },
+      storage
+    );
+    return res.json(result);
+  } catch (err) {
+    req.log.error(err);
+    return res.status(500).json({ error: "Erreur lors du diagnostic enrichi" });
+  }
+});
+
+router.post("/reformuler-anamnese", async (req, res) => {
+  try {
+    const { transcript } = req.body;
+    if (!transcript || typeof transcript !== "string" || !transcript.trim()) {
+      return res.status(400).json({ error: "Le transcript est requis" });
+    }
+    const result = await reformulerAnamnese(transcript);
+    return res.json(result);
+  } catch (err) {
+    req.log.error(err);
+    return res.status(500).json({ error: "Erreur lors de la reformulation de l'anamnÃÂ¨se" });
+  }
+});
+
+router.post("/structurer-examen-clinique", async (req, res) => {
+  try {
+    const { transcript } = req.body;
+    if (!transcript || typeof transcript !== "string" || !transcript.trim()) {
+      return res.status(400).json({ error: "Le transcript est requis" });
+    }
+    const result = await structurerExamenClinique(transcript);
+    return res.json(result);
+  } catch (err) {
+    req.log.error(err);
+    return res.status(500).json({ error: "Erreur lors de la structuration de l'examen clinique" });
+  }
+});
+
+router.post("/resume-client", async (req, res) => {
+  try {
+    const { diagnostic, ordonnance, notes, espece, nomAnimal, nomProprietaire } = req.body;
+    if (!diagnostic && !ordonnance) {
+      return res.status(400).json({ error: "Diagnostic ou ordonnance requis" });
+    }
+    const result = await resumeClient({ diagnostic, ordonnance, notes, espece, nomAnimal, nomProprietaire });
+    return res.json(result);
+  } catch (err) {
+    req.log.error(err);
+    return res.status(500).json({ error: "Erreur lors de la gÃÂ©nÃÂ©ration du rÃÂ©sumÃÂ© client" });
+  }
+});
+
+// CHANGE 5: Accept medicamentsDejaFactures from request body
+router.post("/generer-facture-voix", pdfLimiter, async (req, res) => {
+  try {
+    const { transcript, medicamentsDejaFactures = [] } = req.body;
+    if (!transcript || typeof transcript !== "string" || !transcript.trim()) {
+      return res.status(400).json({ error: "Le transcript est requis" });
+    }
+    const actes = await db.select().from(actesTable).where(eq(actesTable.clinicId, req.clinicId));
+    const result = await genererFactureVoix(
+      transcript,
+      actes.map(a => ({
+        id: a.id,
+        nom: a.nom,
+        categorie: a.categorie,
+        prixDefaut: a.prixDefaut,
+        tvaRate: a.tvaRate ?? 20,
+        unite: a.unite,
+      })),
+      medicamentsDejaFactures
+    );
+    return res.json(result);
+  } catch (err) {
+    req.log.error(err);
+    return res.status(500).json({ error: "Erreur lors de la gÃÂ©nÃÂ©ration de la facture vocale" });
+  }
+});
+
+router.post("/certificat", pdfLimiter, async (req, res) => {
+  try {
+    const { type, patient, owner, vaccinations, consultations, actes, veterinaire, clinique, cliniqueInfo } = req.body;
+    if (!type || !patient) return res.status(400).json({ error: "type et patient requis" });
+    const templates: Record<string, string> = {
+      bonne_sante: "Certificat de bonne santÃÂ© pour voyage UE (ÃÂ©tat gÃÂ©nÃÂ©ral, vaccins, puce, date examen)",
+      cession: "Certificat de cession pour vente (ÃÂ©tat de santÃÂ©, vaccins, vermifugations, absence de pathologie connue)",
+      aptitude: "Certificat d'aptitude pour concours ou ÃÂ©levage (examen complet systÃÂ¨mes, locomoteur, cardiaque, respiratoire)",
+      soins: "Attestation de soins pour assurance (liste actes, diagnostic, pronostic, durÃÂ©e traitement)",
+      ordonnance: "Ordonnance sÃÂ©curisÃÂ©e (numÃÂ©ro vÃÂ©tÃÂ©rinaire, date, posologie dÃÂ©taillÃÂ©e, durÃÂ©e traitement, mentions lÃÂ©gales)",
+    };
+    const templateDesc = templates[type] ?? type;
+    const ci = cliniqueInfo ?? {};
+    const adresseComplete = [ci.adresse, ci.codePostal && ci.ville ? `${ci.codePostal} ${ci.ville}` : (ci.ville || "")].filter(Boolean).join(", ");
+    const prompt = `Tu es vÃÂ©tÃÂ©rinaire praticien en France. GÃÂ©nÃÂ¨re un ${templateDesc} officiel et professionnel.
+
+DONNÃÂES PATIENT :
+${JSON.stringify(patient, null, 2)}
+
+PROPRIÃÂTAIRE :
+${JSON.stringify(owner, null, 2)}
+
+${vaccinations?.length ? `HISTORIQUE VACCINAL :\n${JSON.stringify(vaccinations, null, 2)}` : ""}
+${consultations?.length ? `CONSULTATIONS RÃÂCENTES :\n${JSON.stringify(consultations.slice(0, 3), null, 2)}` : ""}
+${actes?.length ? `ACTES RÃÂALISÃÂS :\n${JSON.stringify(actes, null, 2)}` : ""}
+
+VÃÂSÃÂRINAIRE SIGNATAIRE : ${veterinaire || "Dr. VÃÂ©tÃÂ©rinaire"}
+CLINIQUE : ${ci.nom || clinique || "Clinique vÃÂ©tÃÂ©rinaire"}
+${adresseComplete ? `ADRESSE : ${adresseComplete}` : ""}
+${ci.telephone ? `TÃÂLÃÂPHONE : ${ci.telephone}` : ""}
+${ci.email ? `EMAIL : ${ci.email}` : ""}
+${ci.numeroOrdre ? `NÃÂ° ORDRE : ${ci.numeroOrdre}` : ""}
+${ci.siret ? `SIRET : ${ci.siret}` : ""}
+DATE : ${new Date().toLocaleDateString("fr-FR")}
+
+INSTRUCTIONS :
+- GÃÂ©nÃÂ¨re le certificat complet, professionnel, conforme aux exigences lÃÂ©gales franÃÂ§aises.
+- Utilise les coordonnÃÂ©es exactes fournies ci-dessus Ã¢ÂÂ n'utilise JAMAIS de placeholders comme [Adresse du cabinet], [XXXX], [email@example.com], etc.
+- Inclus toutes les mentions obligatoires.
+- Utilise un format structurÃÂ© avec en-tÃÂªte (coordonnÃÂ©es clinique + vÃÂ©tÃÂ©rinaire), corps du document et signature.
+
+RÃÂ©ponds UNIQUEMENT avec le texte du certificat, prÃÂªt ÃÂ  imprimer.`;
+    const message = await (await import("@workspace/integrations-anthropic-ai")).anthropic.messages.create({
+      model: "claude-sonnet-4-6",
+      max_tokens: 2048,
+      messages: [{ role: "user", content: prompt }],
+    });
+    const content = message.content[0];
+    if (content.type !== "text") throw new Error("RÃÂ©ponse inattendue");
+    return res.json({ certificat: content.text.trim() });
+  } catch (err) {
+    req.log.error(err);
+    return res.status(500).json({ error: "Erreur lors de la gÃÂ©nÃÂ©ration du certificat" });
+  }
+});
+
+router.post("/carnet-vaccinations", async (req, res) => {
+  try {
+    const { patient, owner, vaccinations } = req.body;
+    if (!patient) return res.status(400).json({ error: "patient requis" });
+    const prompt = `Tu es vÃÂ©tÃÂ©rinaire. GÃÂ©nÃÂ¨re un rÃÂ©sumÃÂ© du carnet de santÃÂ© vaccinal pour ce patient animal.
+
+ANIMAL : ${JSON.stringify(patient)}
+PROPRIÃÂTAIRE : ${JSON.stringify(owner)}
+VACCINATIONS : ${JSON.stringify(vaccinations ?? [])}
+DATE D'AUJOURD'HUI : ${new Date().toLocaleDateString("fr-FR")}
+
+GÃÂ©nÃÂ¨re un bilan vaccinal complet et professionnel qui explique :
+1. Les vaccins rÃÂ©alisÃÂ©s et leur date
+2. Les rappels ÃÂ  venir (prochains 6 mois)
+3. Les vaccins en retard s'il y en a
+4. Les recommandations vaccinales pour l'espÃÂ¨ce
+5. Un rÃÂ©sumÃÂ© de protection actuelle
+
+RÃÂ©ponds en franÃÂ§ais, de faÃÂ§on claire et lisible pour le propriÃÂ©taire.`;
+    const message = await (await import("@workspace/integrations-anthropic-ai")).anthropic.messages.create({
+      model: "claude-sonnet-4-6",
+      max_tokens: 2048,
+      messages: [{ role: "user", content: prompt }],
+    });
+    const content = message.content[0];
+    if (content.type !== "text") throw new Error("RÃÂ©ponse inattendue");
+    return res.json({ carnet: content.text.trim() });
+  } catch (err) {
+    req.log.error(err);
+    return res.status(500).json({ error: "Erreur lors de la gÃÂ©nÃÂ©ration du carnet" });
+  }
+});
+
+router.post("/dictee-ordonnance", async (req, res) => {
+  try {
+    const { transcription } = req.body;
+    if (!transcription || typeof transcription !== "string" || !transcription.trim()) {
+      return res.status(400).json({ error: "Le texte de la dictÃÂ©e est requis" });
+    }
+    const { anthropic } = await import("@workspace/integrations-anthropic-ai");
+    const message = await anthropic.messages.create({
+      model: "claude-sonnet-4-6",
+      max_tokens: 2048,
+      system: `Tu es un vÃÂ©tÃÂ©rinaire praticien expert en France. Tu gÃÂ©nÃÂ¨res des ordonnances vÃÂ©tÃÂ©rinaires prÃÂ©cises et mÃÂ©dicalement justifiÃÂ©es ÃÂ  partir de dictÃÂ©es vocales.
+
+RÃÂGLES STRICTES :
+1. Ne prescris JAMAIS d'antibiotiques (amoxicilline, amoxiclavulanate, cÃÂ©fovecine, mÃÂ©tronidazole, etc.) sans indication infectieuse confirmÃÂ©e ou trÃÂ¨s probable.
+2. Calcule toujours les doses en mg/kg si le poids est mentionnÃÂ©.
+3. Prescris UNIQUEMENT ce qui est mÃÂ©dicalement justifiÃÂ©.
+4. AINS : prÃÂ©cise la durÃÂ©e maximale (5-7j chien, 3-5j chat).
+5. CorticoÃÂ¯des : dÃÂ©croissance progressive.
+6. StupÃÂ©fiants : mention "STUPÃÂFIANT Ã¢ÂÂ Ordonnance sÃÂ©curisÃÂ©e obligatoire".
+7. quantite_a_delivrer doit ÃÂªtre un entier positif.
+8. ANTI-DOUBLON STRICT : Si un mÃÂªme mÃÂ©dicament est mentionnÃÂ© plusieurs fois dans la dictÃÂ©e, ne l'inclure QU'UNE SEULE FOIS.
+Inclus le champ estDelivre (boolean).`,
+      messages: [{
+        role: "user",
+        content: `Extrait de cette dictÃÂ©e les prescriptions mÃÂ©dicamenteuses sous forme JSON structurÃÂ© :
+[{
+  "nom_medicament": string,
+  "dose": string,
+  "voie_administration": string,
+  "frequence": string,
+  "duree": string,
+  "quantite_a_delivrer": number,
+  "unite": string,
+  "justification": string,
+  "estDelivre": boolean
+}]
+
+RÃÂ©ponds UNIQUEMENT avec le JSON valide.
+
+Texte de la dictÃÂ©e : "${transcription}"`
+      }],
+    });
+
+    const raw = message.content[0].type === "text" ? message.content[0].text : "[]";
+    let prescriptions: any[] = [];
+    try {
+      const jsonStr = raw.replace(/^```json\n?/, "").replace(/\n?```$/, "").trim();
+      prescriptions = JSON.parse(jsonStr);
+    } catch {
+      return res.status(422).json({ error: "Impossible de parser les prescriptions depuis la transcription" });
+    }
+    const normaliserNom = (nom: string): string => (nom ?? "").toLowerCase().normalize("NFD").replace(/[ÃÂ-ÃÂ¯]/g, "").replace(/[^a-z0-9]/g, " ").trim().split(/\s+/).slice(0, 3).join(" ");
+    const dedupMap = new Map<string, any>();
+    for (const p of prescriptions) { const key = normaliserNom(p.nom_medicament ?? ""); if (key && !dedupMap.has(key)) dedupMap.set(key, p); }
+    prescriptions = Array.from(dedupMap.values());
+    const resultats = await Promise.all(prescriptions.map(async (p) => { const mots = p.nom_medicament.split(/\s+/).filter((m: string) => m.length > 2); let match = null; for (const mot of mots) { const [found] = await db.select({ id: stockMedicamentsTable.id, nom: stockMedicamentsTable.nom, prixVenteTTC: stockMedicamentsTable.prixVenteTTC, quantiteStock: stockMedicamentsTable.quantiteStock, unite: stockMedicamentsTable.unite }).from(stockMedicamentsTable).where(and(eq(stockMedicamentsTable.clinicId, req.clinicId), ilike(stockMedicamentsTable.nom, `%${mot}%`))).limit(1); if (found) { match = found; break; } } return { ...p, stockMatch: match }; }));
+    return res.json({ prescriptions: resultats });
+  } catch (err) { req.log.error(err); return res.status(500).json({ error: "Erreur lors de la dictÃÂ©e ordonnance" }); }
+});
+
+router.post("/confirmer-dictee-ordonnance", async (req, res) => {
+  try {
+    const { consultationId, patientId, veterinaire, prescriptions } = req.body;
+    if (!consultationId || !prescriptions?.length) return res.status(400).json({ error: "consultationId et prescriptions requis" });
+    const consId = Number(consultationId);
+    const [cons] = await db.select({ id: consultationsTable.id }).from(consultationsTable).where(and(eq(consultationsTable.id, consId), eq(consultationsTable.clinicId, req.clinicId)));
+    if (!cons) return res.status(404).json({ error: "Consultation introuvable" });
+    const year = new Date().getFullYear();
+    const [lastOrd] = await db.select({ num: ordonnancesTable.numeroOrdonnance }).from(ordonnancesTable).where(and(eq(ordonnancesTable.clinicId, req.clinicId), drizzleSql`numero_ordonnance LIKE ${"ORD-" + year + "-%"}`)).orderBy(desc(ordonnancesTable.id)).limit(1);
+    const lastSeq = lastOrd?.num ? parseInt(lastOrd.num.split("-")[2] ?? "0") : 0;
+    const numeroOrdonnance = `OQD$tÃ¯Â¿Â½ear}-${String(lastSeq + 1).padStart(5, "0")}`;
+    const cleanField = (v: any) => { if (v == null) return ""; const s = String(v).trim(); if (!s || s === "Ã¢ÂÂ" || s === "-" || /^null$/i.test(s)) return ""; return s; };
+    const contenu = prescriptions.map((p: any) => { const delivre = p.estDelivre === false ? " [ÃÂ acheter en pharmacie]" : " [DÃÂ©livrÃÂ© en clinique]"; return [p.nom_medicament + delivre, cleanField(p.dose) && `Dose : ${cleanField(p.dose)}`, cleanField(p.voie_administration) && `Voie : ${cleanField(p.voie_administration)}`, cleanField(p.frequence) && `FrÃÂ©quence : ${cleanField(p.frequence)}`, cleanField(p.duree) && `DurÃÂ©e : ${cleanField(p.duree)}`].filter(Boolean).join(" Ã¢ÂÂ "); }).join("\n");
+    const [ordonnance] = await db.insert(ordonnancesTable).values({ clinicId: req.clinicId, consultationId: consId, patientId: patientId ? Number(patientId) : null, veterinaire: veterinaire ?? null, contenu, numeroOrdonnance, genereIA: true }).returning();
+    const [existingFacture] = await db.select({ id: facturesTable.id, lignes: facturesTable.lignes, totalHT: facturesTable.totalHT, totalTVA: facturesTable.totalTVA, totalTTC: facturesTable.totalTTC }).from(facturesTable).where(and(eq(facturesTable.clinicId, req.clinicId), eq(facturesTable.consultationId, consId)));
+    for (const p of prescriptions) { if (!p.stockMatch?.id) continue; const quantite = Math.max(1, Math.round(p.quantite_a_delivrer ?? 1)); await db.insert(mouvementsStockTable).values({ clinicId: req.clinicId, medicamentId: p.stockMatch.id, typeMouvement: "sortie_consultation", quantite: -quantite, consultationId: consId, factureId: existingFacture?.id ?? null, motif: `Ordonnance ${numeroOrdonnance} Ã¢ÂÂ ${p.nom_medicament}`, utilisateur: veterinaire ?? "SystÃÂ¨me" }); await db.update(stockMedicamentsTable).set({ quantiteStock: drizzleSql`quantite_stock - ${quantite}` }).where(and(eq(stockMedicamentsTable.clinicId, req.clinicId), eq(stockMedicamentsTable.id, p.stockMatch.id))); }
+    const medicamentsDelivres = prescriptions.filter((p: any) => p.estDelivre !== false && p.stockMatch?.id && p.stockMatch?.prixVenteTTC);
+    if (existingFacture?.id && medicamentsDelivres.length > 0) { const lignesExistantes = Array.isArray(existingFacture.lignes) ? existingFacture.lignes : []; const descExistantes = new Set(lignesExistantes.map((l: any) => (l.description ?? "").toLowerCase().trim())); const nouvLignes = medicamentsDelivres.filter((p: any) => !descExistantes.has((p.nom_medicament ?? "").toLowerCase().trim())).map((p: any) => { const quantite = Math.max(1, Math.round(p.quantite_a_delivrer ?? 1)); const prixTTC = Number(p.stockMatch.prixVenteTTC) || 0; const prixHT = prixTTC / 1.2; return { acteId: null, description: p.nom_medicament, quantite, prixUnitaire: prixHT, tvaRate: 20, montantHT: prixHT * quantite }; }); if (nouvLignes.length > 0) { const toutesLignes = [...lignesExistantes, ...nouvLignes]; const totalHT = toutesLignes.reduce((s, l) => s + (l.montantHT ?? 0), 0); await db.update(facturesTable).set({ lignes: toutesLignes, totalHT: String(totalHT.toFixed(2)), totalTVA: String((totalHT * 0.2).toFixed(2)), totalTTC: String((totalHT * 1.2).toFixed(2)) }).where(eq(facturesTable.id, existingFacture.id)); } }
+    return res.status(201).json({ ordonnance: { ...ordonnance, createdAt: ordonnance.createdAt.toISOString(), updatedAt: ordonnance.updatedAt.toISOString() }, factureId: existingFacture?.id ?? null, medicamentsAjoutes: medicamentsDelivres.map((p: any) => p.nom_medicament) });
+  } catch (err) { req.log.error(err); return res.status(500).json({ error: "Erreur lors de la confirmation de l'ordonnance" }); }
+});
+
+export default router;
+
+
+
+======================================================================
+## routes/factures/index.ts -- CRUD Factures + pagination
+======================================================================
+
+import { Router } from "express";
+import { db } from "@workspace/db";
+import {
+  facturesTable,
+  consultationsTable,
+  patientsTable,
+  ownersTable,
+  actesConsultationsTable,
+  actesTable,
+} from "@workspace/db";
+import {
+  GetFactureParams,
+  UpdateFactureStatutParams,
+  UpdateFactureStatutBody,
+  ListFacturesQueryParams,
+} from "@workspace/api-zod";
+import { eq, and, inArray, desc } from "drizzle-orm";
+import { decrementerConsultationFEFO } from "../stock/ia-engine";
+import { TVA_DEFAULT_RATE } from "../../lib/constants";
+import { computeInvoiceTotals } from "../../lib/numbering";
+import { fail } from "../../lib/response";
+
+import { FactureService } from "../../services/factureService";
+import { validate } from "../../middlewares/validate";
+import { CreateFactureSchema } from "../../schemas";
+
+const router = Router();
+
+type ActeRow = {
+  consultationId: number;
+  prixUnitaire: number;
+  quantite: number;
+  tvaRate: number | null;
+};
+
+/**
+ * AgrÃÂÃÂ¨ge les actes par consultationId ÃÂ¢ÃÂÃÂ totaux HT/TTC/tva breakdown.
+ * Accepte un dÃÂÃÂ©faut (20) pour les actes historiques avec tvaRate null.
+ */
+function buildTotalsByConsultation(actes: ReadonlyArray<ActeRow>) {
+  const byCons = new Map<number, ActeRow[]>();
+  for (const a of actes) {
+    const arr = byCons.get(a.consultationId) ?? [];
+    arr.push(a);
+    byCons.set(a.consultationId, arr);
+  }
+  const out = new Map<number, ReturnType<typeof computeInvoiceTotals>>();
+  for (const [consId, rows] of byCons) {
+    out.set(consId, computeInvoiceTotals(rows, TVA_DEFAULT_RATE));
+  }
+  return out;
+}
+
+// ============================================================================
+//  GET / ÃÂ¢ÃÂÃÂ liste des factures avec consultation + patient + owner joints.
+//  P1-1 : TVA multi-taux calculÃÂÃÂ©e par breakdown par acte.
+//  P1-3 : UN SEUL select pour toutes les consultations + patients + owners.
+// ============================================================================
+router.get("/", async (req, res) => {
+  try {
+    const query = ListFacturesQueryParams.safeParse(req.query);
+    const { statut } = query.success ? query.data : ({} as { statut?: string });
+
+    const cidEq = eq(facturesTable.clinicId, req.clinicId);
+    const rawPage  = parseInt(String(req.query["page"]  ?? "1"),  10);
+    const rawLimit = parseInt(String(req.query["limit"] ?? "50"), 10);
+    const pageNum  = Number.isNaN(rawPage)  || rawPage  < 1               ? 1  : rawPage;
+    const pageSize = Number.isNaN(rawLimit) || rawLimit < 1 || rawLimit > 200 ? 50 : rawLimit;
+    const pageOffset = (pageNum - 1) * pageSize;
+
+    const factures = statut
+      ? await db.select().from(facturesTable).where(and(cidEq, eq(facturesTable.statut, statut))).orderBy(desc(facturesTable.createdAt)).limit(pageSize).offset(pageOffset)
+      : await db.select().from(facturesTable).where(cidEq).orderBy(desc(facturesTable.createdAt)).limit(pageSize).offset(pageOffset);
+
+    if (factures.length === 0) return res.json([]);
+
+    const consultationIds = [...new Set(factures.map((f) => f.consultationId))];
+
+    // 1) Tous les actes d'un coup, avec tvaRate.
+    const allActes: ActeRow[] = await db
+      .select({
+        consultationId: actesConsultationsTable.consultationId,
+        prixUnitaire: actesConsultationsTable.prixUnitaire,
+        quantite: actesConsultationsTable.quantite,
+        tvaRate: actesConsultationsTable.tvaRate,
+      })
+      .from(actesConsultationsTable)
+      .where(
+        and(
+          eq(actesConsultationsTable.clinicId, req.clinicId),
+          inArray(actesConsultationsTable.consultationId, consultationIds),
+        ),
+      );
+
+    const totalsByCons = buildTotalsByConsultation(allActes);
+
+    // 2) Toutes les consultations + patients + owners d'un coup (batch join).
+    const consultations = await db
+      .select({
+        id: consultationsTable.id,
+        patientId: consultationsTable.patientId,
+        veterinaire: consultationsTable.veterinaire,
+        date: consultationsTable.date,
+        statut: consultationsTable.statut,
+        motif: consultationsTable.motif,
+        anamnese: consultationsTable.anamnese,
+        examenClinique: consultationsTable.examenClinique,
+        examensComplementaires: consultationsTable.examensComplementaires,
+        diagnostic: consultationsTable.diagnostic,
+        diagnosticIA: consultationsTable.diagnosticIA,
+        ordonnance: consultationsTable.ordonnance,
+        notes: consultationsTable.notes,
+        poids: consultationsTable.poids,
+        temperature: consultationsTable.temperature,
+        createdAt: consultationsTable.createdAt,
+        patient: {
+          id: patientsTable.id,
+          nom: patientsTable.nom,
+          espece: patientsTable.espece,
+          race: patientsTable.race,
+          sexe: patientsTable.sexe,
+          dateNaissance: patientsTable.dateNaissance,
+          poids: patientsTable.poids,
+          couleur: patientsTable.couleur,
+          sterilise: patientsTable.sterilise,
+          ownerId: patientsTable.ownerId,
+          antecedents: patientsTable.antecedents,
+          allergies: patientsTable.allergies,
+          createdAt: patientsTable.createdAt,
+          owner: {
+            id: ownersTable.id,
+            nom: ownersTable.nom,
+            prenom: ownersTable.prenom,
+            email: ownersTable.email,
+            telephone: ownersTable.telephone,
+            adresse: ownersTable.adresse,
+            createdAt: ownersTable.createdAt,
+          },
+        },
+      })
+      .from(consultationsTable)
+      .leftJoin(patientsTable, eq(consultationsTable.patientId, patientsTable.id))
+      .leftJoin(ownersTable, eq(patientsTable.ownerId, ownersTable.id))
+      .where(
+        and(
+          eq(consultationsTable.clinicId, req.clinicId),
+          inArray(consultationsTable.id, consultationIds),
+        ),
+      );
+
+    const consById = new Map(consultations.map((c) => [c.id, c]));
+
+    // 3) Update en arriÃÂÃÂ¨re-plan des factures dont les totaux ont dÃÂÃÂ©rivÃÂÃÂ© (non bloquant).
+    const staleUpdates = factures
+      .map((f) => {
+        const fresh = totalsByCons.get(f.consultationId);
+        if (!fresh) return null;
+        if (
+          Math.abs(f.montantHT - fresh.montantHT) < 0.005 &&
+          Math.abs(f.montantTTC - fresh.montantTTC) < 0.005
+        ) {
+          return null;
+        }
+        return { id: f.id, fresh };
+      })
+      .filter((x): x is { id: number; fresh: ReturnType<typeof computeInvoiceTotals> } => !!x);
+
+    if (staleUpdates.length > 0) {
+      Promise.all(
+        staleUpdates.map((s) =>
+          db
+            .update(facturesTable)
+            .set({
+              montantHT: s.fresh.montantHT,
+              montantTTC: s.fresh.montantTTC,
+              tva: s.fresh.tvaMoyenne,
+              tvaBreakdown: s.fresh.tvaBreakdown,
+            })
+            .where(and(eq(facturesTable.clinicId, req.clinicId), eq(facturesTable.id, s.id))),
+        ),
+      ).catch((err) => req.log.warn({ err }, "Stale facture background update failed"));
+    }
+
+    const result = factures.map((f) => {
+      const fresh = totalsByCons.get(f.consultationId);
+      const montantHT = fresh?.montantHT ?? f.montantHT;
+      const montantTTC = fresh?.montantTTC ?? f.montantTTC;
+      const tva = fresh?.tvaMoyenne ?? f.tva;
+
+      const cons = consById.get(f.consultationId);
+      return {
+        ...f,
+        montantHT,
+        montantTTC,
+        tva,
+        tvaBreakdown: fresh?.tvaBreakdown ?? f.tvaBreakdown ?? null,
+        dateEmission: f.dateEmission,
+        createdAt: f.createdAt.toISOString(),
+        consultation: cons
+          ? {
+              ...cons,
+              createdAt: cons.createdAt.toISOString(),
+              patient: cons.patient
+                ? {
+                    ...cons.patient,
+                    createdAt: cons.patient.createdAt.toISOString(),
+                    owner: cons.patient.owner
+                      ? {
+                          ...cons.patient.owner,
+                          createdAt: cons.patient.owner.createdAt.toISOString(),
+                        }
+                      : null,
+                  }
+                : null,
+            }
+          : null,
+      };
+    });
+
+    return res.json(result);
+  } catch (err) {
+    req.log.error({ err }, "GET /factures failed");
+    return res.status(500).json(fail("INTERNAL", "Erreur interne du serveur"));
+  }
+});
+
+router.get("/by-consultation/:consultationId", async (req, res) => {
+  try {
+    const consultationId = Number(req.params.consultationId);
+    if (!Number.isInteger(consultationId) || consultationId <= 0) {
+      return res.status(400).json(fail("INVALID_ID", "ID invalide"));
+    }
+
+    const [facture] = await db
+      .select()
+      .from(facturesTable)
+      .where(
+        and(
+          eq(facturesTable.clinicId, req.clinicId),
+          eq(facturesTable.consultationId, consultationId),
+        ),
+      );
+    if (!facture) return res.json({ success: true, data: null });
+
+    return res.json({ ...facture, createdAt: facture.createdAt.toISOString() });
+  } catch (err) {
+    req.log.error({ err }, "GET /factures/by-consultation failed");
+    return res.status(500).json(fail("INTERNAL", "Erreur interne"));
+  }
+});
+
+router.get("/:id", async (req, res) => {
+  try {
+    const params = GetFactureParams.safeParse({ id: Number(req.params.id) });
+    if (!params.success) return res.status(400).json(fail("INVALID_ID", "ID invalide"));
+
+    const [facture] = await db
+      .select()
+      .from(facturesTable)
+      .where(and(eq(facturesTable.clinicId, req.clinicId), eq(facturesTable.id, params.data.id)));
+    if (!facture) return res.status(404).json(fail("NOT_FOUND", "Facture non trouvÃÂÃÂ©e"));
+
+    const [consultation] = await db
+      .select({
+        id: consultationsTable.id,
+        patientId: consultationsTable.patientId,
+        veterinaire: consultationsTable.veterinaire,
+        date: consultationsTable.date,
+        statut: consultationsTable.statut,
+        motif: consultationsTable.motif,
+        anamnese: consultationsTable.anamnese,
+        examenClinique: consultationsTable.examenClinique,
+        examensComplementaires: consultationsTable.examensComplementaires,
+        diagnostic: consultationsTable.diagnostic,
+        diagnosticIA: consultationsTable.diagnosticIA,
+        ordonnance: consultationsTable.ordonnance,
+        notes: consultationsTable.notes,
+        poids: consultationsTable.poids,
+        temperature: consultationsTable.temperature,
+        createdAt: consultationsTable.createdAt,
+        patient: {
+          id: patientsTable.id,
+          nom: patientsTable.nom,
+          espece: patientsTable.espece,
+          race: patientsTable.race,
+          sexe: patientsTable.sexe,
+          dateNaissance: patientsTable.dateNaissance,
+          poids: patientsTable.poids,
+          couleur: patientsTable.couleur,
+          sterilise: patientsTable.sterilise,
+          ownerId: patientsTable.ownerId,
+          antecedents: patientsTable.antecedents,
+          allergies: patientsTable.allergies,
+          createdAt: patientsTable.createdAt,
+          owner: {
+            id: ownersTable.id,
+            nom: ownersTable.nom,
+            prenom: ownersTable.prenom,
+            email: ownersTable.email,
+            telephone: ownersTable.telephone,
+            adresse: ownersTable.adresse,
+            createdAt: ownersTable.createdAt,
+          },
+        },
+      })
+      .from(consultationsTable)
+      .leftJoin(patientsTable, eq(consultationsTable.patientId, patientsTable.id))
+      .leftJoin(ownersTable, eq(patientsTable.ownerId, ownersTable.id))
+      .where(
+        and(
+          eq(consultationsTable.clinicId, req.clinicId),
+          eq(consultationsTable.id, facture.consultationId),
+        ),
+      );
+
+    const lignes = await db
+      .select({
+        id: actesConsultationsTable.id,
+        acteId: actesConsultationsTable.acteId,
+        quantite: actesConsultationsTable.quantite,
+        prixUnitaire: actesConsultationsTable.prixUnitaire,
+        tvaRate: actesConsultationsTable.tvaRate,
+        description: actesConsultationsTable.description,
+        acte: {
+          nom: actesTable.nom,
+          categorie: actesTable.categorie,
+          code: actesTable.code,
+        },
+      })
+      .from(actesConsultationsTable)
+      .leftJoin(actesTable, eq(actesConsultationsTable.acteId, actesTable.id))
+      .where(
+        and(
+          eq(actesConsultationsTable.clinicId, req.clinicId),
+          eq(actesConsultationsTable.consultationId, facture.consultationId),
+        ),
+      );
+
+    // P1-1 : calcul ligne par ligne avec le tvaRate rÃÂÃÂ©el de chaque acte.
+    const lignesMapped = lignes.map((l) => {
+      const rate = l.tvaRate ?? TVA_DEFAULT_RATE;
+      const ht = Math.round(l.prixUnitaire * l.quantite * 100) / 100;
+      const tva = Math.round((ht * rate) / 100 * 100) / 100;
+      return {
+        ...l,
+        description: l.description ?? l.acte?.nom ?? "",
+        montantHT: ht,
+        montantTVA: tva,
+        montantTTC: Math.round((ht + tva) * 100) / 100,
+        tvaRate: rate,
+      };
+    });
+
+    const totals = computeInvoiceTotals(lignes, TVA_DEFAULT_RATE);
+
+    if (
+      lignesMapped.length > 0 &&
+      (Math.abs(facture.montantHT - totals.montantHT) > 0.005 ||
+        Math.abs(facture.montantTTC - totals.montantTTC) > 0.005)
+    ) {
+      await db
+        .update(facturesTable)
+        .set({
+          montantHT: totals.montantHT,
+          montantTTC: totals.montantTTC,
+          tva: totals.tvaMoyenne,
+          tvaBreakdown: totals.tvaBreakdown,
+        })
+        .where(and(eq(facturesTable.clinicId, req.clinicId), eq(facturesTable.id, facture.id)));
+    }
+
+    return res.json({
+      ...facture,
+      montantHT: totals.montantHT,
+      montantTVA: Math.round((totals.montantTTC - totals.montantHT) * 100) / 100,
+      montantTTC: totals.montantTTC,
+      tva: totals.tvaMoyenne,
+      tvaBreakdown: totals.tvaBreakdown,
+      createdAt: facture.createdAt.toISOString(),
+      lignes: lignesMapped,
+      consultation: consultation
+        ? {
+            ...consultation,
+            createdAt: consultation.createdAt.toISOString(),
+            patient: consultation.patient
+              ? {
+                  ...consultation.patient,
+                  createdAt: consultation.patient.createdAt.toISOString(),
+                  owner: consultation.patient.owner
+                    ? {
+                        ...consultation.patient.owner,
+                        createdAt: consultation.patient.owner.createdAt.toISOString(),
+                      }
+                    : null,
+                }
+              : null,
+          }
+        : null,
+    });
+  } catch (err) {
+    req.log.error({ err }, "GET /factures/:id failed");
+    return res.status(500).json(fail("INTERNAL", "Erreur interne du serveur"));
+  }
+});
+
+
+// POST /api/factures ÃÂ¢ÃÂÃÂ CrÃÂÃÂ©er une facture depuis les actes d'une consultation
+router.post("/", validate(CreateFactureSchema), async (req, res) => {
+  try {
+    const consultationId = Number(req.body?.consultationId);
+    if (!Number.isInteger(consultationId) || consultationId <= 0) {
+      return res.status(400).json(fail("VALIDATION_ERROR", "consultationId invalide"));
+    }
+    const [existing] = await db
+      .select()
+      .from(facturesTable)
+      .where(and(eq(facturesTable.clinicId, req.clinicId), eq(facturesTable.consultationId, consultationId)));
+    if (existing) {
+      return res.status(409).json({ success: false, error: { code: "ALREADY_EXISTS", message: "Facture dÃÂÃÂ©jÃÂÃÂ  crÃÂÃÂ©ÃÂÃÂ©e pour cette consultation" } });
+    }
+    const montants = await FactureService.recalculerDepuisActes(consultationId);
+    const numero = await FactureService.genererNumero();
+    const today = new Date().toISOString().split("T")[0];
+    const [facture] = await db.insert(facturesTable).values({
+      clinicId: req.clinicId,
+      consultationId,
+      numero,
+      montantHT: montants.montantHT,
+      tva: TVA_DEFAULT_RATE,
+      montantTTC: montants.montantTTC,
+      statut: "en_attente",
+      dateEmission: today,
+    }).returning();
+    return res.json({ success: true, data: facture });
+  } catch (err) {
+    req.log.error(err);
+    return res.status(500).json(fail("INTERNAL_ERROR", "Erreur interne du serveur"));
+  }
+});
+
+router.delete("/:id", async (req, res) => {
+  try {
+    const params = GetFactureParams.safeParse({ id: Number(req.params.id) });
+    if (!params.success) return res.status(400).json(fail("INVALID_ID", "ID invalide"));
+
+    const [deleted] = await db
+      .delete(facturesTable)
+      .where(and(eq(facturesTable.clinicId, req.clinicId), eq(facturesTable.id, params.data.id)))
+      .returning();
+    if (!deleted) return res.status(404).json(fail("NOT_FOUND", "Facture non trouvÃÂÃÂ©e"));
+
+    return res.json({ success: true });
+  } catch (err) {
+    req.log.error({ err }, "DELETE /factures/:id failed");
+    return res.status(500).json(fail("INTERNAL", "Erreur lors de la suppression"));
+  }
+});
+
+// ============================================================================
+//  PATCH /:id ÃÂ¢ÃÂÃÂ changement de statut, recalcul TVA multi-taux, FEFO transactionnel.
+// ============================================================================
+router.patch("/:id", async (req, res) => {
+  try {
+    const params = UpdateFactureStatutParams.safeParse({ id: Number(req.params.id) });
+    if (!params.success) return res.status(400).json(fail("INVALID_ID", "ID invalide"));
+
+    const body = UpdateFactureStatutBody.safeParse(req.body);
+    if (!body.success) {
+      return res.status(400).json(
+        fail("VALIDATION_ERROR", "DonnÃÂÃÂ©es invalides", body.error.flatten().fieldErrors),
+      );
+    }
+
+    const updateData: Record<string, unknown> = { statut: body.data.statut };
+    if (body.data.datePaiement) updateData.datePaiement = body.data.datePaiement;
+
+    const modePaiement = (req.body as { modePaiement?: unknown }).modePaiement as string | undefined;
+    const montantEspecesRaw = (req.body as { montantEspecesRecu?: unknown }).montantEspecesRecu;
+    const montantEspecesRecu =
+      montantEspecesRaw != null && !Number.isNaN(Number(montantEspecesRaw))
+        ? parseFloat(String(montantEspecesRaw))
+        : null;
+
+    const validModes = [
+      "carte_bancaire",
+      "carte_sans_contact",
+      "payvet",
+      "cheque",
+      "virement",
+      "especes",
+      "autre",
+    ];
+    if (modePaiement) {
+      if (!validModes.includes(modePaiement)) {
+        return res.status(400).json(fail("INVALID_MODE", "Mode de paiement invalide"));
+      }
+      updateData.modePaiement = modePaiement;
+    }
+    if (modePaiement === "especes" && montantEspecesRecu !== null) {
+      updateData.montantEspecesRecu = montantEspecesRecu;
+    }
+
+    const [factureBefore] = await db
+      .select()
+      .from(facturesTable)
+      .where(
+        and(eq(facturesTable.clinicId, req.clinicId), eq(facturesTable.id, params.data.id)),
+      );
+    if (!factureBefore) return res.status(404).json(fail("NOT_FOUND", "Facture non trouvÃÂÃÂ©e"));
+
+    if (body.data.statut === "payee" && Number(factureBefore.montantTTC ?? 0) === 0) {
+      return res.status(400).json(
+        fail("ZERO_TOTAL", "Impossible de marquer comme payÃÂÃÂ©e une facture ÃÂÃÂ  0 ÃÂ¢ÃÂÃÂ¬. Ajoutez des actes d'abord."),
+      );
+    }
+
+    const actesPourTotal = await db
+      .select({
+        prixUnitaire: actesConsultationsTable.prixUnitaire,
+        quantite: actesConsultationsTable.quantite,
+        tvaRate: actesConsultationsTable.tvaRate,
+      })
+      .from(actesConsultationsTable)
+      .where(
+        and(
+          eq(actesConsultationsTable.clinicId, req.clinicId),
+          eq(actesConsultationsTable.consultationId, factureBefore.consultationId),
+        ),
+      );
+
+    if (actesPourTotal.length > 0) {
+      const t = computeInvoiceTotals(actesPourTotal, TVA_DEFAULT_RATE);
+      updateData.montantHT = t.montantHT;
+      updateData.montantTTC = t.montantTTC;
+      updateData.tva = t.tvaMoyenne;
+      updateData.tvaBreakdown = t.tvaBreakdown;
+    }
+
+    const [facture] = await db
+      .update(facturesTable)
+      .set(updateData)
+      .where(and(eq(facturesTable.clinicId, req.clinicId), eq(facturesTable.id, params.data.id)))
+      .returning();
+    if (!facture) return res.status(404).json(fail("NOT_FOUND", "Facture non trouvÃÂÃÂ©e"));
+
+    // FEFO auto-decrement ÃÂÃÂ  l'encaissement.
+    if (body.data.statut === "payee" && factureBefore.statut !== "payee") {
+      try {
+        const lignes = await db
+          .select({
+            nom: actesTable.nom,
+            categorie: actesTable.categorie,
+            code: actesTable.code,
+            quantite: actesConsultationsTable.quantite,
+          })
+          .from(actesConsultationsTable)
+          .leftJoin(actesTable, eq(actesConsultationsTable.acteId, actesTable.id))
+          .where(
+            and(
+              eq(actesConsultationsTable.clinicId, req.clinicId),
+              eq(actesConsultationsTable.consultationId, facture.consultationId),
+            ),
+          );
+
+        const medicamentLignes = lignes
+          .filter(
+            (l) =>
+              l.nom &&
+              (l.categorie?.toLowerCase().includes("mÃÂÃÂ©dic") ||
+                l.categorie?.toLowerCase().includes("medic") ||
+                l.code?.startsWith("MED") ||
+                l.code?.startsWith("VACCI")),
+          )
+          .map((l) => ({ nom: l.nom!, quantite: l.quantite ?? 1 }));
+
+        if (medicamentLignes.length > 0) {
+          await decrementerConsultationFEFO(req.clinicId, facture.consultationId, medicamentLignes);
+        }
+      } catch (fefoErr) {
+        req.log.warn({ err: fefoErr }, "FEFO auto-decrement failed (non-blocking)");
+      }
+    }
+
+    const renduMonnaie =
+      modePaiement === "especes" && montantEspecesRecu !== null
+        ? Math.round((montantEspecesRecu - (facture.montantTTC ?? 0)) * 100) / 100
+        : null;
+
+    return res.json({ ...facture, createdAt: facture.createdAt.toISOString(), renduMonnaie });
+  } catch (err) {
+    req.log.error({ err }, "PATCH /factures/:id failed");
+    return res.status(500).json(fail("INTERNAL", "Erreur interne du serveur"));
+  }
+});
+
+export default router;
+
+
+
+======================================================================
+## routes/consultations/index.ts -- CRUD Consultations
+======================================================================
+
+import { Router } from "express";
+import workflowRouter from "./workflow";
+import consultationPatientsRouter from "./patients";
+import consultationAttachmentsRouter from "./attachments";
+import { db } from "@workspace/db";
+import {
+  consultationsTable,
+  patientsTable,
+  ownersTable,
+  actesConsultationsTable,
+  actesTable,
+  facturesTable,
+} from "@workspace/db";
+import {
+  CreateConsultationBody,
+  GetConsultationParams,
+  UpdateConsultationBody,
+  UpdateConsultationParams,
+  ListConsultationsQueryParams,
+  GenerateOrdonnanceParams,
+  GenerateFactureParams,
+} from "@workspace/api-zod";
+import { eq, and, inArray, desc } from "drizzle-orm";
+import { anthropic } from "@workspace/integrations-anthropic-ai";
+import { AI_MODEL, AI_MAX_TOKENS, TVA_DEFAULT_RATE } from "../../lib/constants";
+import { nextInvoiceNumber, computeInvoiceTotals } from "../../lib/numbering";
+import { fail, ok } from "../../lib/response";
+import { validate } from "../../middlewares/validate";
+import { CreateConsultationSchema } from "../../schemas";
+
+const router = Router();
+
+async function getConsultationWithDetails(id: number, clinicId: string) {
+  const [c] = await db
+    .select({
+      id: consultationsTable.id,
+      patientId: consultationsTable.patientId,
+      veterinaire: consultationsTable.veterinaire,
+      date: consultationsTable.date,
+      statut: consultationsTable.statut,
+      motif: consultationsTable.motif,
+      anamnese: consultationsTable.anamnese,
+      examenClinique: consultationsTable.examenClinique,
+      examensComplementaires: consultationsTable.examensComplementaires,
+      diagnostic: consultationsTable.diagnostic,
+      diagnosticIA: consultationsTable.diagnosticIA,
+      ordonnance: consultationsTable.ordonnance,
+      notes: consultationsTable.notes,
+      poids: consultationsTable.poids,
+      temperature: consultationsTable.temperature,
+      createdAt: consultationsTable.createdAt,
+      patient: {
+        id: patientsTable.id,
+        nom: patientsTable.nom,
+        espece: patientsTable.espece,
+        race: patientsTable.race,
+        sexe: patientsTable.sexe,
+        dateNaissance: patientsTable.dateNaissance,
+        poids: patientsTable.poids,
+        couleur: patientsTable.couleur,
+        sterilise: patientsTable.sterilise,
+        ownerId: patientsTable.ownerId,
+        antecedents: patientsTable.antecedents,
+        allergies: patientsTable.allergies,
+        createdAt: patientsTable.createdAt,
+        owner: {
+          id: ownersTable.id,
+          nom: ownersTable.nom,
+          prenom: ownersTable.prenom,
+          email: ownersTable.email,
+          telephone: ownersTable.telephone,
+          adresse: ownersTable.adresse,
+          createdAt: ownersTable.createdAt,
+        },
+      },
+    })
+    .from(consultationsTable)
+    .leftJoin(patientsTable, eq(consultationsTable.patientId, patientsTable.id))
+    .leftJoin(ownersTable, eq(patientsTable.ownerId, ownersTable.id))
+    .where(and(eq(consultationsTable.clinicId, clinicId), eq(consultationsTable.id, id)));
+
+  if (!c) return null;
+
+  const actes = await db
+    .select({
+      id: actesConsultationsTable.id,
+      acteId: actesConsultationsTable.acteId,
+      consultationId: actesConsultationsTable.consultationId,
+      quantite: actesConsultationsTable.quantite,
+      prixUnitaire: actesConsultationsTable.prixUnitaire,
+      tvaRate: actesConsultationsTable.tvaRate,
+      description: actesConsultationsTable.description,
+      acte: {
+        id: actesTable.id,
+        code: actesTable.code,
+        nom: actesTable.nom,
+        categorie: actesTable.categorie,
+        prixDefaut: actesTable.prixDefaut,
+        description: actesTable.description,
+        unite: actesTable.unite,
+      },
+    })
+    .from(actesConsultationsTable)
+    .leftJoin(actesTable, eq(actesConsultationsTable.acteId, actesTable.id))
+    .where(
+      and(
+        eq(actesConsultationsTable.clinicId, clinicId),
+        eq(actesConsultationsTable.consultationId, id),
+      ),
+    );
+
+  const [facture] = await db
+    .select()
+    .from(facturesTable)
+    .where(
+      and(eq(facturesTable.clinicId, clinicId), eq(facturesTable.consultationId, id)),
+    );
+
+  return {
+    ...c,
+    createdAt: c.createdAt.toISOString(),
+    patient: c.patient
+      ? {
+          ...c.patient,
+          createdAt: c.patient.createdAt.toISOString(),
+          owner: c.patient.owner
+            ? { ...c.patient.owner, createdAt: c.patient.owner.createdAt.toISOString() }
+            : null,
+        }
+      : null,
+    actes,
+    facture: facture
+      ? { ...facture, createdAt: facture.createdAt.toISOString() }
+      : null,
+  };
+}
+
+router.get("/", async (req, res) => {
+  try {
+    const query = ListConsultationsQueryParams.safeParse(req.query);
+    const { statut, date } = query.success ? query.data : ({} as { statut?: string; date?: string });
+  const rawPage = parseInt(String(req.query["page"] ?? "1"), 10);
+  const rawLimit = parseInt(String(req.query["limit"] ?? "50"), 10);
+  const pageNum = Number.isNaN(rawPage) || rawPage < 1 ? 1 : rawPage;
+  const pageSize = Number.isNaN(rawLimit) || rawLimit < 1 || rawLimit > 200 ? 50 : rawLimit;
+  const pageOffset = (pageNum - 1) * pageSize;
+
+    const cidEq = eq(consultationsTable.clinicId, req.clinicId);
+    let consultations;
+    if (statut && date) {
+      consultations = await db.select().from(consultationsTable)
+        .where(and(cidEq, eq(consultationsTable.statut, statut), eq(consultationsTable.date, date))).orderBy(desc(consultationsTable.createdAt)).limit(pageSize).offset(pageOffset);
+    } else if (statut) {
+      consultations = await db.select().from(consultationsTable)
+        .where(and(cidEq, eq(consultationsTable.statut, statut))).orderBy(desc(consultationsTable.createdAt)).limit(pageSize).offset(pageOffset);
+    } else if (date) {
+      consultations = await db.select().from(consultationsTable)
+        .where(and(cidEq, eq(consultationsTable.date, date))).orderBy(desc(consultationsTable.createdAt)).limit(pageSize).offset(pageOffset);
+    } else {
+      consultations = await db.select().from(consultationsTable).where(cidEq).orderBy(desc(consultationsTable.createdAt)).limit(pageSize).offset(pageOffset);
+    }
+
+    // P1-3 : anti-N+1 ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ on lit tous les patients et owners en une seule requÃÂÃÂÃÂÃÂªte.
+    const patientIds = [...new Set(consultations.map((c) => c.patientId).filter(Boolean))];
+    const patients = patientIds.length
+      ? await db
+          .select({
+            id: patientsTable.id,
+            nom: patientsTable.nom,
+            espece: patientsTable.espece,
+            race: patientsTable.race,
+            sexe: patientsTable.sexe,
+            dateNaissance: patientsTable.dateNaissance,
+            poids: patientsTable.poids,
+            couleur: patientsTable.couleur,
+            sterilise: patientsTable.sterilise,
+            ownerId: patientsTable.ownerId,
+            antecedents: patientsTable.antecedents,
+            allergies: patientsTable.allergies,
+            createdAt: patientsTable.createdAt,
+            owner: {
+              id: ownersTable.id,
+              nom: ownersTable.nom,
+              prenom: ownersTable.prenom,
+              email: ownersTable.email,
+              telephone: ownersTable.telephone,
+              adresse: ownersTable.adresse,
+              createdAt: ownersTable.createdAt,
+            },
+          })
+          .from(patientsTable)
+          .leftJoin(ownersTable, eq(patientsTable.ownerId, ownersTable.id))
+          .where(
+            and(
+              eq(patientsTable.clinicId, req.clinicId),
+              inArray(patientsTable.id, patientIds as Array<number>),
+            ),
+          )
+      : [];
+    const patientsById = new Map(patients.map((p) => [p.id, p]));
+
+    const result = consultations.map((c) => {
+      const patient = patientsById.get(c.patientId) ?? null;
+      return {
+        ...c,
+        createdAt: c.createdAt.toISOString(),
+        patient: patient
+          ? {
+              ...patient,
+              createdAt: patient.createdAt.toISOString(),
+              owner: patient.owner
+                ? { ...patient.owner, createdAt: patient.owner.createdAt.toISOString() }
+                : null,
+            }
+          : null,
+      };
+    });
+
+    return res.json(result);
+  } catch (err) {
+    req.log.error({ err }, "GET /consultations failed");
+    return res.status(500).json(fail("INTERNAL", "Erreur interne du serveur"));
+  }
+});
+
+router.post("/", validate(CreateConsultationSchema), async (req, res) => {
+  try {
+    const body = CreateConsultationBody.safeParse(req.body);
+    if (!body.success) {
+      return res.status(400).json(
+        fail("VALIDATION_ERROR", "DonnÃÂÃÂÃÂÃÂ©es invalides", body.error.flatten().fieldErrors),
+      );
+    }
+
+    const [pat] = await db
+      .select({ id: patientsTable.id })
+      .from(patientsTable)
+      .where(and(eq(patientsTable.clinicId, req.clinicId), eq(patientsTable.id, body.data.patientId)));
+    if (!pat) return res.status(400).json(fail("PATIENT_NOT_FOUND", "Patient introuvable"));
+
+    const [consultation] = await db
+      .insert(consultationsTable)
+      .values({ ...body.data, clinicId: req.clinicId })
+      .returning();
+
+    return res
+      .status(201)
+      .json({ ...consultation, createdAt: consultation.createdAt.toISOString() });
+  } catch (err) {
+    req.log.error({ err }, "POST /consultations failed");
+    return res.status(500).json(fail("INTERNAL", "Erreur interne du serveur"));
+  }
+});
+
+router.get("/:id", async (req, res) => {
+  try {
+    const params = GetConsultationParams.safeParse({ id: Number(req.params.id) });
+    if (!params.success) return res.status(400).json(fail("INVALID_ID", "ID invalide"));
+
+    const consultation = await getConsultationWithDetails(params.data.id, req.clinicId);
+    if (!consultation) return res.status(404).json(fail("NOT_FOUND", "Consultation non trouvÃÂÃÂÃÂÃÂ©e"));
+
+    return res.json(consultation);
+  } catch (err) {
+    req.log.error({ err }, "GET /consultations/:id failed");
+    return res.status(500).json(fail("INTERNAL", "Erreur interne du serveur"));
+  }
+});
+
+// ============================================================================
+//  PATCH /:id ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ P0-9 : delete+insert des actes encapsulÃÂÃÂÃÂÃÂ©s dans une transaction.
+// ============================================================================
+router.patch("/:id", async (req, res) => {
+  try {
+    const params = UpdateConsultationParams.safeParse({ id: Number(req.params.id) });
+    if (!params.success) return res.status(400).json(fail("INVALID_ID", "ID invalide"));
+
+    const body = UpdateConsultationBody.safeParse(req.body);
+    if (!body.success) {
+      return res.status(400).json(
+        fail("VALIDATION_ERROR", "DonnÃÂÃÂÃÂÃÂ©es invalides", body.error.flatten().fieldErrors),
+      );
+    }
+
+    const { actes, ...consultationData } = body.data;
+
+    const [exists] = await db
+      .select({ id: consultationsTable.id })
+      .from(consultationsTable)
+      .where(and(eq(consultationsTable.clinicId, req.clinicId), eq(consultationsTable.id, params.data.id)));
+    if (!exists) return res.status(404).json(fail("NOT_FOUND", "Consultation non trouvÃÂÃÂÃÂÃÂ©e"));
+
+    await db.transaction(async (tx) => {
+      if (Object.keys(consultationData).length > 0) {
+        await tx
+          .update(consultationsTable)
+          .set(consultationData)
+          .where(
+            and(
+              eq(consultationsTable.clinicId, req.clinicId),
+              eq(consultationsTable.id, params.data.id),
+            ),
+          );
+      }
+
+      if (actes !== undefined) {
+        await tx
+          .delete(actesConsultationsTable)
+          .where(
+            and(
+              eq(actesConsultationsTable.clinicId, req.clinicId),
+              eq(actesConsultationsTable.consultationId, params.data.id),
+            ),
+          );
+        if (actes.length > 0) {
+          await tx.insert(actesConsultationsTable).values(
+            actes.map((a) => ({
+              acteId: a.acteId && a.acteId > 0 ? a.acteId : null,
+              consultationId: params.data.id,
+              quantite: a.quantite,
+              prixUnitaire: a.prixUnitaire,
+              tvaRate: a.tvaRate ?? TVA_DEFAULT_RATE,
+              description: a.description ?? null,
+              clinicId: req.clinicId,
+            })),
+          );
+        }
+      }
+    });
+
+    const consultation = await getConsultationWithDetails(params.data.id, req.clinicId);
+    if (!consultation) return res.status(404).json(fail("NOT_FOUND", "Consultation non trouvÃÂÃÂÃÂÃÂ©e"));
+    return res.json(consultation);
+  } catch (err) {
+    req.log.error({ err }, "PATCH /consultations/:id failed");
+    return res.status(500).json(fail("INTERNAL", "Erreur interne du serveur"));
+  }
+});
+
+router.post("/:id/actes", async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id) || id <= 0) return res.status(400).json(fail("INVALID_ID", "ID invalide"));
+
+    const { description, quantite, prixUnitaire, acteId, tvaRate } = req.body;
+
+    if (!description?.trim()) return res.status(400).json(fail("VALIDATION_ERROR", "Description requise"));
+    if (prixUnitaire === undefined || prixUnitaire === null || Number.isNaN(Number(prixUnitaire))) {
+      return res.status(400).json(fail("VALIDATION_ERROR", "Prix unitaire requis"));
+    }
+
+    const [exists] = await db
+      .select({ id: consultationsTable.id })
+      .from(consultationsTable)
+      .where(and(eq(consultationsTable.clinicId, req.clinicId), eq(consultationsTable.id, id)));
+    if (!exists) return res.status(404).json(fail("NOT_FOUND", "Consultation non trouvÃÂÃÂÃÂÃÂ©e"));
+
+    const [acte] = await db
+      .insert(actesConsultationsTable)
+      .values({
+        consultationId: id,
+        acteId: acteId && Number(acteId) > 0 ? Number(acteId) : null,
+        quantite: Number(quantite) || 1,
+        prixUnitaire: Number(prixUnitaire),
+        tvaRate: tvaRate !== undefined ? Number(tvaRate) : TVA_DEFAULT_RATE,
+        description: String(description).trim(),
+        clinicId: req.clinicId,
+      })
+      .returning();
+
+    return res.status(201).json(acte);
+  } catch (err) {
+    req.log.error({ err }, "POST /consultations/:id/actes failed");
+    return res.status(500).json(fail("INTERNAL", "Erreur interne du serveur"));
+  }
+});
+
+router.post("/:id/ordonnance", async (req, res) => {
+  try {
+    const params = GenerateOrdonnanceParams.safeParse({ id: Number(req.params.id) });
+    if (!params.success) return res.status(400).json(fail("INVALID_ID", "ID invalide"));
+
+    const consultation = await getConsultationWithDetails(params.data.id, req.clinicId);
+    if (!consultation) return res.status(404).json(fail("NOT_FOUND", "Consultation non trouvÃÂÃÂÃÂÃÂ©e"));
+
+    const patient = consultation.patient;
+    const actes = consultation.actes;
+
+    const prompt = `Tu es un vÃÂÃÂÃÂÃÂ©tÃÂÃÂÃÂÃÂ©rinaire. GÃÂÃÂÃÂÃÂ©nÃÂÃÂÃÂÃÂ¨re une ordonnance mÃÂÃÂÃÂÃÂ©dicale structurÃÂÃÂÃÂÃÂ©e pour ce patient animal.
+
+PATIENT : ${patient?.nom ?? "Inconnu"} (${patient?.espece ?? ""}, ${patient?.sexe ?? ""}, ${patient?.sterilise ? "stÃÂÃÂÃÂÃÂ©rilisÃÂÃÂÃÂÃÂ©(e)" : "non stÃÂÃÂÃÂÃÂ©rilisÃÂÃÂÃÂÃÂ©(e)"})
+PROPRIÃÂÃÂÃÂÃÂTAIRE : ${patient?.owner?.nom ?? ""} ${patient?.owner?.prenom ?? ""}
+DATE : ${consultation.date}
+VÃÂÃÂÃÂÃÂTÃÂÃÂÃÂÃÂRINAIRE : Dr. ${consultation.veterinaire}
+
+DIAGNOSTIC : ${consultation.diagnostic ?? consultation.diagnosticIA ?? "ÃÂÃÂÃÂÃÂ prÃÂÃÂÃÂÃÂ©ciser"}
+ANAMNÃÂÃÂÃÂÃÂSE : ${consultation.anamnese ?? ""}
+EXAMEN CLINIQUE : ${consultation.examenClinique ?? ""}
+${actes.length > 0 ? `ACTES RÃÂÃÂÃÂÃÂALISÃÂÃÂÃÂÃÂS : ${actes.map((a) => a.acte?.nom).filter(Boolean).join(", ")}` : ""}
+
+GÃÂÃÂÃÂÃÂ©nÃÂÃÂÃÂÃÂ¨re une ordonnance mÃÂÃÂÃÂÃÂ©dicale vÃÂÃÂÃÂÃÂ©tÃÂÃÂÃÂÃÂ©rinaire complÃÂÃÂÃÂÃÂ¨te avec :
+- En-tÃÂÃÂÃÂÃÂªte professionnel
+- Identification du patient et propriÃÂÃÂÃÂÃÂ©taire
+- Les mÃÂÃÂÃÂÃÂ©dicaments appropriÃÂÃÂÃÂÃÂ©s avec posologie, durÃÂÃÂÃÂÃÂ©e et instructions claires
+- Conseils post-consultation
+- Signature du vÃÂÃÂÃÂÃÂ©tÃÂÃÂÃÂÃÂ©rinaire
+
+Format: texte structurÃÂÃÂÃÂÃÂ© lisible, en franÃÂÃÂÃÂÃÂ§ais, professionnel.`;
+
+    const message = await anthropic.messages.create({
+      model: AI_MODEL,
+      max_tokens: AI_MAX_TOKENS.long,
+      messages: [{ role: "user", content: prompt }],
+    });
+
+    const content = message.content[0];
+    if (content?.type !== "text") {
+      return res.status(500).json(fail("AI_ERROR", "Erreur lors de la gÃÂÃÂÃÂÃÂ©nÃÂÃÂÃÂÃÂ©ration de l'ordonnance"));
+    }
+
+    await db
+      .update(consultationsTable)
+      .set({ ordonnance: content.text })
+      .where(
+        and(
+          eq(consultationsTable.clinicId, req.clinicId),
+          eq(consultationsTable.id, params.data.id),
+        ),
+      );
+
+    return res.json({ ordonnance: content.text });
+  } catch (err) {
+    req.log.error({ err }, "POST /consultations/:id/ordonnance failed");
+    return res.status(500).json(fail("AI_ERROR", "Erreur lors de la gÃÂÃÂÃÂÃÂ©nÃÂÃÂÃÂÃÂ©ration de l'ordonnance"));
+  }
+});
+
+// ============================================================================
+//  POST /:id/facture ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ P0-8 : numÃÂÃÂÃÂÃÂ©rotation atomique via transaction + advisory lock.
+//                      P1-1 : TVA multi-taux par acte.
+// ============================================================================
+router.post("/:id/facture", async (req, res) => {
+  try {
+    const params = GenerateFactureParams.safeParse({ id: Number(req.params.id) });
+    if (!params.success) return res.status(400).json(fail("INVALID_ID", "ID invalide"));
+
+    const [exists] = await db
+      .select({ id: consultationsTable.id })
+      .from(consultationsTable)
+      .where(
+        and(
+          eq(consultationsTable.clinicId, req.clinicId),
+          eq(consultationsTable.id, params.data.id),
+        ),
+      );
+    if (!exists) return res.status(404).json(fail("NOT_FOUND", "Consultation non trouvÃÂÃÂÃÂÃÂ©e"));
+
+    const actes = await db
+      .select()
+      .from(actesConsultationsTable)
+      .where(
+        and(
+          eq(actesConsultationsTable.clinicId, req.clinicId),
+          eq(actesConsultationsTable.consultationId, params.data.id),
+        ),
+      );
+
+    if (actes.length === 0) {
+      return res.status(400).json(
+        fail(
+          "NO_ACTES",
+          "Aucun acte saisi ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ veuillez ajouter et enregistrer vos actes avant de gÃÂÃÂÃÂÃÂ©nÃÂÃÂÃÂÃÂ©rer la facture.",
+        ),
+      );
+    }
+
+    const totals = computeInvoiceTotals(actes, TVA_DEFAULT_RATE);
+
+    if (totals.montantHT === 0) {
+      return res.status(400).json(
+        fail(
+          "ZERO_TOTAL",
+          "Le total des actes est 0 ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ¬ ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ saisissez des prix corrects avant de gÃÂÃÂÃÂÃÂ©nÃÂÃÂÃÂÃÂ©rer la facture.",
+        ),
+      );
+    }
+
+    const [existingFacture] = await db
+      .select()
+      .from(facturesTable)
+      .where(
+        and(
+          eq(facturesTable.clinicId, req.clinicId),
+          eq(facturesTable.consultationId, params.data.id),
+        ),
+      );
+
+    if (existingFacture) {
+      const [updated] = await db
+        .update(facturesTable)
+        .set({
+          montantHT: totals.montantHT,
+          tva: totals.tvaMoyenne,
+          montantTTC: totals.montantTTC,
+          tvaBreakdown: totals.tvaBreakdown,
+        })
+        .where(
+          and(eq(facturesTable.clinicId, req.clinicId), eq(facturesTable.id, existingFacture.id)),
+        )
+        .returning();
+      return res.json({ ...updated, createdAt: updated.createdAt.toISOString() });
+    }
+
+    // Transaction atomique : numÃÂÃÂÃÂÃÂ©ro + insert.
+    const facture = await db.transaction(async (tx) => {
+      const numero = await nextInvoiceNumber(tx, req.clinicId);
+      const [inserted] = await tx
+        .insert(facturesTable)
+        .values({
+          consultationId: params.data.id,
+          numero,
+          montantHT: totals.montantHT,
+          tva: totals.tvaMoyenne,
+          montantTTC: totals.montantTTC,
+          tvaBreakdown: totals.tvaBreakdown,
+          statut: "en_attente",
+          dateEmission: new Date().toISOString().split("T")[0],
+          clinicId: req.clinicId,
+        })
+        .returning();
+      return inserted;
+    });
+
+    return res.json({ ...facture, createdAt: facture.createdAt.toISOString() });
+  } catch (err) {
+    req.log.error({ err }, "POST /consultations/:id/facture failed");
+    return res.status(500).json(fail("INTERNAL", "Erreur lors de la gÃÂÃÂÃÂÃÂ©nÃÂÃÂÃÂÃÂ©ration de la facture"));
+  }
+});
+
+
+// Workflow dual-phase IA
+router.use("/:consultationId/patients", consultationPatientsRouter);
+router.use("/:consultationId/attachments", consultationAttachmentsRouter);
+router.use(workflowRouter);
+export default router;
+
+
+
+======================================================================
+## routes/patients/index.ts -- CRUD Patients
+======================================================================
+
+import { Router } from "express";
+import { db } from "@workspace/db";
+import { patientsTable, ownersTable, consultationsTable } from "@workspace/db";
+import {
+  CreatePatientBody,
+  GetPatientParams,
+  UpdatePatientBody,
+  UpdatePatientParams,
+  DeletePatientParams,
+  ListPatientsQueryParams,
+  ListPatientConsultationsParams,
+} from "@workspace/api-zod";
+import { eq, ilike, or, and, asc } from "drizzle-orm";
+import { PAGINATION_DEFAULT_LIMIT, PAGINATION_MAX_LIMIT } from "../../lib/constants";
+import { validate } from "../../middlewares/validate";
+import { CreatePatientSchema } from "../../schemas";
+
+const router = Router();
+
+router.get("/", async (req, res) => {
+  try {
+    const query = ListPatientsQueryParams.safeParse(req.query);
+    const { search, ownerId, espece } = query.success ? query.data : {};
+    const rawLimit = parseInt(req.query.limit as string || "");
+    const rawOffset = parseInt(req.query.offset as string || "0");
+    const limit = isNaN(rawLimit) ? PAGINATION_DEFAULT_LIMIT : Math.min(rawLimit, PAGINATION_MAX_LIMIT);
+    const offset = isNaN(rawOffset) ? 0 : rawOffset;
+
+    const conditions = [eq(patientsTable.clinicId, req.clinicId)];
+    if (ownerId) conditions.push(eq(patientsTable.ownerId, ownerId));
+    if (espece) conditions.push(eq(patientsTable.espece, espece));
+
+    const baseQuery = db
+      .select({
+        id: patientsTable.id,
+        nom: patientsTable.nom,
+        espece: patientsTable.espece,
+        race: patientsTable.race,
+        sexe: patientsTable.sexe,
+        dateNaissance: patientsTable.dateNaissance,
+        poids: patientsTable.poids,
+        couleur: patientsTable.couleur,
+        sterilise: patientsTable.sterilise,
+        ownerId: patientsTable.ownerId,
+        antecedents: patientsTable.antecedents,
+        allergies: patientsTable.allergies,
+        puce: patientsTable.puce,
+        passeport: patientsTable.passeport,
+        assurance: patientsTable.assurance,
+        assuranceNom: patientsTable.assuranceNom,
+        agressif: patientsTable.agressif,
+        createdAt: patientsTable.createdAt,
+        owner: {
+          id: ownersTable.id,
+          nom: ownersTable.nom,
+          prenom: ownersTable.prenom,
+          email: ownersTable.email,
+          telephone: ownersTable.telephone,
+          adresse: ownersTable.adresse,
+          rgpdAccepted: ownersTable.rgpdAccepted,
+          rgpdAcceptedAt: ownersTable.rgpdAcceptedAt,
+          rgpdDocumentUrl: ownersTable.rgpdDocumentUrl,
+          createdAt: ownersTable.createdAt,
+        },
+      })
+      .from(patientsTable)
+      .leftJoin(ownersTable, eq(patientsTable.ownerId, ownersTable.id));
+
+    let patients;
+    if (search) {
+      patients = await baseQuery
+        .where(and(
+          eq(patientsTable.clinicId, req.clinicId),
+          or(
+            ilike(patientsTable.nom, `%${search}%`),
+            ilike(patientsTable.espece, `%${search}%`),
+            ilike(patientsTable.race, `%${search}%`),
+            ilike(ownersTable.nom, `%${search}%`),
+            ilike(ownersTable.prenom, `%${search}%`),
+          ),
+        ))
+        .orderBy(asc(patientsTable.nom))
+        .limit(limit)
+        .offset(offset);
+    } else {
+      patients = await baseQuery
+        .where(and(...conditions))
+        .orderBy(asc(patientsTable.nom))
+        .limit(limit)
+        .offset(offset);
+    }
+
+    return res.json(patients.map(p => ({
+      ...p,
+      createdAt: p.createdAt.toISOString(),
+      owner: p.owner ? { ...p.owner, createdAt: p.owner.createdAt.toISOString() } : null,
+    })));
+  } catch (err) {
+    req.log.error(err);
+    return res.status(500).json({ error: "Erreur interne du serveur" });
+  }
+});
+
+router.post("/", validate(CreatePatientSchema), async (req, res) => {
+  try {
+    const body = CreatePatientBody.safeParse(req.body);
+    if (!body.success) return res.status(400).json({ error: "DonnÃÂÃÂ©es invalides" });
+    const [own] = await db.select({ id: ownersTable.id }).from(ownersTable)
+      .where(and(eq(ownersTable.clinicId, req.clinicId), eq(ownersTable.id, body.data.ownerId)));
+    if (!own) return res.status(400).json({ error: "PropriÃÂÃÂ©taire introuvable" });
+    const [patient] = await db.insert(patientsTable).values({ ...body.data, clinicId: req.clinicId }).returning();
+    return res.status(201).json({ ...patient, createdAt: patient.createdAt.toISOString() });
+  } catch (err) {
+    req.log.error(err);
+    return res.status(500).json({ error: "Erreur interne du serveur" });
+  }
+});
+
+router.get("/:id", async (req, res) => {
+  try {
+    const params = GetPatientParams.safeParse({ id: Number(req.params.id) });
+    if (!params.success) return res.status(400).json({ error: "ID invalide" });
+    const [patient] = await db
+      .select({
+        id: patientsTable.id,
+        nom: patientsTable.nom,
+        espece: patientsTable.espece,
+        race: patientsTable.race,
+        sexe: patientsTable.sexe,
+        dateNaissance: patientsTable.dateNaissance,
+        poids: patientsTable.poids,
+        couleur: patientsTable.couleur,
+        sterilise: patientsTable.sterilise,
+        ownerId: patientsTable.ownerId,
+        antecedents: patientsTable.antecedents,
+        allergies: patientsTable.allergies,
+        puce: patientsTable.puce,
+        passeport: patientsTable.passeport,
+        assurance: patientsTable.assurance,
+        assuranceNom: patientsTable.assuranceNom,
+        agressif: patientsTable.agressif,
+        createdAt: patientsTable.createdAt,
+        owner: {
+          id: ownersTable.id,
+          nom: ownersTable.nom,
+          prenom: ownersTable.prenom,
+          email: ownersTable.email,
+          telephone: ownersTable.telephone,
+          adresse: ownersTable.adresse,
+          rgpdAccepted: ownersTable.rgpdAccepted,
+          rgpdAcceptedAt: ownersTable.rgpdAcceptedAt,
+          rgpdDocumentUrl: ownersTable.rgpdDocumentUrl,
+          createdAt: ownersTable.createdAt,
+        },
+      })
+      .from(patientsTable)
+      .leftJoin(ownersTable, eq(patientsTable.ownerId, ownersTable.id))
+      .where(and(eq(patientsTable.clinicId, req.clinicId), eq(patientsTable.id, params.data.id)));
+    if (!patient) return res.status(404).json({ error: "Patient non trouvÃÂÃÂ©" });
+    return res.json({
+      ...patient,
+      createdAt: patient.createdAt.toISOString(),
+      owner: patient.owner ? { ...patient.owner, createdAt: patient.owner.createdAt.toISOString() } : null,
+    });
+  } catch (err) {
+    req.log.error(err);
+    return res.status(500).json({ error: "Erreur interne du serveur" });
+  }
+});
+
+router.patch("/:id", async (req, res) => {
+  try {
+    const params = UpdatePatientParams.safeParse({ id: Number(req.params.id) });
+    if (!params.success) return res.status(400).json({ error: "ID invalide" });
+    const body = UpdatePatientBody.safeParse(req.body);
+    if (!body.success) return res.status(400).json({ error: "DonnÃÂÃÂ©es invalides" });
+    const [patient] = await db.update(patientsTable).set(body.data).where(and(eq(patientsTable.clinicId, req.clinicId), eq(patientsTable.id, params.data.id))).returning();
+    if (!patient) return res.status(404).json({ error: "Patient non trouvÃÂÃÂ©" });
+    return res.json({ ...patient, createdAt: patient.createdAt.toISOString() });
+  } catch (err) {
+    req.log.error(err);
+    return res.status(500).json({ error: "Erreur interne du serveur" });
+  }
+});
+
+router.delete("/:id", async (req, res) => {
+  try {
+    const params = DeletePatientParams.safeParse({ id: Number(req.params.id) });
+    if (!params.success) return res.status(400).json({ error: "ID invalide" });
+
+    // VÃÂÃÂ©rifier l'absence de consultations liÃÂÃÂ©es avant suppression
+    // (ÃÂÃÂ©vite une erreur FK PostgreSQL opaque et protÃÂÃÂ¨ge les donnÃÂÃÂ©es mÃÂÃÂ©dicales)
+    const [linked] = await db
+      .select({ id: consultationsTable.id })
+      .from(consultationsTable)
+      .where(and(
+        eq(consultationsTable.clinicId, req.clinicId),
+        eq(consultationsTable.patientId, params.data.id),
+      ))
+      .limit(1);
+
+    if (linked) {
+      return res.status(409).json({
+        error: "Ce patient possÃÂÃÂ¨de des consultations. Supprimez d'abord toutes ses consultations avant de supprimer le patient.",
+      });
+    }
+
+    await db.delete(patientsTable).where(and(eq(patientsTable.clinicId, req.clinicId), eq(patientsTable.id, params.data.id)));
+    return res.status(204).send();
+  } catch (err) {
+    req.log.error(err);
+    return res.status(500).json({ error: "Erreur interne du serveur" });
+  }
+});
+
+router.get("/:id/consultations", async (req, res) => {
+  try {
+    const params = ListPatientConsultationsParams.safeParse({ id: Number(req.params.id) });
+    if (!params.success) return res.status(400).json({ error: "ID invalide" });
+    const consultations = await db.select().from(consultationsTable).where(and(eq(consultationsTable.clinicId, req.clinicId), eq(consultationsTable.patientId, params.data.id)));
+    return res.json(consultations.map(c => ({
+      ...c,
+      createdAt: c.createdAt.toISOString(),
+    })));
+  } catch (err) {
+    req.log.error(err);
+    return res.status(500).json({ error: "Erreur interne du serveur" });
+  }
+});
+
+router.post("/batch", requireAuth(), async (req, res) => {
+  try {
+    const { patients, motherId, fatherId } = req.body as {
+      patients: Array<{
+        nom: string; espece: string; sexe: string; race?: string;
+        couleur?: string; dateNaissance?: string; poids?: number;
+        ownerId: number; clinicId?: number;
+      }>;
+      motherId?: number;
+      fatherId?: number;
+    };
+    if (!Array.isArray(patients) || patients.length === 0) {
+      return res.status(400).json({ error: "patients array required" });
+    }
+    if (patients.length > 20) {
+      return res.status(400).json({ error: "Maximum 20 patients par portee" });
+    }
+    const rows = await db.insert(patientsTable).values(
+      patients.map(p => ({
+        ...p,
+        motherId: motherId ?? null,
+        fatherId: fatherId ?? null,
+        sterilise: false,
+        assurance: false,
+        agressif: false,
+        consentementRgpd: false,
+      }))
+    ).returning();
+    return res.status(201).json({ data: rows, count: rows.length });
+  } catch (err) {
+    req.log.error(err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+export default router;
+
+
