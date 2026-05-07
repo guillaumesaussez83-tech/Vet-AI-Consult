@@ -28,6 +28,21 @@ import statistiquesRouter from "./statistiques";
 import vaccinationsRouter from "./vaccinations";
 import fournisseursRouter from "./fournisseurs";
 
+
+// Routes orphelines branchees -- audit Phase 0
+import actesRouter from "./actes";
+import adminRouter from "./admin";
+import aiRouter from "./ai";
+import anesthesieRouter from "./anesthesie";
+import communicationsRouter from "./communications";
+import comptabiliteRouter from "./comptabilite";
+import cremationRouter from "./cremation";
+import dashboardRouter from "./dashboard";
+import parametresClinique from "./parametres-clinique";
+import portailRouter from "./portail";
+import searchRouter from "./search";
+import vetKnowledgeRouter from "./vet-knowledge";
+
 const router = Router();
 
 // Routes existantes
@@ -56,5 +71,20 @@ router.use("/ventes", ventesRouter);
 router.use("/statistiques", statistiquesRouter);
 router.use("/vaccinations", vaccinationsRouter);
 router.use("/fournisseurs", fournisseursRouter);
+
+
+// Routes orphelines -- audit Phase 0
+router.use("/actes", actesRouter);
+router.use("/admin", adminRouter);
+router.use("/ai", aiRouter);
+router.use("/anesthesie", anesthesieRouter);
+router.use("/communications", communicationsRouter);
+router.use("/comptabilite", comptabiliteRouter);
+router.use("/cremation", cremationRouter);
+router.use("/dashboard", dashboardRouter);
+router.use("/parametres-clinique", parametresClinique);
+router.use("/portail", portailRouter);
+router.use("/search", searchRouter);
+router.use("/vet-knowledge", vetKnowledgeRouter);
 
 export default router;
