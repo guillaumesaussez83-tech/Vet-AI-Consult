@@ -7,8 +7,8 @@ import { findMedications, formatMedicationsContext } from "../../lib/ragMedicati
 
 const router = Router();
 
-// ─── POST /:id/anamnese ─────────────────────────────────────────────────────
-// Phase 1 — GPT-4o-mini (volume task)
+// âââ POST /:id/anamnese âââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// Phase 1 â GPT-4o-mini (volume task)
 router.post("/:id/anamnese", async (req, res) => {
   const consultationId = parseInt(req.params.id);
   const { transcription } = req.body;
@@ -86,8 +86,8 @@ router.post("/:id/anamnese", async (req, res) => {
   }
 });
 
-// ─── POST /:id/examen ───────────────────────────────────────────────────────
-// Phase 2 — GPT-4o-mini (volume task)
+// âââ POST /:id/examen âââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// Phase 2 â GPT-4o-mini (volume task)
 router.post("/:id/examen", async (req, res) => {
   const consultationId = parseInt(req.params.id);
   const { transcription } = req.body;
@@ -112,8 +112,8 @@ router.post("/:id/examen", async (req, res) => {
     let anamneseData: Record<string, unknown> | null = null;
     try {
       if (consult.anamneseIA) anamneseData = JSON.parse(consult.anamneseIA);
-    } catch {
-      /**/
+    } catch (err) {
+      req.log?.warn({ err }, 'non-blocking error');
     }
 
     const prompt =
@@ -172,9 +172,9 @@ router.post("/:id/examen", async (req, res) => {
   }
 });
 
-// ─── POST /:id/valider-examens ──────────────────────────────────────────────
-// Phase 3 — Claude Sonnet + RAG ANMV
-// IMPORTANT: stays in SYNTHESE phase — vet must call /terminer to finalize
+// âââ POST /:id/valider-examens ââââââââââââââââââââââââââââââââââââââââââââââ
+// Phase 3 â Claude Sonnet + RAG ANMV
+// IMPORTANT: stays in SYNTHESE phase â vet must call /terminer to finalize
 router.post("/:id/valider-examens", async (req, res) => {
   const consultationId = parseInt(req.params.id);
   const { examensValides } = req.body;
@@ -197,16 +197,16 @@ router.post("/:id/valider-examens", async (req, res) => {
     let examenData: Record<string, unknown> | null = null;
     try {
       if (consult.anamneseIA) anamneseData = JSON.parse(consult.anamneseIA);
-    } catch {
-      /**/
+    } catch (err) {
+      req.log?.warn({ err }, 'non-blocking error');
     }
     try {
       if (consult.examenIA) examenData = JSON.parse(consult.examenIA);
-    } catch {
-      /**/
+    } catch (err) {
+      req.log?.warn({ err }, 'non-blocking error');
     }
 
-    // ── RAG ANMV: get patient species and search medications ──────────────
+    // ââ RAG ANMV: get patient species and search medications ââââââââââââââ
     let ragContext = "";
     try {
       const [patient] = await db
@@ -266,7 +266,7 @@ router.post("/:id/valider-examens", async (req, res) => {
       syntheseIA = { raw: rawText };
     }
 
-    // ── Log to ai_outputs ─────────────────────────────────────────────────
+    // ââ Log to ai_outputs âââââââââââââââââââââââââââââââââââââââââââââââââ
     let aiOutputId: number | null = null;
     try {
       const [inserted] = await db
@@ -285,7 +285,7 @@ router.post("/:id/valider-examens", async (req, res) => {
       req.log?.warn({ err: e }, "ai_outputs insert failed (synthese)");
     }
 
-    // ── Update consultation (STAY in SYNTHESE — vet must validate) ────────
+    // ââ Update consultation (STAY in SYNTHESE â vet must validate) ââââââââ
     await db
       .update(consultationsTable)
       .set({
@@ -300,7 +300,7 @@ router.post("/:id/valider-examens", async (req, res) => {
         )
       );
 
-    // ── Auto-create ordonnance ────────────────────────────────────────────
+    // ââ Auto-create ordonnance ââââââââââââââââââââââââââââââââââââââââââââ
     let ordonnanceId: number | null = null;
     let ordonnanceNumero: string | null = null;
     try {
@@ -314,7 +314,7 @@ router.post("/:id/valider-examens", async (req, res) => {
           .filter((m: any) => m.molecule || m.specialite)
           .map((m: any) => {
             const nom = m.specialite || m.molecule || "Medicament";
-            const lines = ["• " + nom];
+            const lines = ["â¢ " + nom];
             if (m.dose_mg) lines.push("  Dose : " + m.dose_mg + "mg");
             if (m.forme) lines.push("  Forme : " + m.forme);
             if (m.posologie) lines.push("  Posologie : " + m.posologie);
@@ -371,7 +371,7 @@ router.post("/:id/valider-examens", async (req, res) => {
       );
     }
 
-    // ── Auto-create actes devis ───────────────────────────────────────────
+    // ââ Auto-create actes devis âââââââââââââââââââââââââââââââââââââââââââ
     try {
       const lignesDevis: Array<{
         description: string;
@@ -391,7 +391,7 @@ router.post("/:id/valider-examens", async (req, res) => {
           ]
             .filter(Boolean)
             .join(" ");
-          const description = nom + (details ? " — " + details : "");
+          const description = nom + (details ? " â " + details : "");
           lignesDevis.push({
             description,
             prixUnitaire: Number(med.prix_estime) || 0,
@@ -453,8 +453,8 @@ router.post("/:id/valider-examens", async (req, res) => {
   }
 });
 
-// ─── POST /:id/terminer ──────────────────────────────────────────────────────
-// Validation checkpoint — requires Clerk user ID before TERMINEE
+// âââ POST /:id/terminer ââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// Validation checkpoint â requires Clerk user ID before TERMINEE
 router.post("/:id/terminer", async (req, res) => {
   const consultationId = parseInt(req.params.id);
   const { validated_by, validation_changes } = req.body;
@@ -462,7 +462,7 @@ router.post("/:id/terminer", async (req, res) => {
 
   if (!validated_by?.trim()) {
     return res.status(400).json({
-      error: "validated_by requis — identifiant veterinaire manquant",
+      error: "validated_by requis â identifiant veterinaire manquant",
     });
   }
 
@@ -509,8 +509,8 @@ router.post("/:id/terminer", async (req, res) => {
     let syntheseIA: Record<string, unknown> | null = null;
     try {
       if (consult.syntheseIA) syntheseIA = JSON.parse(consult.syntheseIA);
-    } catch {
-      /**/
+    } catch (err) {
+      req.log?.warn({ err }, 'non-blocking error');
     }
 
     // Transition to TERMINEE
@@ -519,12 +519,14 @@ router.post("/:id/terminer", async (req, res) => {
       .set({
         phase: "TERMINEE",
         statut: "terminee",
-        diagnostic:
-          typeof syntheseIA?.diagnostic_final === "string"
-            ? syntheseIA.diagnostic_final
-            : "",
-        notes:
-          typeof syntheseIA?.suivi === "string" ? syntheseIA.suivi : "",
+        ...(syntheseIA != null && {
+          diagnostic:
+            typeof syntheseIA.diagnostic_final === "string"
+              ? syntheseIA.diagnostic_final
+              : undefined,
+          notes:
+            typeof syntheseIA.suivi === "string" ? syntheseIA.suivi : undefined,
+        }),
       })
       .where(
         and(
@@ -544,7 +546,7 @@ router.post("/:id/terminer", async (req, res) => {
   }
 });
 
-// ─── GET /:id/workflow-state ─────────────────────────────────────────────────
+// âââ GET /:id/workflow-state âââââââââââââââââââââââââââââââââââââââââââââââââ
 router.get("/:id/workflow-state", async (req, res) => {
   const consultationId = parseInt(req.params.id);
   const clinicId = req.clinicId;
