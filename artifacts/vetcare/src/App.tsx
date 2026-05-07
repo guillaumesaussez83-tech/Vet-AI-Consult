@@ -30,6 +30,19 @@ import VentesPage from "./pages/ventes";
 import VaccinationsPage from "./pages/vaccinations";
 import FournisseursPage from "./pages/fournisseurs";
 
+
+// Pages orphelines branchees -- audit Phase 0
+import ActesPage from "./pages/actes";
+import AdminPage from "./pages/admin";
+import CataloguePage from "./pages/catalogue";
+import CertificatsPage from "./pages/certificats";
+import ComptabilitePage from "./pages/comptabilite";
+import CremationPage from "./pages/cremation";
+import PortailPage from "./pages/portail";
+import RappelsPage from "./pages/rappels";
+import SalleAttentePage from "./pages/salle-attente";
+import StupefiantsPage from "./pages/stupefiants";
+
 function PrivateRoute({ component: Component, ...rest }: any) {
   const { isLoaded, isSignedIn } = useAuth();
   if (!isLoaded) return null;
@@ -87,6 +100,17 @@ export default function App() {
           <Route path="/permissions" component={() => <PrivateRoute component={PermissionsPage} />} />
 
           <Route path="/parametres" component={() => <PrivateRoute component={ParametresPage} />} />
+          {/* Modules clinique -- audit Phase 0 */}
+          <Route path="/actes" component={() => <PrivateRoute component={ActesPage} />} />
+          <Route path="/catalogue" component={() => <PrivateRoute component={CataloguePage} />} />
+          <Route path="/certificats" component={() => <PrivateRoute component={CertificatsPage} />} />
+          <Route path="/comptabilite" component={() => <PrivateRoute component={ComptabilitePage} />} />
+          <Route path="/cremation" component={() => <PrivateRoute component={CremationPage} />} />
+          <Route path="/portail" component={() => <PrivateRoute component={PortailPage} />} />
+          <Route path="/rappels" component={() => <PrivateRoute component={RappelsPage} />} />
+          <Route path="/salle-attente" component={() => <PrivateRoute component={SalleAttentePage} />} />
+          <Route path="/stupefiants" component={() => <PrivateRoute component={StupefiantsPage} />} />
+          <Route path="/admin" component={() => <PrivateRoute component={AdminPage} />} />
         </Switch>
       </AppLayout>
     </Switch>
