@@ -1,166 +1,139 @@
-import { type ReactNode } from "react";
+// artifacts/vetcare/src/components/AppLayout.tsx
+// MODIFIÉ Sprint 7 — ajout nav Propriétaires + Permissions
+
+import { ReactNode } from "react";
 import { Link, useLocation } from "wouter";
-import { useUser, useClerk } from "@clerk/react";
-import { 
-  Activity, 
-  Users, 
-  FileText, 
-  Settings, 
-  LogOut,
-  Syringe,
-  Menu,
-  Euro,
-  Bell,
-  CalendarDays,
-  Package,
-  BarChart2,
-  Award,
-  ClipboardList,
-  LayoutDashboard,
-  Stethoscope,
-  FlaskConical,
-  ShoppingCart,
-  UserCog,
-  Shield,
-  Flame,
-  BookOpen, Calculator, Truck,
-} from "lucide-react";
-import { Logo } from "@/components/Logo";
-import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { useAuth, UserButton } from "@clerk/clerk-react";
 
-export function AppLayout({ children }: { children: ReactNode }) {
+const NAV_ITEMS = [
+  { href: "/dashboard", label: "Dashboard", icon: (
+    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+    </svg>
+  )},
+  { href: "/agenda", label: "Agenda", icon: (
+    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+    </svg>
+  )},
+  { href: "/patients", label: "Patients", icon: (
+    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+    </svg>
+  )},
+  { href: "/proprietaires", label: "Propriétaires", icon: (
+    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2h5M12 12a4 4 0 100-8 4 4 0 000 8z" />
+    </svg>
+  )},
+  { href: "/factures", label: "Facturation", icon: (
+    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+    </svg>
+  )},
+  { href: "/caisse", label: "Caisse", icon: (
+    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+    </svg>
+  )},
+  { href: "/ordonnances", label: "Ordonnances", icon: (
+    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+    </svg>
+  )},
+  { href: "/stocks", label: "Stocks", icon: (
+    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+    </svg>
+  )},
+  { href: "/rapports", label: "Rapports", icon: (
+    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+    </svg>
+  )},
+];
+
+const BOTTOM_NAV = [
+  { href: "/permissions", label: "Permissions", icon: (
+    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+    </svg>
+  )},
+  { href: "/parametres", label: "Paramètres", icon: (
+    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+    </svg>
+  )},
+];
+
+export default function AppLayout({ children }: { children: ReactNode }) {
   const [location] = useLocation();
-  const { user } = useUser();
-  const { signOut } = useClerk();
+  const { isSignedIn } = useAuth();
 
-  const navigation = [
-    { name: "Tableau de bord", href: "/dashboard", icon: Activity },
-    { name: "Statistiques", href: "/statistiques", icon: BarChart2 },
-    { name: "Salle d'attente", href: "/salle-attente", icon: LayoutDashboard },
-    { name: "Agenda", href: "/agenda", icon: CalendarDays },
-    { name: "Patients", href: "/patients", icon: Users },
-    { name: "Consultations", href: "/consultations", icon: Stethoscope },
-    { name: "Certificats", href: "/certificats", icon: Award },
-    { name: "Facturation", href: "/factures", icon: FileText },
-    { name: "Encaissements", href: "/encaissements", icon: Euro },
-    { name: "Ordonnances", href: "/ordonnances", icon: ClipboardList },
-    { name: "Rappels", href: "/rappels", icon: Bell },
-    { name: "Stock", href: "/stock", icon: Package },
-    { name: "StupÃÂ©fiants", href: "/stupefiants", icon: FlaskConical },
-    { name: "Actes & Produits", href: "/actes", icon: Syringe },
-    { name: "ParamÃÂ¨tres", href: "/parametres", icon: Settings },
-  { name: "Ventes", href: "/ventes", icon: ShoppingCart },
-  { name: "ÃÂquipe", href: "/equipe", icon: UserCog },
-  { name: "Permissions", href: "/admin/permissions", icon: Shield },
-  { name: "Crémation", href: "/cremation", icon: Flame },
-  { name: "Catalogue Prix", href: "/catalogue", icon: BookOpen },
-    { name: "Comptabilité", href: "/comptabilite", icon: Calculator },
-    { name: "Fournisseurs", href: "/fournisseurs", icon: Truck },
-    { name: "Vaccinations", href: "/vaccinations", icon: Syringe },
-    { name: "Caisse", href: "/caisse", icon: ShoppingCart },
-  ];
+  if (!isSignedIn) return <>{children}</>;
 
-  const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
-  const currentPath = location === "" ? "/" : location;
-
-  const NavLinks = () => (
-    <div className="flex flex-col gap-2 mt-4 px-2">
-      {navigation.map((item) => {
-        const isActive = currentPath === item.href || (item.href !== "/dashboard" && currentPath.startsWith(item.href));
-        return (
-          <Link key={item.name} href={item.href}>
-            <div
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors cursor-pointer text-sm font-medium ${
-                isActive
-                  ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                  : "text-sidebar-foreground/80 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
-              }`}
-            >
-              <item.icon className="h-5 w-5" />
-              {item.name}
-            </div>
-          </Link>
-        );
-      })}
-    </div>
-  );
+  const isActive = (href: string) => location === href || (href !== "/dashboard" && location.startsWith(href));
 
   return (
-    <div className="min-h-screen bg-background flex w-full">
-      {/* Desktop Sidebar */}
-      <aside className="hidden md:flex flex-col w-64 border-r bg-sidebar border-sidebar-border h-screen sticky top-0 shrink-0">
-        <div className="p-5 flex items-center">
-          <Logo size={28} />
-        </div>
-        
-        <div className="flex-1 overflow-y-auto px-3">
-          <NavLinks />
-        </div>
-
-        <div className="p-4 border-t border-sidebar-border/50">
-          <div className="flex items-center gap-3 px-3 py-2">
-            <div className="h-9 w-9 rounded-full bg-sidebar-accent flex items-center justify-center text-sidebar-accent-foreground font-semibold">
-              {user?.firstName?.charAt(0) || "D"}
-            </div>
-            <div className="flex-1 overflow-hidden">
-              <p className="text-sm font-medium text-sidebar-foreground truncate">Dr. {user?.firstName || "VÃÂ©tÃÂ©rinaire"}</p>
-              <p className="text-xs text-sidebar-foreground/60 truncate">{user?.emailAddresses[0]?.emailAddress}</p>
+    <div className="flex h-screen bg-gray-50 overflow-hidden">
+      {/* Sidebar */}
+      <aside className="w-60 bg-white border-r border-gray-200 flex flex-col flex-shrink-0 shadow-sm">
+        {/* Logo */}
+        <div className="px-5 py-5 border-b border-gray-100">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold text-sm">V</div>
+            <div>
+              <div className="font-bold text-gray-900 text-sm leading-none">VétoAI</div>
+              <div className="text-xs text-gray-400 leading-none mt-0.5">Clinique vétérinaire</div>
             </div>
           </div>
-          <Button 
-            variant="ghost" 
-            className="w-full justify-start text-sidebar-foreground/80 hover:text-sidebar-foreground hover:bg-sidebar-accent/50 mt-2"
-            onClick={() => signOut()}
-          >
-            <LogOut className="h-4 w-4 mr-2" />
-            DÃÂ©connexion
-          </Button>
+        </div>
+
+        {/* Nav items */}
+        <nav className="flex-1 px-3 py-3 space-y-0.5 overflow-y-auto">
+          {NAV_ITEMS.map(item => (
+            <Link key={item.href} href={item.href}>
+              <div className={`flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer transition-colors text-sm ${
+                isActive(item.href)
+                  ? "bg-blue-50 text-blue-700 font-semibold"
+                  : "text-gray-600 hover:bg-gray-100 hover:text-gray-800"
+              }`}>
+                <span className={isActive(item.href) ? "text-blue-600" : "text-gray-400"}>
+                  {item.icon}
+                </span>
+                {item.label}
+              </div>
+            </Link>
+          ))}
+        </nav>
+
+        {/* Bottom nav */}
+        <div className="px-3 py-3 border-t border-gray-100 space-y-0.5">
+          {BOTTOM_NAV.map(item => (
+            <Link key={item.href} href={item.href}>
+              <div className={`flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer transition-colors text-sm ${
+                isActive(item.href)
+                  ? "bg-blue-50 text-blue-700 font-semibold"
+                  : "text-gray-600 hover:bg-gray-100 hover:text-gray-800"
+              }`}>
+                <span className={isActive(item.href) ? "text-blue-600" : "text-gray-400"}>
+                  {item.icon}
+                </span>
+                {item.label}
+              </div>
+            </Link>
+          ))}
+          <div className="px-3 py-2.5 flex items-center gap-3">
+            <UserButton afterSignOutUrl="/sign-in" />
+            <span className="text-xs text-gray-500">Mon compte</span>
+          </div>
         </div>
       </aside>
 
-      {/* Main Content */}
-      <main className="flex-1 flex flex-col min-w-0 max-w-full">
-        {/* Mobile Header */}
-        <header className="md:hidden flex items-center justify-between p-4 border-b bg-card">
-          <div className="flex items-center">
-            <Logo size={22} />
-          </div>
-          
-          <Sheet>
-            <SheetTrigger asChild>
-              <Button variant="ghost" size="icon">
-                <Menu className="h-6 w-6" />
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="left" className="w-72 bg-sidebar p-0 border-sidebar-border">
-              <div className="p-5 flex items-center">
-                <Logo size={28} />
-              </div>
-              <div className="px-3">
-                <NavLinks />
-              </div>
-            </SheetContent>
-          </Sheet>
-        </header>
-
-        <div className={`flex-1 overflow-y-auto ${currentPath === "/salle-attente" ? "" : "p-4 md:p-6"}`}>
-          <div className={currentPath === "/salle-attente" ? "h-full" : "max-w-6xl mx-auto w-full"}>
-            {children}
-          </div>
-        </div>
-        {currentPath !== "/salle-attente" && (
-          <footer className="border-t bg-card/50 py-3 px-4 md:px-6">
-            <div className="max-w-6xl mx-auto flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
-              <span>ÃÂ© {new Date().getFullYear()} VÃÂ©toAI</span>
-              <div className="flex items-center gap-3">
-                <a href="/legal" className="hover:text-foreground hover:underline">Mentions lÃÂ©gales</a>
-                <span>ÃÂ·</span>
-                <a href="/confidentialite" className="hover:text-foreground hover:underline">ConfidentialitÃÂ©</a>
-              </div>
-            </div>
-          </footer>
-        )}
+      {/* Main content */}
+      <main className="flex-1 overflow-y-auto">
+        {children}
       </main>
     </div>
   );
