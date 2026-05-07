@@ -1,73 +1,44 @@
-import { Router, type IRouter } from "express";
-import { aiLimiter } from "../middlewares/rateLimiter";
-import healthRouter from "./health";
-import ownersRouter from "./owners";
-import patientsRouter from "./patients";
-import consultationsRouter from "./consultations";
-import actesRouter from "./actes";
-import facturesRouter from "./factures";
-import aiRouter from "./ai";
-import dashboardRouter from "./dashboard";
-import storageRouter from "./storage";
-import rappelsRouter from "./rappels";
-import vaccinationsRouter from "./vaccinations";
-import stockRouter from "./stock";
+// artifacts/api-server/src/routes/index.ts
+// MODIFIÉ — ajout routes Sprint 7
+
+import { Router } from "express";
 import rendezVousRouter from "./rendez-vous";
-import anesthesieRouter from "./anesthesie";
-import portailRouter from "./portail";
-import statistiquesRouter from "./statistiques";
-import ordonnancesRouter from "./ordonnances";
-import parametresCliniqueRouter from "./parametres-clinique";
 import agendaRouter from "./agenda";
-import searchRouter from "./search";
-import encaissementsRouter from "./encaissements";
-import vetKnowledgeRouter from "./vet-knowledge";
-import equipeRouter from "./equipe";
-import ventesRouter from "./ventes";
-import adminPermissionsRouter from "./admin/permissions";
-import adminAiCostsRouter from "./admin/ai-costs";
+import patientsRouter from "./patients";
+import ownersRouter from "./owners";
+import consultationsRouter from "./consultations";
+import facturesRouter from "./factures";
+import ordonnancesRouter from "./ordonnances";
+import stocksRouter from "./stocks";
+import rappelsRouter from "./rappels";
+import clinicRouter from "./clinic";
 
-const router: IRouter = Router();
+// Sprint 7 — Phase 1 MVP Clinique
+import permissionsRouter from "./permissions";
+import smsRouter from "./sms";
+import recurringAppointmentsRouter from "./recurring-appointments";
+import weightHistoryRouter from "./weight-history";
+import clientLettersRouter from "./client-letters";
 
-router.use(healthRouter);
-router.use("/owners", ownersRouter);
-router.use("/patients", patientsRouter);
-router.use("/consultations", consultationsRouter);
-router.use("/actes", actesRouter);
-router.use("/factures", facturesRouter);
-router.use("/ai", aiLimiter, aiRouter);
-router.use("/dashboard", dashboardRouter);
-router.use("/rappels", rappelsRouter);
-router.use("/vaccinations", vaccinationsRouter);
-router.use("/stock", stockRouter);
+const router = Router();
+
+// Routes existantes
 router.use("/rendez-vous", rendezVousRouter);
-router.use("/anesthesie", anesthesieRouter);
-router.use("/statistiques", statistiquesRouter);
-router.use("/portail", portailRouter);
-router.use("/ordonnances", ordonnancesRouter);
-router.use("/parametres-clinique", parametresCliniqueRouter);
 router.use("/agenda", agendaRouter);
-router.use("/search", searchRouter);
-router.use("/encaissements", encaissementsRouter);
-router.use("/vet-knowledge", vetKnowledgeRouter);
-router.use(storageRouter);
-router.use("/equipe", equipeRouter);
-router.use("/ventes", ventesRouter);
-router.use("/admin/permissions", adminPermissionsRouter);
-router.use("/admin", adminAiCostsRouter);
+router.use("/patients", patientsRouter);
+router.use("/owners", ownersRouter);
+router.use("/consultations", consultationsRouter);
+router.use("/factures", facturesRouter);
+router.use("/ordonnances", ordonnancesRouter);
+router.use("/stocks", stocksRouter);
+router.use("/rappels", rappelsRouter);
+router.use("/clinic", clinicRouter);
 
-import cremationRouter from "./cremation";
-router.use("/cremation-partners", cremationRouter);
+// Sprint 7 — nouvelles routes
+router.use("/permissions", permissionsRouter);
+router.use("/sms", smsRouter);
+router.use("/recurring-appointments", recurringAppointmentsRouter);
+router.use("/weight-history", weightHistoryRouter);
+router.use("/client-letters", clientLettersRouter);
 
-import comptabiliteRouter from "./comptabilite";
-router.use("/comptabilite", comptabiliteRouter);
-
-import stockRouter from "./stock";
-import fournisseursRouter from "./fournisseurs";
-import vaccinationsRouter from "./vaccinations";
-import communicationsRouter from "./communications";
-router.use("/stock", stockRouter);
-router.use("/fournisseurs", fournisseursRouter);
-router.use("/vaccinations", vaccinationsRouter);
-router.use("/communications", communicationsRouter);
 export default router;
