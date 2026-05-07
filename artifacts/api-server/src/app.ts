@@ -8,10 +8,11 @@ import { existsSync } from "fs";
 import pinoHttp from "pino-http";
 import { clerkMiddleware } from "@clerk/express";
 import { CLERK_PROXY_PATH, clerkProxyMiddleware } from "./middlewares/clerkProxyMiddleware";
-import { extractClinic } from "./middlewares/extractClinic";
+import { requireClinicId } from "./middleware/requireClinicId";
 import router from "./routes";
 import { logger } from "./lib/logger";
-import { errorHandler } from "./middlewares/errorHandler";
+import { errorHandler } from "./middleware/errorHandler";
+import { auditLogger } from "./middleware/auditLogger";
 import { apiLimiter } from "./middlewares/rateLimiter";
 import { responseWrapper } from "./middlewares/responseWrapper";
 import { fail } from "./lib/response";
@@ -72,7 +73,7 @@ app.use(
         };
       },
     },
-    // Empêcher la fuite de headers sensibles dans les logs.
+    // EmpÃªcher la fuite de headers sensibles dans les logs.
     redact: {
       paths: [
         'req.headers.authorization',
@@ -87,9 +88,9 @@ app.use(
 
 app.use(CLERK_PROXY_PATH, clerkProxyMiddleware());
 
-// =============== CORS strict — whitelist pilotée par env ===============
+// =============== CORS strict â whitelist pilotÃ©e par env ===============
 // En prod, CORS_ALLOWED_ORIGINS="https://app.vetoai.fr".
-// Plusieurs origines séparées par virgule, ex: "https://app.vetoai.fr,https://staging.vetoai.fr".
+// Plusieurs origines sÃ©parÃ©es par virgule, ex: "https://app.vetoai.fr,https://staging.vetoai.fr".
 const ALLOWED_ORIGINS = (process.env["CORS_ALLOWED_ORIGINS"] ?? "https://app.vetoai.fr")
   .split(",")
   .map((s) => s.trim())
@@ -99,7 +100,7 @@ app.use("/api",
   cors({
     credentials: true,
     origin: (origin, cb) => {
-      // Pas d'Origin → appel same-origin (navigation directe, Postman, curl). OK.
+      // Pas d'Origin â appel same-origin (navigation directe, Postman, curl). OK.
       if (!origin) return cb(null, true);
       if (ALLOWED_ORIGINS.includes(origin)) return cb(null, true);
       logger.warn({ origin }, "CORS blocked");
@@ -115,10 +116,11 @@ app.use(clerkMiddleware());
 
 app.use("/api", apiLimiter);
 app.use("/api", responseWrapper);
-app.use("/api", extractClinic());
+app.use("/api", requireClinicId);
+app.use("/api", auditLogger);
 app.use("/api", router);
 
-// === Servir le frontend en production (déploiement monolithique) ===
+// === Servir le frontend en production (dÃ©ploiement monolithique) ===
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const frontendDist = path.resolve(__dirname, "../../vetcare/dist/public");
@@ -141,7 +143,7 @@ app.use((req, res) => {
   res.status(404).json(fail("NOT_FOUND", `Route ${req.method} ${req.path} introuvable`));
 });
 
-// Sentry error handler — doit être enregistré avant tout autre error middleware
+// Sentry error handler â doit Ãªtre enregistrÃ© avant tout autre error middleware
 Sentry.setupExpressErrorHandler(app);
 
 app.use(errorHandler);
