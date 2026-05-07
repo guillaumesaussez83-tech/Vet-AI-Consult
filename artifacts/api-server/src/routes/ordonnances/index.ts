@@ -14,13 +14,15 @@ import { AI_MODEL, AI_MAX_TOKENS } from "../../lib/constants";
 import { anthropic } from "@workspace/integrations-anthropic-ai";
 import { decrementerConsultationFEFO } from "../stock/ia-engine";
 import { checkContraindications } from "../../services/contraindications";
+import { validate } from "../../middlewares/validate";
+import { CreateOrdonnanceSchema } from "../../schemas";
 
 const router = Router();
 
-// Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
-// HELPER : dÃÂ©crÃÂ©menter le stock depuis le texte d'une ordonnance
-// Fire-and-forget Ã¢ÂÂ ne bloque jamais la rÃÂ©ponse HTTP.
-// Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
+// ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ
+// HELPER : dÃÂÃÂ©crÃÂÃÂ©menter le stock depuis le texte d'une ordonnance
+// Fire-and-forget ÃÂ¢ÃÂÃÂ ne bloque jamais la rÃÂÃÂ©ponse HTTP.
+// ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ
 async function decrementeStockDepuisOrdonnance(
   clinicId: string,
   consultationId: number,
@@ -28,20 +30,20 @@ async function decrementeStockDepuisOrdonnance(
   logFn: (msg: string, data?: unknown) => void,
 ): Promise<void> {
   try {
-    const parsePrompt = `Analyse cette ordonnance vÃÂ©tÃÂ©rinaire et extrais UNIQUEMENT la liste des mÃÂ©dicaments/produits avec leurs quantitÃÂ©s.
+    const parsePrompt = `Analyse cette ordonnance vÃÂÃÂ©tÃÂÃÂ©rinaire et extrais UNIQUEMENT la liste des mÃÂÃÂ©dicaments/produits avec leurs quantitÃÂÃÂ©s.
 
 ORDONNANCE :
 ${contenu}
 
-RÃÂ©ponds UNIQUEMENT en JSON valide, sans texte autour, format exact :
+RÃÂÃÂ©ponds UNIQUEMENT en JSON valide, sans texte autour, format exact :
 [ { "nom": "Meloxicam", "quantite": 14 }, { "nom": "Amoxicilline 500mg", "quantite": 30 } ]
 
-RÃÂ¨gles :
-- "nom" = DCI ou nom commercial exact du mÃÂ©dicament
-- "quantite" = nombre d'unitÃÂ©s ÃÂ  dÃÂ©livrer
-- Si quantitÃÂ© non prÃÂ©cisÃÂ©e, mettre 1
-- Ignorer les vitamines, supplÃÂ©ments, conseils de soins
-- Si aucun mÃÂ©dicament trouvÃÂ©, retourner []`;
+RÃÂÃÂ¨gles :
+- "nom" = DCI ou nom commercial exact du mÃÂÃÂ©dicament
+- "quantite" = nombre d'unitÃÂÃÂ©s ÃÂÃÂ  dÃÂÃÂ©livrer
+- Si quantitÃÂÃÂ© non prÃÂÃÂ©cisÃÂÃÂ©e, mettre 1
+- Ignorer les vitamines, supplÃÂÃÂ©ments, conseils de soins
+- Si aucun mÃÂÃÂ©dicament trouvÃÂÃÂ©, retourner []`;
 
     const aiResp = await anthropic.messages.create({
       model: AI_MODEL,
@@ -60,10 +62,10 @@ RÃÂ¨gles :
 
     const resultats = await decrementerConsultationFEFO(clinicId, consultationId, parsed);
     const decremented = resultats.filter((r) => !r.notFound).length;
-    logFn(`Stock dÃÂ©crÃÂ©mentÃÂ© depuis ordonnance: ${decremented}/${parsed.length} produits (FEFO)`);
+    logFn(`Stock dÃÂÃÂ©crÃÂÃÂ©mentÃÂÃÂ© depuis ordonnance: ${decremented}/${parsed.length} produits (FEFO)`);
   } catch (err) {
-    // Non-bloquant Ã¢ÂÂ on log uniquement
-    logFn("DÃÂ©crÃÂ©mentation stock depuis ordonnance ignorÃÂ©e (non bloquante): " + String(err));
+    // Non-bloquant ÃÂ¢ÃÂÃÂ on log uniquement
+    logFn("DÃÂÃÂ©crÃÂÃÂ©mentation stock depuis ordonnance ignorÃÂÃÂ©e (non bloquante): " + String(err));
   }
 }
 
@@ -123,7 +125,7 @@ router.get("/:id", async (req, res) => {
           eq(ordonnancesTable.id, id),
         ),
       );
-    if (!row) return res.status(404).json({ error: "Ordonnance non trouvÃÂ©e" });
+    if (!row) return res.status(404).json({ error: "Ordonnance non trouvÃÂÃÂ©e" });
     return res.json({
       ...row,
       createdAt: row.createdAt.toISOString(),
@@ -135,7 +137,7 @@ router.get("/:id", async (req, res) => {
   }
 });
 
-router.post("/", async (req, res) => {
+router.post("/", validate(CreateOrdonnanceSchema), async (req, res) => {
   try {
     const {
       consultationId,
@@ -196,7 +198,7 @@ router.post("/", async (req, res) => {
       })
       .returning();
 
-    // DÃÂ©crÃÂ©menter le stock automatiquement (FEFO) Ã¢ÂÂ fire and forget
+    // DÃÂÃÂ©crÃÂÃÂ©menter le stock automatiquement (FEFO) ÃÂ¢ÃÂÃÂ fire and forget
     setImmediate(() =>
       void decrementeStockDepuisOrdonnance(
         req.clinicId,
@@ -238,7 +240,7 @@ router.patch("/:id", async (req, res) => {
         ),
       )
       .returning();
-    if (!row) return res.status(404).json({ error: "Ordonnance non trouvÃÂ©e" });
+    if (!row) return res.status(404).json({ error: "Ordonnance non trouvÃÂÃÂ©e" });
     return res.json({
       ...row,
       createdAt: row.createdAt.toISOString(),
@@ -264,7 +266,7 @@ router.delete("/:id", async (req, res) => {
       )
       .returning();
     if (!deleted)
-      return res.status(404).json({ error: "Ordonnance non trouvÃÂ©e" });
+      return res.status(404).json({ error: "Ordonnance non trouvÃÂÃÂ©e" });
     return res.json({ success: true });
   } catch (err) {
     req.log.error(err);
@@ -317,7 +319,7 @@ router.post("/ia/generer", async (req, res) => {
         ),
       );
     if (!consultation)
-      return res.status(404).json({ error: "Consultation non trouvÃÂ©e" });
+      return res.status(404).json({ error: "Consultation non trouvÃÂÃÂ©e" });
 
     const actes = await db
       .select({
@@ -346,7 +348,7 @@ router.post("/ia/generer", async (req, res) => {
           (Date.now() - new Date(dateNaissance).getTime()) /
             (365.25 * 24 * 3600 * 1000),
         )} ans`
-      : "ÃÂ¢ge inconnu";
+      : "ÃÂÃÂ¢ge inconnu";
     const proprietaire = consultation.patient?.owner
       ? `${consultation.patient.owner.prenom ?? ""} ${consultation.patient.owner.nom ?? ""}`.trim()
       : "";
@@ -357,7 +359,7 @@ router.post("/ia/generer", async (req, res) => {
         .filter(
           (a) =>
             a.categorie === "medicament" ||
-            a.categorie === "MÃÂ©dicaments" ||
+            a.categorie === "MÃÂÃÂ©dicaments" ||
             a.code?.startsWith("MED"),
         )
         .map(
@@ -367,38 +369,38 @@ router.post("/ia/generer", async (req, res) => {
         .join("\n") ||
       actes.map((a) => `- ${a.nom} (x${a.quantite})`).join("\n");
 
-    const prompt = `Tu es un vÃÂ©tÃÂ©rinaire expert. GÃÂ©nÃÂ¨re une ordonnance vÃÂ©tÃÂ©rinaire professionnelle en franÃÂ§ais pour la consultation suivante.
+    const prompt = `Tu es un vÃÂÃÂ©tÃÂÃÂ©rinaire expert. GÃÂÃÂ©nÃÂÃÂ¨re une ordonnance vÃÂÃÂ©tÃÂÃÂ©rinaire professionnelle en franÃÂÃÂ§ais pour la consultation suivante.
 
 PATIENT :
 - Nom : ${nomPatient}
-- EspÃÂ¨ce : ${espece} ${race ? `(${race})` : ""}
+- EspÃÂÃÂ¨ce : ${espece} ${race ? `(${race})` : ""}
 - Age : ${ageStr}
-- Poids : ${poids ? `${poids} kg` : "non renseignÃÂ©"}
-- PropriÃÂ©taire : ${proprietaire || "non renseignÃÂ©"}
+- Poids : ${poids ? `${poids} kg` : "non renseignÃÂÃÂ©"}
+- PropriÃÂÃÂ©taire : ${proprietaire || "non renseignÃÂÃÂ©"}
 ${allergies ? `- Allergies connues : ${allergies}` : ""}
-${antecedents ? `- AntÃÂ©cÃÂ©dents : ${antecedents}` : ""}
+${antecedents ? `- AntÃÂÃÂ©cÃÂÃÂ©dents : ${antecedents}` : ""}
 
 CONSULTATION DU ${consultation.date} :
-${consultation.anamnese ? `Motif / AnamnÃÂ¨se : ${consultation.anamnese}` : ""}
+${consultation.anamnese ? `Motif / AnamnÃÂÃÂ¨se : ${consultation.anamnese}` : ""}
 ${consultation.examenClinique ? `Examen clinique : ${consultation.examenClinique}` : ""}
-${consultation.temperature ? `TempÃÂ©rature : ${consultation.temperature}ÃÂ°C` : ""}
-Diagnostic : ${consultation.diagnostic ?? consultation.diagnosticIA ?? "non spÃÂ©cifiÃÂ©"}
+${consultation.temperature ? `TempÃÂÃÂ©rature : ${consultation.temperature}ÃÂÃÂ°C` : ""}
+Diagnostic : ${consultation.diagnostic ?? consultation.diagnosticIA ?? "non spÃÂÃÂ©cifiÃÂÃÂ©"}
 ${consultation.ordonnance ? `Ordonnance saisie manuellement : ${consultation.ordonnance}` : ""}
 
-ACTES / MÃÂDICAMENTS PRESCRITS :
-${medicaments || "Aucun acte enregistrÃÂ©"}
+ACTES / MÃÂÃÂDICAMENTS PRESCRITS :
+${medicaments || "Aucun acte enregistrÃÂÃÂ©"}
 
 INSTRUCTIONS :
-1. GÃÂ©nÃÂ¨re le contenu complet de l'ordonnance (section CONTENU) incluant :
-   - Liste de chaque mÃÂ©dicament avec : posologie prÃÂ©cise (dose/kg si pertinent), frÃÂ©quence, durÃÂ©e du traitement, voie d'administration
-   - Conditions de conservation si nÃÂ©cessaire
-   - PrÃÂ©cautions particuliÃÂ¨res (ÃÂ©viter ensoleillement, jeÃÂ»ne, etc.)
-2. GÃÂ©nÃÂ¨re les instructions simplifiÃÂ©es pour le propriÃÂ©taire (section INSTRUCTIONS_CLIENT) :
-   language clair, sans jargon mÃÂ©dical
-3. Sois prÃÂ©cis, professionnel et adaptÃÂ© ÃÂ  l'espÃÂ¨ce animale
+1. GÃÂÃÂ©nÃÂÃÂ¨re le contenu complet de l'ordonnance (section CONTENU) incluant :
+   - Liste de chaque mÃÂÃÂ©dicament avec : posologie prÃÂÃÂ©cise (dose/kg si pertinent), frÃÂÃÂ©quence, durÃÂÃÂ©e du traitement, voie d'administration
+   - Conditions de conservation si nÃÂÃÂ©cessaire
+   - PrÃÂÃÂ©cautions particuliÃÂÃÂ¨res (ÃÂÃÂ©viter ensoleillement, jeÃÂÃÂ»ne, etc.)
+2. GÃÂÃÂ©nÃÂÃÂ¨re les instructions simplifiÃÂÃÂ©es pour le propriÃÂÃÂ©taire (section INSTRUCTIONS_CLIENT) :
+   language clair, sans jargon mÃÂÃÂ©dical
+3. Sois prÃÂÃÂ©cis, professionnel et adaptÃÂÃÂ© ÃÂÃÂ  l'espÃÂÃÂ¨ce animale
 
-RÃÂ©ponds en JSON strict (sans markdown) :
-{ "contenu": "texte complet de l'ordonnance mÃÂ©dicale", "instructionsClient": "texte simplifiÃÂ© pour le propriÃÂ©taire" }`;
+RÃÂÃÂ©ponds en JSON strict (sans markdown) :
+{ "contenu": "texte complet de l'ordonnance mÃÂÃÂ©dicale", "instructionsClient": "texte simplifiÃÂÃÂ© pour le propriÃÂÃÂ©taire" }`;
 
     const response = await anthropic.messages.create({
       model: AI_MODEL,
@@ -450,7 +452,7 @@ RÃÂ©ponds en JSON strict (sans markdown) :
       })
       .returning();
 
-    // DÃÂ©crÃÂ©menter le stock automatiquement (FEFO) Ã¢ÂÂ fire and forget
+    // DÃÂÃÂ©crÃÂÃÂ©menter le stock automatiquement (FEFO) ÃÂ¢ÃÂÃÂ fire and forget
     setImmediate(() =>
       void decrementeStockDepuisOrdonnance(
         req.clinicId,
@@ -467,7 +469,7 @@ RÃÂ©ponds en JSON strict (sans markdown) :
     });
   } catch (err) {
     req.log.error(err);
-    return res.status(500).json({ error: "Erreur lors de la gÃÂ©nÃÂ©ration IA" });
+    return res.status(500).json({ error: "Erreur lors de la gÃÂÃÂ©nÃÂÃÂ©ration IA" });
   }
 });
 
