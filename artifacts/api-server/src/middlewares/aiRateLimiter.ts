@@ -40,3 +40,11 @@ export const aiLimiter: RequestHandler = rateLimit({
     });
   },
 });
+
+export const pdfLimiter = rateLimit({
+  windowMs: 60_000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many PDF requests, please wait before retrying." },
+});
