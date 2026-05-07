@@ -1,9 +1,9 @@
 import { Request, Response, NextFunction } from "express";
 
 /**
- * Phase 0B — Centralized error handler middleware
+ * Phase 0B â Centralized error handler middleware
  *
- * Replaces scattered try/catch → res.status(500).json({ error: e.message })
+ * Replaces scattered try/catch â res.status(500).json({ error: e.message })
  * patterns with a single, consistent error response format.
  *
  * Registration (must be LAST middleware in app.ts):
@@ -14,7 +14,7 @@ import { Request, Response, NextFunction } from "express";
  *     try {
  *       // ...
  *     } catch (err) {
- *       next(err);   // ← delegates to errorHandler
+ *       next(err);   // â delegates to errorHandler
  *     }
  *   });
  */
@@ -31,7 +31,7 @@ export function errorHandler(
   _next: NextFunction
 ): void {
   const statusCode = err.statusCode ?? 500;
-  const isDev = process.env.NODE_ENV !== "production";
+  const isDev = process.env.NODE_ENV === "development" && process.env.EXPOSE_ERRORS === "true";
 
   // Structured log for Railway / observability tools
   console.error({
@@ -87,7 +87,7 @@ export function createError(
 }
 
 /**
- * Async route wrapper — catches Promise rejections and forwards to errorHandler.
+ * Async route wrapper â catches Promise rejections and forwards to errorHandler.
  * Avoids adding try/catch to every async route.
  *
  * Usage:
