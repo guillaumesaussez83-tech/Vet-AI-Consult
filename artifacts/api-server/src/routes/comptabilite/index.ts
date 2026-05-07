@@ -1,1 +1,328 @@
-aW1wb3J0IHsgUm91dGVyLCBSZXF1ZXN0LCBSZXNwb25zZSB9IGZyb20gImV4cHJlc3MiOwppbXBvcnQgeyByZXF1aXJlQXV0aCwgZ2V0QXV0aCB9IGZyb20gIkBjbGVyay9leHByZXNzIjsKaW1wb3J0IHsgZGIgfSBmcm9tICIuLi8uLi8uLi9kYiI7CmltcG9ydCB7IHNxbCB9IGZyb20gImRyaXp6bGUtb3JtIjsKCmNvbnN0IHJvdXRlciA9IFJvdXRlcigpOwoKLy8g4pSA4pSA4pSAIEdFVCAvYXBpL2NvbXB0YWJpbGl0ZS9kYXNoYm9hcmQg4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSACi8vIEtQSXMgZmluYW5jaWVycyA6IENBIEhULCBUVkEgY29sbGVjdMOpZSwgaW1wYXnDqXMsIG5iIGZhY3R1cmVzICsgY291cmJlIG1lbnN1ZWxsZQpyb3V0ZXIuZ2V0KCIvZGFzaGJvYXJkIiwgcmVxdWlyZUF1dGgoKSwgYXN5bmMgKHJlcTogUmVxdWVzdCwgcmVzOiBSZXNwb25zZSkgPT4gewogIHRyeSB7CiAgICBjb25zdCB7IHVzZXJJZCB9ID0gZ2V0QXV0aChyZXEpOwogICAgY29uc3QgeyBmcm9tLCB0byB9ID0gcmVxLnF1ZXJ5OwoKICAgIGNvbnN0IGNsaW5pY0lkID0gKHJlcSBhcyBhbnkpLmNsaW5pY0lkOwoKICAgIGNvbnN0IGRhdGVGcm9tID0gZnJvbSA/IFN0cmluZyhmcm9tKSA6IG5ldyBEYXRlKG5ldyBEYXRlKCkuZ2V0RnVsbFllYXIoKSwgMCwgMSkudG9JU09TdHJpbmcoKS5zbGljZSgwLCAxMCk7CiAgICBjb25zdCBkYXRlVG8gPSB0byA/IFN0cmluZyh0bykgOiBuZXcgRGF0ZSgpLnRvSVNPU3RyaW5nKCkuc2xpY2UoMCwgMTApOwoKICAgIC8vIEtQSXMgZ2xvYmF1eCBzdXIgbGEgcMOpcmlvZGUKICAgIGNvbnN0IGtwaXMgPSBhd2FpdCBkYi5leGVjdXRlKHNxbGAKICAgICAgU0VMRUNUCiAgICAgICAgQ09BTEVTQ0UoU1VNKENBU0UgV0hFTiBkb2N1bWVudF90eXBlID0gJ0ZBQ1RVUkUnIEFORCBzdGF0dXMgTk9UIElOICgnQU5OVUxFJywnQlJPVUlMTE9OJykgVEhFTiB0b3RhbF9odCBFTFNFIDAgRU5EKSwgMCk6Om51bWVyaWMgQVMgY2FfaHQsCiAgICAgICAgQ09BTEVTQ0UoU1VNKENBU0UgV0hFTiBkb2N1bWVudF90eXBlID0gJ0ZBQ1RVUkUnIEFORCBzdGF0dXMgTk9UIElOICgnQU5OVUxFJywnQlJPVUlMTE9OJykgVEhFTiB0b3RhbF90dmEgRUxTRSAwIEVORCksIDApOjpudW1lcmljIEFTIHR2YV9jb2xsZWN0ZWUsCiAgICAgICAgQ09BTEVTQ0UoU1VNKENBU0UgV0hFTiBkb2N1bWVudF90eXBlID0gJ0ZBQ1RVUkUnIEFORCBzdGF0dXMgTk9UIElOICgnQU5OVUxFJywnQlJPVUlMTE9OJykgVEhFTiB0b3RhbF90dGMgRUxTRSAwIEVORCksIDApOjpudW1lcmljIEFTIGNhX3R0YywKICAgICAgICBDT1VOVChDQVNFIFdIRU4gZG9jdW1lbnRfdHlwZSA9ICdGQUNUVVJFJyBBTkQgc3RhdHVzIE5PVCBJTiAoJ0FOTlVMRScsJ0JST1VJTExPTicpIFRIRU4gMSBFTkQpOjppbnQgQVMgbmJfZmFjdHVyZXMsCiAgICAgICAgQ09BTEVTQ0UoU1VNKENBU0UgV0hFTiBkb2N1bWVudF90eXBlID0gJ0ZBQ1RVUkUnIEFORCBzdGF0dXMgSU4gKCdGQUNUVVJFJywnRU5fQVRURU5URScpIFRIRU4gKHRvdGFsX3R0YyAtIENPQUxFU0NFKHRvdGFsX3BhaWQsMCkpIEVMU0UgMCBFTkQpLCAwKTo6bnVtZXJpYyBBUyBpbXBheWVzX3R0YywKICAgICAgICBDT1VOVChDQVNFIFdIRU4gZG9jdW1lbnRfdHlwZSA9ICdGQUNUVVJFJyBBTkQgc3RhdHVzIElOICgnRkFDVFVSRScsJ0VOX0FUVEVOVEUnKSBBTkQgKHRvdGFsX3R0YyAtIENPQUxFU0NFKHRvdGFsX3BhaWQsMCkpID4gMCBUSEVOIDEgRU5EKTo6aW50IEFTIG5iX2ltcGF5ZXMKICAgICAgRlJPTSBpbnZvaWNlcwogICAgICBXSEVSRSBjbGluaWNfaWQgPSAke2NsaW5pY0lkfQogICAgICAgIEFORCBpbnZvaWNlX2RhdGUgQkVUV0VFTiAke2RhdGVGcm9tfTo6ZGF0ZSBBTkQgJHtkYXRlVG99OjpkYXRlCiAgICBgKTsKCiAgICAvLyBDb3VyYmUgbWVuc3VlbGxlIENBIEhUIHN1ciAxMiBkZXJuaWVycyBtb2lzCiAgICBjb25zdCBtb250aGx5ID0gYXdhaXQgZGIuZXhlY3V0ZShzcWxgCiAgICAgIFNFTEVDVAogICAgICAgIFRPX0NIQVIoREFURV9UUlVOQygnbW9udGgnLCBpbnZvaWNlX2RhdGUpLCAnWVlZWS1NTScpIEFTIG1vaXMsCiAgICAgICAgQ09BTEVTQ0UoU1VNKHRvdGFsX2h0KSwgMCk6Om51bWVyaWMgQVMgY2FfaHQsCiAgICAgICAgQ09BTEVTQ0UoU1VNKHRvdGFsX3R0YyksIDApOjpudW1lcmljIEFTIGNhX3R0YywKICAgICAgICBDT1VOVCgqKTo6aW50IEFTIG5iX2ZhY3R1cmVzCiAgICAgIEZST00gaW52b2ljZXMKICAgICAgV0hFUkUgY2xpbmljX2lkID0gJHtjbGluaWNJZH0KICAgICAgICBBTkQgZG9jdW1lbnRfdHlwZSA9ICdGQUNUVVJFJwogICAgICAgIEFORCBzdGF0dXMgTk9UIElOICgnQU5OVUxFJywnQlJPVUlMTE9OJykKICAgICAgICBBTkQgaW52b2ljZV9kYXRlID49IChDVVJSRU5UX0RBVEUgLSBJTlRFUlZBTCAnMTIgbW9udGhzJykKICAgICAgR1JPVVAgQlkgREFURV9UUlVOQygnbW9udGgnLCBpbnZvaWNlX2RhdGUpCiAgICAgIE9SREVSIEJZIERBVEVfVFJVTkMoJ21vbnRoJywgaW52b2ljZV9kYXRlKQogICAgYCk7CgogICAgLy8gUsOpcGFydGl0aW9uIHBhciBtb2RlIGRlIHLDqGdsZW1lbnQKICAgIGNvbnN0IGJ5UGF5bWVudE1ldGhvZCA9IGF3YWl0IGRiLmV4ZWN1dGUoc3FsYAogICAgICBTRUxFQ1QKICAgICAgICBDT0FMRVNDRShwYXltZW50X21ldGhvZCwgJ05PTl9ERUZJTkknKSBBUyBtZXRob2RlLAogICAgICAgIENPVU5UKCopOjppbnQgQVMgbmIsCiAgICAgICAgQ09BTEVTQ0UoU1VNKGFtb3VudCksIDApOjpudW1lcmljIEFTIHRvdGFsCiAgICAgIEZST00gZW5jYWlzc2VtZW50cwogICAgICBXSEVSRSBjbGluaWNfaWQgPSAke2NsaW5pY0lkfQogICAgICAgIEFORCBwYXltZW50X2RhdGUgQkVUV0VFTiAke2RhdGVGcm9tfTo6ZGF0ZSBBTkQgJHtkYXRlVG99OjpkYXRlCiAgICAgIEdST1VQIEJZIHBheW1lbnRfbWV0aG9kCiAgICAgIE9SREVSIEJZIHRvdGFsIERFU0MKICAgIGApOwoKICAgIHJlcy5qc29uKHsKICAgICAgZGF0YTogewogICAgICAgIGtwaXM6IGtwaXMucm93c1swXSwKICAgICAgICBtb250aGx5OiBtb250aGx5LnJvd3MsCiAgICAgICAgYnlQYXltZW50TWV0aG9kOiBieVBheW1lbnRNZXRob2Qucm93cywKICAgICAgICBwZXJpb2RlOiB7IGZyb206IGRhdGVGcm9tLCB0bzogZGF0ZVRvIH0sCiAgICAgIH0KICAgIH0pOwogIH0gY2F0Y2ggKGVycjogYW55KSB7CiAgICByZXMuc3RhdHVzKDUwMCkuanNvbih7IGVycm9yOiBlcnIubWVzc2FnZSB9KTsKICB9Cn0pOwoKLy8g4pSA4pSA4pSAIEdFVCAvYXBpL2NvbXB0YWJpbGl0ZS9leHBvcnQtZmVjIOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgOKUgAovLyBFeHBvcnQgRmljaGllciBkZXMgw4ljcml0dXJlcyBDb21wdGFibGVzIChmb3JtYXQgREdGaVAg4oCUIFRWQSBzdXIgZW5jYWlzc2VtZW50cykKcm91dGVyLmdldCgiL2V4cG9ydC1mZWMiLCByZXF1aXJlQXV0aCgpLCBhc3luYyAocmVxOiBSZXF1ZXN0LCByZXM6IFJlc3BvbnNlKSA9PiB7CiAgdHJ5IHsKICAgIGNvbnN0IHsgZnJvbSwgdG8gfSA9IHJlcS5xdWVyeTsKICAgIGNvbnN0IGNsaW5pY0lkID0gKHJlcSBhcyBhbnkpLmNsaW5pY0lkOwoKICAgIGNvbnN0IGRhdGVGcm9tID0gZnJvbSA/IFN0cmluZyhmcm9tKSA6IG5ldyBEYXRlKG5ldyBEYXRlKCkuZ2V0RnVsbFllYXIoKSwgMCwgMSkudG9JU09TdHJpbmcoKS5zbGljZSgwLCAxMCk7CiAgICBjb25zdCBkYXRlVG8gPSB0byA/IFN0cmluZyh0bykgOiBuZXcgRGF0ZSgpLnRvSVNPU3RyaW5nKCkuc2xpY2UoMCwgMTApOwoKICAgIC8vIEZhY3R1cmVzIHN1ciBsYSBww6lyaW9kZSAoam91cm5hbCBWVEUpCiAgICBjb25zdCBmYWN0dXJlcyA9IGF3YWl0IGRiLmV4ZWN1dGUoc3FsYAogICAgICBTRUxFQ1QKICAgICAgICBpLmludm9pY2VfbnVtYmVyLAogICAgICAgIGkuaW52b2ljZV9kYXRlLAogICAgICAgIGkudG90YWxfaHQsCiAgICAgICAgaS50b3RhbF90dmEsCiAgICAgICAgaS50b3RhbF90dGMsCiAgICAgICAgQ09BTEVTQ0Uoby5sYXN0X25hbWUgfHwgJyAnIHx8IG8uZmlyc3RfbmFtZSwgJ0NMSUVOVCcpIEFTIG93bmVyX25hbWUKICAgICAgRlJPTSBpbnZvaWNlcyBpCiAgICAgIExFRlQgSk9JTiBvd25lcnMgbyBPTiBvLmlkOjp0ZXh0ID0gaS5vd25lcl9pZDo6dGV4dAogICAgICBXSEVSRSBpLmNsaW5pY19pZCA9ICR7Y2xpbmljSWR9CiAgICAgICAgQU5EIGkuZG9jdW1lbnRfdHlwZSA9ICdGQUNUVVJFJwogICAgICAgIEFORCBpLnN0YXR1cyBOT1QgSU4gKCdBTk5VTEUnLCdCUk9VSUxMT04nKQogICAgICAgIEFORCBpLmludm9pY2VfZGF0ZSBCRVRXRUVOICR7ZGF0ZUZyb219OjpkYXRlIEFORCAke2RhdGVUb306OmRhdGUKICAgICAgT1JERVIgQlkgaS5pbnZvaWNlX2RhdGUsIGkuaW52b2ljZV9udW1iZXIKICAgIGApOwoKICAgIC8vIEVuY2Fpc3NlbWVudHMgc3VyIGxhIHDDqXJpb2RlIChqb3VybmFsIEJRKQogICAgY29uc3QgZW5jYWlzc2VtZW50cyA9IGF3YWl0IGRiLmV4ZWN1dGUoc3FsYAogICAgICBTRUxFQ1QKICAgICAgICBlLmlkLAogICAgICAgIGUucGF5bWVudF9kYXRlLAogICAgICAgIGUuYW1vdW50LAogICAgICAgIGUucGF5bWVudF9tZXRob2QsCiAgICAgICAgZS5yZWZlcmVuY2UsCiAgICAgICAgaS5pbnZvaWNlX251bWJlcgogICAgICBGUk9NIGVuY2Fpc3NlbWVudHMgZQogICAgICBMRUZUIEpPSU4gaW52b2ljZXMgaSBPTiBpLmlkID0gZS5pbnZvaWNlX2lkCiAgICAgIFdIRVJFIGUuY2xpbmljX2lkID0gJHtjbGluaWNJZH0KICAgICAgICBBTkQgZS5wYXltZW50X2RhdGUgQkVUV0VFTiAke2RhdGVGcm9tfTo6ZGF0ZSBBTkQgJHtkYXRlVG99OjpkYXRlCiAgICAgIE9SREVSIEJZIGUucGF5bWVudF9kYXRlCiAgICBgKTsKCiAgICAvLyBHw6luw6lyYXRpb24gRkVDIChmb3JtYXQgREdGaVAg4oCUIHPDqXBhcmF0ZXVyIFRBQiwgZW5jb2RhZ2UgVVRGLTgpCiAgICBjb25zdCBmbXREYXRlID0gKGQ6IHN0cmluZyB8IERhdGUpID0+IFN0cmluZyhkKS5zbGljZSgwLCAxMCkucmVwbGFjZSgvLS9nLCAiIik7CiAgICBjb25zdCBmbXRBbXQgPSAobjogbnVtYmVyIHwgc3RyaW5nKSA9PiBOdW1iZXIobikudG9GaXhlZCgyKS5yZXBsYWNlKCIuIiwgIiwiKTsKCiAgICBjb25zdCBoZWFkZXIgPSBbCiAgICAgICJKb3VybmFsQ29kZSIsICJKb3VybmFsTGliIiwgIkVjcml0dXJlTnVtIiwgIkVjcml0dXJlRGF0ZSIsCiAgICAgICJDb21wdGVOdW0iLCAiQ29tcHRlTGliIiwgIkNvbXBBdXhOdW0iLCAiQ29tcEF1eExpYiIsCiAgICAgICJQaWVjZVJlZiIsICJQaWVjZURhdGUiLCAiRWNyaXR1cmVMaWIiLAogICAgICAiRGViaXQiLCAiQ3JlZGl0IiwgIkVjcml0dXJlTGV0IiwgIkRhdGVMZXQiLCAiVmFsaWREYXRlIiwKICAgICAgIk1vbnRhbnRkZXZpc2UiLCAiSWRldmlzZSIKICAgIF0uam9pbigiXHQiKTsKCiAgICBjb25zdCBsaW5lczogc3RyaW5nW10gPSBbaGVhZGVyXTsKICAgIGxldCBlY3JpdHVyZUNvdW50ZXIgPSAxOwoKICAgIC8vIEpvdXJuYWwgVlRFIOKAlCB1bmUgZmFjdHVyZSA9IDMgbGlnbmVzIChjbGllbnQgZGViaXQgLyBwcmVzdGF0aW9uIGNyZWRpdCAvIFRWQSBjcmVkaXQpCiAgICBmb3IgKGNvbnN0IGYgb2YgZmFjdHVyZXMucm93cyBhcyBhbnlbXSkgewogICAgICBjb25zdCBudW0gPSBTdHJpbmcoZWNyaXR1cmVDb3VudGVyKyspLnBhZFN0YXJ0KDYsICIwIik7CiAgICAgIGNvbnN0IGQgPSBmbXREYXRlKGYuaW52b2ljZV9kYXRlKTsKICAgICAgY29uc3QgbGliID0gYEZhY3QgJHtmLmludm9pY2VfbnVtYmVyfWA7CiAgICAgIGNvbnN0IGh0ID0gTnVtYmVyKGYudG90YWxfaHQpOwogICAgICBjb25zdCB0dmEgPSBOdW1iZXIoZi50b3RhbF90dmEpOwogICAgICBjb25zdCB0dGMgPSBOdW1iZXIoZi50b3RhbF90dGMpOwoKICAgICAgLy8gTGlnbmUgMSDigJQgRMOpYml0IENsaWVudCA0MTEwMDAKICAgICAgbGluZXMucHVzaChbIlZURSIsIlZlbnRlcyIsIlZURSIgKyBudW0sIGQsICI0MTEwMDAiLCJDbGllbnRzIiwKICAgICAgICBmLmludm9pY2VfbnVtYmVyLCBmLm93bmVyX25hbWUsIGYuaW52b2ljZV9udW1iZXIsIGQsIGxpYiwKICAgICAgICBmbXRBbXQodHRjKSwgIjAsMDAiLCAiIiwgIiIsIGQsICIiLCAiIl0uam9pbigiXHQiKSk7CgogICAgICAvLyBMaWduZSAyIOKAlCBDcsOpZGl0IFByZXN0YXRpb25zIDcwNjAwMAogICAgICBsaW5lcy5wdXNoKFsiVlRFIiwiVmVudGVzIiwiVlRFIiArIG51bSwgZCwgIjcwNjAwMCIsIlByZXN0YXRpb25zIGRlIHNlcnZpY2VzIiwKICAgICAgICAiIiwgIiIsIGYuaW52b2ljZV9udW1iZXIsIGQsIGxpYiwKICAgICAgICAiMCwwMCIsIGZtdEFtdChodCksICIiLCAiIiwgZCwgIiIsICIiXS5qb2luKCJcdCIpKTsKCiAgICAgIC8vIExpZ25lIDMg4oCUIENyw6lkaXQgVFZBIGNvbGxlY3TDqWUgNDQ1NzEwIChzaSBUVkEgPiAwKQogICAgICBpZiAodHZhID4gMCkgewogICAgICAgIGxpbmVzLnB1c2goWyJWVEUiLCJWZW50ZXMiLCJWVEUiICsgbnVtLCBkLCAiNDQ1NzEwIiwiVFZBIGNvbGxlY3TDqWUiLAogICAgICAgICAgIiIsICIiLCBmLmludm9pY2VfbnVtYmVyLCBkLCBsaWIsCiAgICAgICAgICAiMCwwMCIsIGZtdEFtdCh0dmEpLCAiIiwgIiIsIGQsICIiLCAiIl0uam9pbigiXHQiKSk7CiAgICAgIH0KICAgIH0KCiAgICAvLyBKb3VybmFsIEJRIOKAlCB1biBlbmNhaXNzZW1lbnQgPSAyIGxpZ25lcyAoYmFucXVlIGRlYml0IC8gY2xpZW50IGNyZWRpdCkKICAgIGZvciAoY29uc3QgZSBvZiBlbmNhaXNzZW1lbnRzLnJvd3MgYXMgYW55W10pIHsKICAgICAgY29uc3QgbnVtID0gU3RyaW5nKGVjcml0dXJlQ291bnRlcisrKS5wYWRTdGFydCg2LCAiMCIpOwogICAgICBjb25zdCBkID0gZm10RGF0ZShlLnBheW1lbnRfZGF0ZSk7CiAgICAgIGNvbnN0IGxpYiA9IGBSw6hnbCAke2UuaW52b2ljZV9udW1iZXIgfHwgZS5yZWZlcmVuY2UgfHwgIiJ9YDsKICAgICAgY29uc3QgYW10ID0gTnVtYmVyKGUuYW1vdW50KTsKICAgICAgY29uc3QgcmVmUGllY2UgPSBlLmludm9pY2VfbnVtYmVyIHx8IGBFTkMtJHtlLmlkfWA7CgogICAgICBsaW5lcy5wdXNoKFsiQlEiLCJCYW5xdWUiLCJCUSIgKyBudW0sIGQsICI1MTIwMDAiLCJCYW5xdWUiLAogICAgICAgICIiLCAiIiwgcmVmUGllY2UsIGQsIGxpYiwKICAgICAgICBmbXRBbXQoYW10KSwgIjAsMDAiLCAiIiwgIiIsIGQsICIiLCAiIl0uam9pbigiXHQiKSk7CgogICAgICBsaW5lcy5wdXNoKFsiQlEiLCJCYW5xdWUiLCJCUSIgKyBudW0sIGQsICI0MTEwMDAiLCJDbGllbnRzIiwKICAgICAgICByZWZQaWVjZSwgIiIsIHJlZlBpZWNlLCBkLCBsaWIsCiAgICAgICAgIjAsMDAiLCBmbXRBbXQoYW10KSwgIiIsICIiLCBkLCAiIiwgIiJdLmpvaW4oIlx0IikpOwogICAgfQoKICAgIGNvbnN0IGZpbGVuYW1lID0gYEZFQ19WZXRvQUlfJHtkYXRlRnJvbX1fJHtkYXRlVG99LnR4dGA7CiAgICByZXMuc2V0SGVhZGVyKCJDb250ZW50LVR5cGUiLCAidGV4dC9wbGFpbjsgY2hhcnNldD11dGYtOCIpOwogICAgcmVzLnNldEhlYWRlcigiQ29udGVudC1EaXNwb3NpdGlvbiIsIGBhdHRhY2htZW50OyBmaWxlbmFtZT0iJHtmaWxlbmFtZX0iYCk7CiAgICByZXMuc2VuZChsaW5lcy5qb2luKCJcclxuIikpOwoKICB9IGNhdGNoIChlcnI6IGFueSkgewogICAgcmVzLnN0YXR1cyg1MDApLmpzb24oeyBlcnJvcjogZXJyLm1lc3NhZ2UgfSk7CiAgfQp9KTsKCi8vIOKUgOKUgOKUgCBHRVQgL2FwaS9jb21wdGFiaWxpdGUvam91cm5hbC1jYWlzc2Ug4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSACi8vIEpvdXJuYWwgZGUgY2Fpc3NlIGpvdXJuYWxpZXIKcm91dGVyLmdldCgiL2pvdXJuYWwtY2Fpc3NlIiwgcmVxdWlyZUF1dGgoKSwgYXN5bmMgKHJlcTogUmVxdWVzdCwgcmVzOiBSZXNwb25zZSkgPT4gewogIHRyeSB7CiAgICBjb25zdCBjbGluaWNJZCA9IChyZXEgYXMgYW55KS5jbGluaWNJZDsKICAgIGNvbnN0IGRhdGUgPSByZXEucXVlcnkuZGF0ZSA/IFN0cmluZyhyZXEucXVlcnkuZGF0ZSkgOiBuZXcgRGF0ZSgpLnRvSVNPU3RyaW5nKCkuc2xpY2UoMCwgMTApOwoKICAgIGNvbnN0IGpvdXJuYWwgPSBhd2FpdCBkYi5leGVjdXRlKHNxbGAKICAgICAgU0VMRUNUCiAgICAgICAgZS5pZCwKICAgICAgICBlLnBheW1lbnRfZGF0ZSwKICAgICAgICBlLmFtb3VudCwKICAgICAgICBlLnBheW1lbnRfbWV0aG9kLAogICAgICAgIGUucmVmZXJlbmNlLAogICAgICAgIGkuaW52b2ljZV9udW1iZXIsCiAgICAgICAgaS50b3RhbF90dGMgQVMgaW52b2ljZV90b3RhbCwKICAgICAgICBDT0FMRVNDRShvLmxhc3RfbmFtZSB8fCAnICcgfHwgby5maXJzdF9uYW1lLCAnSW5jb25udScpIEFTIG93bmVyX25hbWUKICAgICAgRlJPTSBlbmNhaXNzZW1lbnRzIGUKICAgICAgTEVGVCBKT0lOIGludm9pY2VzIGkgT04gaS5pZCA9IGUuaW52b2ljZV9pZAogICAgICBMRUZUIEpPSU4gb3duZXJzIG8gT04gby5pZDo6dGV4dCA9IGkub3duZXJfaWQ6OnRleHQKICAgICAgV0hFUkUgZS5jbGluaWNfaWQgPSAke2NsaW5pY0lkfQogICAgICAgIEFORCBlLnBheW1lbnRfZGF0ZTo6ZGF0ZSA9ICR7ZGF0ZX06OmRhdGUKICAgICAgT1JERVIgQlkgZS5wYXltZW50X2RhdGUKICAgIGApOwoKICAgIGNvbnN0IHRvdGF1eCA9IGF3YWl0IGRiLmV4ZWN1dGUoc3FsYAogICAgICBTRUxFQ1QKICAgICAgICBwYXltZW50X21ldGhvZCwKICAgICAgICBDT1VOVCgqKTo6aW50IEFTIG5iLAogICAgICAgIFNVTShhbW91bnQpOjpudW1lcmljIEFTIHRvdGFsCiAgICAgIEZST00gZW5jYWlzc2VtZW50cwogICAgICBXSEVSRSBjbGluaWNfaWQgPSAke2NsaW5pY0lkfQogICAgICAgIEFORCBwYXltZW50X2RhdGU6OmRhdGUgPSAke2RhdGV9OjpkYXRlCiAgICAgIEdST1VQIEJZIHBheW1lbnRfbWV0aG9kCiAgICBgKTsKCiAgICBjb25zdCBncmFuZFRvdGFsID0gKHRvdGF1eC5yb3dzIGFzIGFueVtdKS5yZWR1Y2UoKGFjYywgcikgPT4gYWNjICsgTnVtYmVyKHIudG90YWwpLCAwKTsKCiAgICByZXMuanNvbih7CiAgICAgIGRhdGE6IHsKICAgICAgICBkYXRlLAogICAgICAgIGVuY2Fpc3NlbWVudHM6IGpvdXJuYWwucm93cywKICAgICAgICB0b3RhdXg6IHRvdGF1eC5yb3dzLAogICAgICAgIGdyYW5kX3RvdGFsOiBncmFuZFRvdGFsLAogICAgICB9CiAgICB9KTsKICB9IGNhdGNoIChlcnI6IGFueSkgewogICAgcmVzLnN0YXR1cyg1MDApLmpzb24oeyBlcnJvcjogZXJyLm1lc3NhZ2UgfSk7CiAgfQp9KTsKCi8vIOKUgOKUgOKUgCBHRVQgL2FwaS9jb21wdGFiaWxpdGUvaW1wYXllcyDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIDilIAKLy8gTGlzdGUgZGVzIGZhY3R1cmVzIGltcGF5w6llcyBhdmVjIGFnaW5nIGJ1Y2tldHMKcm91dGVyLmdldCgiL2ltcGF5ZXMiLCByZXF1aXJlQXV0aCgpLCBhc3luYyAocmVxOiBSZXF1ZXN0LCByZXM6IFJlc3BvbnNlKSA9PiB7CiAgdHJ5IHsKICAgIGNvbnN0IGNsaW5pY0lkID0gKHJlcSBhcyBhbnkpLmNsaW5pY0lkOwoKICAgIGNvbnN0IGltcGF5ZXMgPSBhd2FpdCBkYi5leGVjdXRlKHNxbGAKICAgICAgU0VMRUNUCiAgICAgICAgaS5pZCwKICAgICAgICBpLmludm9pY2VfbnVtYmVyLAogICAgICAgIGkuaW52b2ljZV9kYXRlLAogICAgICAgIGkuZHVlX2RhdGUsCiAgICAgICAgaS50b3RhbF90dGMsCiAgICAgICAgQ09BTEVTQ0UoaS50b3RhbF9wYWlkLCAwKSBBUyB0b3RhbF9wYWlkLAogICAgICAgIChpLnRvdGFsX3R0YyAtIENPQUxFU0NFKGkudG90YWxfcGFpZCwgMCkpIEFTIHJlc3RlX2FfcGF5ZXIsCiAgICAgICAgKENVUlJFTlRfREFURSAtIENPQUxFU0NFKGkuZHVlX2RhdGUsIGkuaW52b2ljZV9kYXRlKTo6ZGF0ZSk6OmludCBBUyBqb3Vyc19yZXRhcmQsCiAgICAgICAgQ0FTRQogICAgICAgICAgV0hFTiAoQ1VSUkVOVF9EQVRFIC0gQ09BTEVTQ0UoaS5kdWVfZGF0ZSwgaS5pbnZvaWNlX2RhdGUpOjpkYXRlKSA8PSAzMCBUSEVOICcwLTMwJwogICAgICAgICAgV0hFTiAoQ1VSUkVOVF9EQVRFIC0gQ09BTEVTQ0UoaS5kdWVfZGF0ZSwgaS5pbnZvaWNlX2RhdGUpOjpkYXRlKSA8PSA2MCBUSEVOICczMS02MCcKICAgICAgICAgIFdIRU4gKENVUlJFTlRfREFURSAtIENPQUxFU0NFKGkuZHVlX2RhdGUsIGkuaW52b2ljZV9kYXRlKTo6ZGF0ZSkgPD0gOTAgVEhFTiAnNjEtOTAnCiAgICAgICAgICBFTFNFICc5MCsnCiAgICAgICAgRU5EIEFTIGFnaW5nX2J1Y2tldCwKICAgICAgICBDT0FMRVNDRShvLmxhc3RfbmFtZSB8fCAnICcgfHwgby5maXJzdF9uYW1lLCAnSW5jb25udScpIEFTIG93bmVyX25hbWUsCiAgICAgICAgby5lbWFpbCBBUyBvd25lcl9lbWFpbCwKICAgICAgICBvLnBob25lX21vYmlsZSBBUyBvd25lcl9waG9uZSwKICAgICAgICAtLSBEZXJuacOocmUgcmVsYW5jZQogICAgICAgIChTRUxFQ1QgTUFYKHIuc2VudF9hdCkgRlJPTSByZWxhbmNlcyByIFdIRVJFIHIuaW52b2ljZV9pZCA9IGkuaWQpIEFTIGRlcm5pZXJlX3JlbGFuY2UsCiAgICAgICAgKFNFTEVDVCBDT1VOVCgqKTo6aW50IEZST00gcmVsYW5jZXMgciBXSEVSRSByLmludm9pY2VfaWQgPSBpLmlkKSBBUyBuYl9yZWxhbmNlcwogICAgICBGUk9NIGludm9pY2VzIGkKICAgICAgTEVGVCBKT0lOIG93bmVycyBvIE9OIG8uaWQ6OnRleHQgPSBpLm93bmVyX2lkOjp0ZXh0CiAgICAgIFdIRVJFIGkuY2xpbmljX2lkID0gJHtjbGluaWNJZH0KICAgICAgICBBTkQgaS5kb2N1bWVudF90eXBlID0gJ0ZBQ1RVUkUnCiAgICAgICAgQU5EIGkuc3RhdHVzIElOICgnRkFDVFVSRScsJ0VOX0FUVEVOVEUnLCdDT05UUk9MRScpCiAgICAgICAgQU5EIChpLnRvdGFsX3R0YyAtIENPQUxFU0NFKGkudG90YWxfcGFpZCwgMCkpID4gMAogICAgICBPUkRFUiBCWSBqb3Vyc19yZXRhcmQgREVTQywgaS5pbnZvaWNlX2RhdGUKICAgIGApOwoKICAgIC8vIFLDqXN1bcOpIHBhciBidWNrZXQKICAgIGNvbnN0IGJ1Y2tldHMgPSB7ICIwLTMwIjogMCwgIjMxLTYwIjogMCwgIjYxLTkwIjogMCwgIjkwKyI6IDAgfTsKICAgIGxldCB0b3RhbEltcGF5ZXMgPSAwOwogICAgZm9yIChjb25zdCByb3cgb2YgaW1wYXllcy5yb3dzIGFzIGFueVtdKSB7CiAgICAgIGJ1Y2tldHNbcm93LmFnaW5nX2J1Y2tldCBhcyBrZXlvZiB0eXBlb2YgYnVja2V0c10gKz0gTnVtYmVyKHJvdy5yZXN0ZV9hX3BheWVyKTsKICAgICAgdG90YWxJbXBheWVzICs9IE51bWJlcihyb3cucmVzdGVfYV9wYXllcik7CiAgICB9CgogICAgcmVzLmpzb24oewogICAgICBkYXRhOiB7CiAgICAgICAgaW1wYXllczogaW1wYXllcy5yb3dzLAogICAgICAgIGJ1Y2tldHMsCiAgICAgICAgdG90YWxfaW1wYXllczogdG90YWxJbXBheWVzLAogICAgICAgIG5iX2ltcGF5ZXM6IGltcGF5ZXMucm93cy5sZW5ndGgsCiAgICAgIH0KICAgIH0pOwogIH0gY2F0Y2ggKGVycjogYW55KSB7CiAgICByZXMuc3RhdHVzKDUwMCkuanNvbih7IGVycm9yOiBlcnIubWVzc2FnZSB9KTsKICB9Cn0pOwoKLy8g4pSA4pSA4pSAIFBPU1QgL2FwaS9jb21wdGFiaWxpdGUvcmVsYW5jZXMg4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSA4pSACi8vIEVucmVnaXN0cmVyIHVuZSByZWxhbmNlIG1hbnVlbGxlIChlbWFpbCBlbnZvecOpIGPDtHTDqSBjbGllbnQpCnJvdXRlci5wb3N0KCIvcmVsYW5jZXMiLCByZXF1aXJlQXV0aCgpLCBhc3luYyAocmVxOiBSZXF1ZXN0LCByZXM6IFJlc3BvbnNlKSA9PiB7CiAgdHJ5IHsKICAgIGNvbnN0IHsgdXNlcklkIH0gPSBnZXRBdXRoKHJlcSk7CiAgICBjb25zdCBjbGluaWNJZCA9IChyZXEgYXMgYW55KS5jbGluaWNJZDsKICAgIGNvbnN0IHsgaW52b2ljZUlkLCBjaGFubmVsLCByZWNpcGllbnRFbWFpbCwgcmVjaXBpZW50TmFtZSwgbWVzc2FnZSB9ID0gcmVxLmJvZHk7CgogICAgaWYgKCFpbnZvaWNlSWQpIHJldHVybiByZXMuc3RhdHVzKDQwMCkuanNvbih7IGVycm9yOiAiaW52b2ljZUlkIHJlcXVpcyIgfSk7CgogICAgLy8gVsOpcmlmaWVyIHF1ZSBsYSBmYWN0dXJlIGFwcGFydGllbnQgw6AgbGEgY2xpbmlxdWUKICAgIGNvbnN0IGNoZWNrID0gYXdhaXQgZGIuZXhlY3V0ZShzcWxgCiAgICAgIFNFTEVDVCBpZCBGUk9NIGludm9pY2VzCiAgICAgIFdIRVJFIGlkID0gJHtpbnZvaWNlSWR9IEFORCBjbGluaWNfaWQgPSAke2NsaW5pY0lkfQogICAgICBMSU1JVCAxCiAgICBgKTsKICAgIGlmICghY2hlY2sucm93cy5sZW5ndGgpIHJldHVybiByZXMuc3RhdHVzKDQwNCkuanNvbih7IGVycm9yOiAiRmFjdHVyZSBub24gdHJvdXbDqWUiIH0pOwoKICAgIGNvbnN0IFtyb3ddID0gYXdhaXQgZGIuZXhlY3V0ZShzcWxgCiAgICAgIElOU0VSVCBJTlRPIHJlbGFuY2VzIChjbGluaWNfaWQsIGludm9pY2VfaWQsIHNlbnRfYnksIGNoYW5uZWwsIHJlY2lwaWVudF9lbWFpbCwgcmVjaXBpZW50X25hbWUsIG1lc3NhZ2UsIHN0YXR1cykKICAgICAgVkFMVUVTICgke2NsaW5pY0lkfSwgJHtpbnZvaWNlSWR9LCAke3VzZXJJZH0sICR7Y2hhbm5lbCB8fCAnZW1haWwnfSwgJHtyZWNpcGllbnRFbWFpbCB8fCBudWxsfSwgJHtyZWNpcGllbnROYW1lIHx8IG51bGx9LCAke21lc3NhZ2UgfHwgbnVsbH0sICdzZW50JykKICAgICAgUkVUVVJOSU5HICoKICAgIGApOwoKICAgIHJlcy5zdGF0dXMoMjAxKS5qc29uKHsgZGF0YTogcm93IH0pOwogIH0gY2F0Y2ggKGVycjogYW55KSB7CiAgICByZXMuc3RhdHVzKDUwMCkuanNvbih7IGVycm9yOiBlcnIubWVzc2FnZSB9KTsKICB9Cn0pOwoKZXhwb3J0IGRlZmF1bHQgcm91dGVyOwo=
+import { Router, Request, Response } from "express";
+import { requireAuth, getAuth } from "@clerk/express";
+import { db } from "../../../db";
+import { sql } from "drizzle-orm";
+
+const router = Router();
+
+// âââ GET /api/comptabilite/dashboard ââââââââââââââââââââââââââââââââââââââââ
+// KPIs financiers : CA HT, TVA collectÃ©e, impayÃ©s, nb factures + courbe mensuelle
+router.get("/dashboard", requireAuth(), async (req: Request, res: Response) => {
+  try {
+    const { userId } = getAuth(req);
+    const { from, to } = req.query;
+
+    const clinicId = (req as any).clinicId;
+
+    const dateFrom = from ? String(from) : new Date(new Date().getFullYear(), 0, 1).toISOString().slice(0, 10);
+    const dateTo = to ? String(to) : new Date().toISOString().slice(0, 10);
+
+    // KPIs globaux sur la pÃ©riode
+    const kpis = await db.execute(sql`
+      SELECT
+        COALESCE(SUM(CASE WHEN document_type = 'FACTURE' AND status NOT IN ('ANNULE','BROUILLON') THEN total_ht ELSE 0 END), 0)::numeric AS ca_ht,
+        COALESCE(SUM(CASE WHEN document_type = 'FACTURE' AND status NOT IN ('ANNULE','BROUILLON') THEN total_tva ELSE 0 END), 0)::numeric AS tva_collectee,
+        COALESCE(SUM(CASE WHEN document_type = 'FACTURE' AND status NOT IN ('ANNULE','BROUILLON') THEN total_ttc ELSE 0 END), 0)::numeric AS ca_ttc,
+        COUNT(CASE WHEN document_type = 'FACTURE' AND status NOT IN ('ANNULE','BROUILLON') THEN 1 END)::int AS nb_factures,
+        COALESCE(SUM(CASE WHEN document_type = 'FACTURE' AND status IN ('FACTURE','EN_ATTENTE') THEN (total_ttc - COALESCE(total_paid,0)) ELSE 0 END), 0)::numeric AS impayes_ttc,
+        COUNT(CASE WHEN document_type = 'FACTURE' AND status IN ('FACTURE','EN_ATTENTE') AND (total_ttc - COALESCE(total_paid,0)) > 0 THEN 1 END)::int AS nb_impayes
+      FROM invoices
+      WHERE clinic_id = ${clinicId}
+        AND invoice_date BETWEEN ${dateFrom}::date AND ${dateTo}::date
+    `);
+
+    // Courbe mensuelle CA HT sur 12 derniers mois
+    const monthly = await db.execute(sql`
+      SELECT
+        TO_CHAR(DATE_TRUNC('month', invoice_date), 'YYYY-MM') AS mois,
+        COALESCE(SUM(total_ht), 0)::numeric AS ca_ht,
+        COALESCE(SUM(total_ttc), 0)::numeric AS ca_ttc,
+        COUNT(*)::int AS nb_factures
+      FROM invoices
+      WHERE clinic_id = ${clinicId}
+        AND document_type = 'FACTURE'
+        AND status NOT IN ('ANNULE','BROUILLON')
+        AND invoice_date >= (CURRENT_DATE - INTERVAL '12 months')
+      GROUP BY DATE_TRUNC('month', invoice_date)
+      ORDER BY DATE_TRUNC('month', invoice_date)
+    `);
+
+    // RÃ©partition par mode de rÃ¨glement
+    const byPaymentMethod = await db.execute(sql`
+      SELECT
+        COALESCE(payment_method, 'NON_DEFINI') AS methode,
+        COUNT(*)::int AS nb,
+        COALESCE(SUM(amount), 0)::numeric AS total
+      FROM encaissements
+      WHERE clinic_id = ${clinicId}
+        AND payment_date BETWEEN ${dateFrom}::date AND ${dateTo}::date
+      GROUP BY payment_method
+      ORDER BY total DESC
+    `);
+
+    res.json({
+      data: {
+        kpis: kpis.rows[0],
+        monthly: monthly.rows,
+        byPaymentMethod: byPaymentMethod.rows,
+        periode: { from: dateFrom, to: dateTo },
+      }
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// âââ GET /api/comptabilite/export-fec ââââââââââââââââââââââââââââââââââââââââ
+// Export Fichier des Ãcritures Comptables (format DGFiP â TVA sur encaissements)
+router.get("/export-fec", requireAuth(), async (req: Request, res: Response) => {
+  try {
+    const { from, to } = req.query;
+    const clinicId = (req as any).clinicId;
+
+    const dateFrom = from ? String(from) : new Date(new Date().getFullYear(), 0, 1).toISOString().slice(0, 10);
+    const dateTo = to ? String(to) : new Date().toISOString().slice(0, 10);
+
+    // Factures sur la pÃ©riode (journal VTE)
+    const factures = await db.execute(sql`
+      SELECT
+        i.invoice_number,
+        i.invoice_date,
+        i.total_ht,
+        i.total_tva,
+        i.total_ttc,
+        COALESCE(o.last_name || ' ' || o.first_name, 'CLIENT') AS owner_name
+      FROM invoices i
+      LEFT JOIN owners o ON o.id::text = i.owner_id::text
+      WHERE i.clinic_id = ${clinicId}
+        AND i.document_type = 'FACTURE'
+        AND i.status NOT IN ('ANNULE','BROUILLON')
+        AND i.invoice_date BETWEEN ${dateFrom}::date AND ${dateTo}::date
+      ORDER BY i.invoice_date, i.invoice_number
+    `);
+
+    // Encaissements sur la pÃ©riode (journal BQ)
+    const encaissements = await db.execute(sql`
+      SELECT
+        e.id,
+        e.payment_date,
+        e.amount,
+        e.payment_method,
+        e.reference,
+        i.invoice_number
+      FROM encaissements e
+      LEFT JOIN invoices i ON i.id = e.invoice_id
+      WHERE e.clinic_id = ${clinicId}
+        AND e.payment_date BETWEEN ${dateFrom}::date AND ${dateTo}::date
+      ORDER BY e.payment_date
+    `);
+
+    // GÃ©nÃ©ration FEC (format DGFiP â sÃ©parateur TAB, encodage UTF-8)
+    const fmtDate = (d: string | Date) => String(d).slice(0, 10).replace(/-/g, "");
+    const fmtAmt = (n: number | string) => Number(n).toFixed(2).replace(".", ",");
+
+    const header = [
+      "JournalCode", "JournalLib", "EcritureNum", "EcritureDate",
+      "CompteNum", "CompteLib", "CompAuxNum", "CompAuxLib",
+      "PieceRef", "PieceDate", "EcritureLib",
+      "Debit", "Credit", "EcritureLet", "DateLet", "ValidDate",
+      "Montantdevise", "Idevise"
+    ].join("\t");
+
+    const lines: string[] = [header];
+    let ecritureCounter = 1;
+
+    // Journal VTE â une facture = 3 lignes (client debit / prestation credit / TVA credit)
+    for (const f of factures.rows as any[]) {
+      const num = String(ecritureCounter++).padStart(6, "0");
+      const d = fmtDate(f.invoice_date);
+      const lib = `Fact ${f.invoice_number}`;
+      const ht = Number(f.total_ht);
+      const tva = Number(f.total_tva);
+      const ttc = Number(f.total_ttc);
+
+      // Ligne 1 â DÃ©bit Client 411000
+      lines.push(["VTE","Ventes","VTE" + num, d, "411000","Clients",
+        f.invoice_number, f.owner_name, f.invoice_number, d, lib,
+        fmtAmt(ttc), "0,00", "", "", d, "", ""].join("\t"));
+
+      // Ligne 2 â CrÃ©dit Prestations 706000
+      lines.push(["VTE","Ventes","VTE" + num, d, "706000","Prestations de services",
+        "", "", f.invoice_number, d, lib,
+        "0,00", fmtAmt(ht), "", "", d, "", ""].join("\t"));
+
+      // Ligne 3 â CrÃ©dit TVA collectÃ©e 445710 (si TVA > 0)
+      if (tva > 0) {
+        lines.push(["VTE","Ventes","VTE" + num, d, "445710","TVA collectÃ©e",
+          "", "", f.invoice_number, d, lib,
+          "0,00", fmtAmt(tva), "", "", d, "", ""].join("\t"));
+      }
+    }
+
+    // Journal BQ â un encaissement = 2 lignes (banque debit / client credit)
+    for (const e of encaissements.rows as any[]) {
+      const num = String(ecritureCounter++).padStart(6, "0");
+      const d = fmtDate(e.payment_date);
+      const lib = `RÃ¨gl ${e.invoice_number || e.reference || ""}`;
+      const amt = Number(e.amount);
+      const refPiece = e.invoice_number || `ENC-${e.id}`;
+
+      lines.push(["BQ","Banque","BQ" + num, d, "512000","Banque",
+        "", "", refPiece, d, lib,
+        fmtAmt(amt), "0,00", "", "", d, "", ""].join("\t"));
+
+      lines.push(["BQ","Banque","BQ" + num, d, "411000","Clients",
+        refPiece, "", refPiece, d, lib,
+        "0,00", fmtAmt(amt), "", "", d, "", ""].join("\t"));
+    }
+
+    const filename = `FEC_VetoAI_${dateFrom}_${dateTo}.txt`;
+    res.setHeader("Content-Type", "text/plain; charset=utf-8");
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    res.send(lines.join("\r\n"));
+
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// âââ GET /api/comptabilite/journal-caisse âââââââââââââââââââââââââââââââââââââ
+// Journal de caisse journalier
+router.get("/journal-caisse", requireAuth(), async (req: Request, res: Response) => {
+  try {
+    const clinicId = (req as any).clinicId;
+    const date = req.query.date ? String(req.query.date) : new Date().toISOString().slice(0, 10);
+
+    const journal = await db.execute(sql`
+      SELECT
+        e.id,
+        e.payment_date,
+        e.amount,
+        e.payment_method,
+        e.reference,
+        i.invoice_number,
+        i.total_ttc AS invoice_total,
+        COALESCE(o.last_name || ' ' || o.first_name, 'Inconnu') AS owner_name
+      FROM encaissements e
+      LEFT JOIN invoices i ON i.id = e.invoice_id
+      LEFT JOIN owners o ON o.id::text = i.owner_id::text
+      WHERE e.clinic_id = ${clinicId}
+        AND e.payment_date::date = ${date}::date
+      ORDER BY e.payment_date
+    `);
+
+    const totaux = await db.execute(sql`
+      SELECT
+        payment_method,
+        COUNT(*)::int AS nb,
+        SUM(amount)::numeric AS total
+      FROM encaissements
+      WHERE clinic_id = ${clinicId}
+        AND payment_date::date = ${date}::date
+      GROUP BY payment_method
+    `);
+
+    const grandTotal = (totaux.rows as any[]).reduce((acc, r) => acc + Number(r.total), 0);
+
+    res.json({
+      data: {
+        date,
+        encaissements: journal.rows,
+        totaux: totaux.rows,
+        grand_total: grandTotal,
+      }
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// âââ GET /api/comptabilite/impayes ââââââââââââââââââââââââââââââââââââââââââââ
+// Liste des factures impayÃ©es avec aging buckets
+router.get("/impayes", requireAuth(), async (req: Request, res: Response) => {
+  try {
+    const clinicId = (req as any).clinicId;
+
+    const impayes = await db.execute(sql`
+      SELECT
+        i.id,
+        i.invoice_number,
+        i.invoice_date,
+        i.due_date,
+        i.total_ttc,
+        COALESCE(i.total_paid, 0) AS total_paid,
+        (i.total_ttc - COALESCE(i.total_paid, 0)) AS reste_a_payer,
+        (CURRENT_DATE - COALESCE(i.due_date, i.invoice_date)::date)::int AS jours_retard,
+        CASE
+          WHEN (CURRENT_DATE - COALESCE(i.due_date, i.invoice_date)::date) <= 30 THEN '0-30'
+          WHEN (CURRENT_DATE - COALESCE(i.due_date, i.invoice_date)::date) <= 60 THEN '31-60'
+          WHEN (CURRENT_DATE - COALESCE(i.due_date, i.invoice_date)::date) <= 90 THEN '61-90'
+          ELSE '90+'
+        END AS aging_bucket,
+        COALESCE(o.last_name || ' ' || o.first_name, 'Inconnu') AS owner_name,
+        o.email AS owner_email,
+        o.phone_mobile AS owner_phone,
+        -- DerniÃ¨re relance
+        (SELECT MAX(r.sent_at) FROM relances r WHERE r.invoice_id = i.id) AS derniere_relance,
+        (SELECT COUNT(*)::int FROM relances r WHERE r.invoice_id = i.id) AS nb_relances
+      FROM invoices i
+      LEFT JOIN owners o ON o.id::text = i.owner_id::text
+      WHERE i.clinic_id = ${clinicId}
+        AND i.document_type = 'FACTURE'
+        AND i.status IN ('FACTURE','EN_ATTENTE','CONTROLE')
+        AND (i.total_ttc - COALESCE(i.total_paid, 0)) > 0
+      ORDER BY jours_retard DESC, i.invoice_date
+    `);
+
+    // RÃ©sumÃ© par bucket
+    const buckets = { "0-30": 0, "31-60": 0, "61-90": 0, "90+": 0 };
+    let totalImpayes = 0;
+    for (const row of impayes.rows as any[]) {
+      buckets[row.aging_bucket as keyof typeof buckets] += Number(row.reste_a_payer);
+      totalImpayes += Number(row.reste_a_payer);
+    }
+
+    res.json({
+      data: {
+        impayes: impayes.rows,
+        buckets,
+        total_impayes: totalImpayes,
+        nb_impayes: impayes.rows.length,
+      }
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// âââ POST /api/comptabilite/relances âââââââââââââââââââââââââââââââââââââââââ
+// Enregistrer une relance manuelle (email envoyÃ© cÃ´tÃ© client)
+router.post("/relances", requireAuth(), async (req: Request, res: Response) => {
+  try {
+    const { userId } = getAuth(req);
+    const clinicId = (req as any).clinicId;
+    const { invoiceId, channel, recipientEmail, recipientName, message } = req.body;
+
+    if (!invoiceId) return res.status(400).json({ error: "invoiceId requis" });
+
+    // VÃ©rifier que la facture appartient Ã  la clinique
+    const check = await db.execute(sql`
+      SELECT id FROM invoices
+      WHERE id = ${invoiceId} AND clinic_id = ${clinicId}
+      LIMIT 1
+    `);
+    if (!check.rows.length) return res.status(404).json({ error: "Facture non trouvÃ©e" });
+
+    const [row] = await db.execute(sql`
+      INSERT INTO relances (clinic_id, invoice_id, sent_by, channel, recipient_email, recipient_name, message, status)
+      VALUES (${clinicId}, ${invoiceId}, ${userId}, ${channel || 'email'}, ${recipientEmail || null}, ${recipientName || null}, ${message || null}, 'sent')
+      RETURNING *
+    `);
+
+    res.status(201).json({ data: row });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+export default router;
