@@ -160,7 +160,7 @@ router.get("/", async (req, res) => {
       consultations = await db.select().from(consultationsTable).where(cidEq).orderBy(desc(consultationsTable.createdAt)).limit(pageSize).offset(pageOffset);
     }
 
-    // P1-3 : anti-N+1 ÃÂ¢ÃÂÃÂ on lit tous les patients et owners en une seule requÃÂÃÂªte.
+    // P1-3 : anti-N+1 ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ on lit tous les patients et owners en une seule requÃÂÃÂÃÂÃÂªte.
     const patientIds = [...new Set(consultations.map((c) => c.patientId).filter(Boolean))];
     const patients = patientIds.length
       ? await db
@@ -228,7 +228,7 @@ router.post("/", validate(CreateConsultationSchema), async (req, res) => {
     const body = CreateConsultationBody.safeParse(req.body);
     if (!body.success) {
       return res.status(400).json(
-        fail("VALIDATION_ERROR", "DonnÃÂÃÂ©es invalides", body.error.flatten().fieldErrors),
+        fail("VALIDATION_ERROR", "DonnÃÂÃÂÃÂÃÂ©es invalides", body.error.flatten().fieldErrors),
       );
     }
 
@@ -258,7 +258,7 @@ router.get("/:id", async (req, res) => {
     if (!params.success) return res.status(400).json(fail("INVALID_ID", "ID invalide"));
 
     const consultation = await getConsultationWithDetails(params.data.id, req.clinicId);
-    if (!consultation) return res.status(404).json(fail("NOT_FOUND", "Consultation non trouvÃÂÃÂ©e"));
+    if (!consultation) return res.status(404).json(fail("NOT_FOUND", "Consultation non trouvÃÂÃÂÃÂÃÂ©e"));
 
     return res.json(consultation);
   } catch (err) {
@@ -268,7 +268,7 @@ router.get("/:id", async (req, res) => {
 });
 
 // ============================================================================
-//  PATCH /:id ÃÂ¢ÃÂÃÂ P0-9 : delete+insert des actes encapsulÃÂÃÂ©s dans une transaction.
+//  PATCH /:id ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ P0-9 : delete+insert des actes encapsulÃÂÃÂÃÂÃÂ©s dans une transaction.
 // ============================================================================
 router.patch("/:id", async (req, res) => {
   try {
@@ -278,7 +278,7 @@ router.patch("/:id", async (req, res) => {
     const body = UpdateConsultationBody.safeParse(req.body);
     if (!body.success) {
       return res.status(400).json(
-        fail("VALIDATION_ERROR", "DonnÃÂÃÂ©es invalides", body.error.flatten().fieldErrors),
+        fail("VALIDATION_ERROR", "DonnÃÂÃÂÃÂÃÂ©es invalides", body.error.flatten().fieldErrors),
       );
     }
 
@@ -288,7 +288,7 @@ router.patch("/:id", async (req, res) => {
       .select({ id: consultationsTable.id })
       .from(consultationsTable)
       .where(and(eq(consultationsTable.clinicId, req.clinicId), eq(consultationsTable.id, params.data.id)));
-    if (!exists) return res.status(404).json(fail("NOT_FOUND", "Consultation non trouvÃÂÃÂ©e"));
+    if (!exists) return res.status(404).json(fail("NOT_FOUND", "Consultation non trouvÃÂÃÂÃÂÃÂ©e"));
 
     await db.transaction(async (tx) => {
       if (Object.keys(consultationData).length > 0) {
@@ -329,7 +329,7 @@ router.patch("/:id", async (req, res) => {
     });
 
     const consultation = await getConsultationWithDetails(params.data.id, req.clinicId);
-    if (!consultation) return res.status(404).json(fail("NOT_FOUND", "Consultation non trouvÃÂÃÂ©e"));
+    if (!consultation) return res.status(404).json(fail("NOT_FOUND", "Consultation non trouvÃÂÃÂÃÂÃÂ©e"));
     return res.json(consultation);
   } catch (err) {
     req.log.error({ err }, "PATCH /consultations/:id failed");
@@ -353,7 +353,7 @@ router.post("/:id/actes", async (req, res) => {
       .select({ id: consultationsTable.id })
       .from(consultationsTable)
       .where(and(eq(consultationsTable.clinicId, req.clinicId), eq(consultationsTable.id, id)));
-    if (!exists) return res.status(404).json(fail("NOT_FOUND", "Consultation non trouvÃÂÃÂ©e"));
+    if (!exists) return res.status(404).json(fail("NOT_FOUND", "Consultation non trouvÃÂÃÂÃÂÃÂ©e"));
 
     const [acte] = await db
       .insert(actesConsultationsTable)
@@ -381,41 +381,41 @@ router.post("/:id/ordonnance", async (req, res) => {
     if (!params.success) return res.status(400).json(fail("INVALID_ID", "ID invalide"));
 
     const consultation = await getConsultationWithDetails(params.data.id, req.clinicId);
-    if (!consultation) return res.status(404).json(fail("NOT_FOUND", "Consultation non trouvÃÂÃÂ©e"));
+    if (!consultation) return res.status(404).json(fail("NOT_FOUND", "Consultation non trouvÃÂÃÂÃÂÃÂ©e"));
 
     const patient = consultation.patient;
     const actes = consultation.actes;
 
-    const prompt = `Tu es un vÃÂÃÂ©tÃÂÃÂ©rinaire. GÃÂÃÂ©nÃÂÃÂ¨re une ordonnance mÃÂÃÂ©dicale structurÃÂÃÂ©e pour ce patient animal.
+    const prompt = `Tu es un vÃÂÃÂÃÂÃÂ©tÃÂÃÂÃÂÃÂ©rinaire. GÃÂÃÂÃÂÃÂ©nÃÂÃÂÃÂÃÂ¨re une ordonnance mÃÂÃÂÃÂÃÂ©dicale structurÃÂÃÂÃÂÃÂ©e pour ce patient animal.
 
-PATIENT : ${patient?.nom ?? "Inconnu"} (${patient?.espece ?? ""}, ${patient?.sexe ?? ""}, ${patient?.sterilise ? "stÃÂÃÂ©rilisÃÂÃÂ©(e)" : "non stÃÂÃÂ©rilisÃÂÃÂ©(e)"})
-PROPRIÃÂÃÂTAIRE : ${patient?.owner?.nom ?? ""} ${patient?.owner?.prenom ?? ""}
+PATIENT : ${patient?.nom ?? "Inconnu"} (${patient?.espece ?? ""}, ${patient?.sexe ?? ""}, ${patient?.sterilise ? "stÃÂÃÂÃÂÃÂ©rilisÃÂÃÂÃÂÃÂ©(e)" : "non stÃÂÃÂÃÂÃÂ©rilisÃÂÃÂÃÂÃÂ©(e)"})
+PROPRIÃÂÃÂÃÂÃÂTAIRE : ${patient?.owner?.nom ?? ""} ${patient?.owner?.prenom ?? ""}
 DATE : ${consultation.date}
-VÃÂÃÂTÃÂÃÂRINAIRE : Dr. ${consultation.veterinaire}
+VÃÂÃÂÃÂÃÂTÃÂÃÂÃÂÃÂRINAIRE : Dr. ${consultation.veterinaire}
 
-DIAGNOSTIC : ${consultation.diagnostic ?? consultation.diagnosticIA ?? "ÃÂÃÂ prÃÂÃÂ©ciser"}
-ANAMNÃÂÃÂSE : ${consultation.anamnese ?? ""}
+DIAGNOSTIC : ${consultation.diagnostic ?? consultation.diagnosticIA ?? "ÃÂÃÂÃÂÃÂ prÃÂÃÂÃÂÃÂ©ciser"}
+ANAMNÃÂÃÂÃÂÃÂSE : ${consultation.anamnese ?? ""}
 EXAMEN CLINIQUE : ${consultation.examenClinique ?? ""}
-${actes.length > 0 ? `ACTES RÃÂÃÂALISÃÂÃÂS : ${actes.map((a) => a.acte?.nom).filter(Boolean).join(", ")}` : ""}
+${actes.length > 0 ? `ACTES RÃÂÃÂÃÂÃÂALISÃÂÃÂÃÂÃÂS : ${actes.map((a) => a.acte?.nom).filter(Boolean).join(", ")}` : ""}
 
-GÃÂÃÂ©nÃÂÃÂ¨re une ordonnance mÃÂÃÂ©dicale vÃÂÃÂ©tÃÂÃÂ©rinaire complÃÂÃÂ¨te avec :
-- En-tÃÂÃÂªte professionnel
-- Identification du patient et propriÃÂÃÂ©taire
-- Les mÃÂÃÂ©dicaments appropriÃÂÃÂ©s avec posologie, durÃÂÃÂ©e et instructions claires
+GÃÂÃÂÃÂÃÂ©nÃÂÃÂÃÂÃÂ¨re une ordonnance mÃÂÃÂÃÂÃÂ©dicale vÃÂÃÂÃÂÃÂ©tÃÂÃÂÃÂÃÂ©rinaire complÃÂÃÂÃÂÃÂ¨te avec :
+- En-tÃÂÃÂÃÂÃÂªte professionnel
+- Identification du patient et propriÃÂÃÂÃÂÃÂ©taire
+- Les mÃÂÃÂÃÂÃÂ©dicaments appropriÃÂÃÂÃÂÃÂ©s avec posologie, durÃÂÃÂÃÂÃÂ©e et instructions claires
 - Conseils post-consultation
-- Signature du vÃÂÃÂ©tÃÂÃÂ©rinaire
+- Signature du vÃÂÃÂÃÂÃÂ©tÃÂÃÂÃÂÃÂ©rinaire
 
-Format: texte structurÃÂÃÂ© lisible, en franÃÂÃÂ§ais, professionnel.`;
+Format: texte structurÃÂÃÂÃÂÃÂ© lisible, en franÃÂÃÂÃÂÃÂ§ais, professionnel.`;
 
     const message = await anthropic.messages.create({
       model: AI_MODEL,
       max_tokens: AI_MAX_TOKENS.long,
-      messages: [{ role: "user", content: prompt }],
+      messages: [{ role: "user", content: prompt.slice(0, 10_000) }],
     });
 
     const content = message.content[0];
     if (content?.type !== "text") {
-      return res.status(500).json(fail("AI_ERROR", "Erreur lors de la gÃÂÃÂ©nÃÂÃÂ©ration de l'ordonnance"));
+      return res.status(500).json(fail("AI_ERROR", "Erreur lors de la gÃÂÃÂÃÂÃÂ©nÃÂÃÂÃÂÃÂ©ration de l'ordonnance"));
     }
 
     await db
@@ -431,12 +431,12 @@ Format: texte structurÃÂÃÂ© lisible, en franÃÂÃÂ§ais, prof
     return res.json({ ordonnance: content.text });
   } catch (err) {
     req.log.error({ err }, "POST /consultations/:id/ordonnance failed");
-    return res.status(500).json(fail("AI_ERROR", "Erreur lors de la gÃÂÃÂ©nÃÂÃÂ©ration de l'ordonnance"));
+    return res.status(500).json(fail("AI_ERROR", "Erreur lors de la gÃÂÃÂÃÂÃÂ©nÃÂÃÂÃÂÃÂ©ration de l'ordonnance"));
   }
 });
 
 // ============================================================================
-//  POST /:id/facture ÃÂ¢ÃÂÃÂ P0-8 : numÃÂÃÂ©rotation atomique via transaction + advisory lock.
+//  POST /:id/facture ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ P0-8 : numÃÂÃÂÃÂÃÂ©rotation atomique via transaction + advisory lock.
 //                      P1-1 : TVA multi-taux par acte.
 // ============================================================================
 router.post("/:id/facture", async (req, res) => {
@@ -453,7 +453,7 @@ router.post("/:id/facture", async (req, res) => {
           eq(consultationsTable.id, params.data.id),
         ),
       );
-    if (!exists) return res.status(404).json(fail("NOT_FOUND", "Consultation non trouvÃÂÃÂ©e"));
+    if (!exists) return res.status(404).json(fail("NOT_FOUND", "Consultation non trouvÃÂÃÂÃÂÃÂ©e"));
 
     const actes = await db
       .select()
@@ -469,7 +469,7 @@ router.post("/:id/facture", async (req, res) => {
       return res.status(400).json(
         fail(
           "NO_ACTES",
-          "Aucun acte saisi ÃÂ¢ÃÂÃÂ veuillez ajouter et enregistrer vos actes avant de gÃÂÃÂ©nÃÂÃÂ©rer la facture.",
+          "Aucun acte saisi ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ veuillez ajouter et enregistrer vos actes avant de gÃÂÃÂÃÂÃÂ©nÃÂÃÂÃÂÃÂ©rer la facture.",
         ),
       );
     }
@@ -480,7 +480,7 @@ router.post("/:id/facture", async (req, res) => {
       return res.status(400).json(
         fail(
           "ZERO_TOTAL",
-          "Le total des actes est 0 ÃÂ¢ÃÂÃÂ¬ ÃÂ¢ÃÂÃÂ saisissez des prix corrects avant de gÃÂÃÂ©nÃÂÃÂ©rer la facture.",
+          "Le total des actes est 0 ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ¬ ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ saisissez des prix corrects avant de gÃÂÃÂÃÂÃÂ©nÃÂÃÂÃÂÃÂ©rer la facture.",
         ),
       );
     }
@@ -511,7 +511,7 @@ router.post("/:id/facture", async (req, res) => {
       return res.json({ ...updated, createdAt: updated.createdAt.toISOString() });
     }
 
-    // Transaction atomique : numÃÂÃÂ©ro + insert.
+    // Transaction atomique : numÃÂÃÂÃÂÃÂ©ro + insert.
     const facture = await db.transaction(async (tx) => {
       const numero = await nextInvoiceNumber(tx, req.clinicId);
       const [inserted] = await tx
@@ -534,7 +534,7 @@ router.post("/:id/facture", async (req, res) => {
     return res.json({ ...facture, createdAt: facture.createdAt.toISOString() });
   } catch (err) {
     req.log.error({ err }, "POST /consultations/:id/facture failed");
-    return res.status(500).json(fail("INTERNAL", "Erreur lors de la gÃÂÃÂ©nÃÂÃÂ©ration de la facture"));
+    return res.status(500).json(fail("INTERNAL", "Erreur lors de la gÃÂÃÂÃÂÃÂ©nÃÂÃÂÃÂÃÂ©ration de la facture"));
   }
 });
 
