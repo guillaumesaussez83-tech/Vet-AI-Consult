@@ -1,27 +1,33 @@
-import { pgTable, text, serial, timestamp, integer, index } from "drizzle-orm/pg-core";
-import { createInsertSchema } from "drizzle-zod";
-import { z } from "zod/v4";
-import { patientsTable } from "./patients";
+import { pgTable, serial, integer, text, date, timestamp } from "drizzle-orm/pg-core";
 
 export const vaccinationsTable = pgTable("vaccinations", {
   id: serial("id").primaryKey(),
-  clinicId: text("clinic_id").notNull().default("default"),
-  patientId: integer("patient_id").notNull().references(() => patientsTable.id),
-  nomVaccin: text("nom_vaccin").notNull(),
-  dateInjection: text("date_injection").notNull(),
-  dateRappel: text("date_rappel"),
-  lotNumero: text("lot_numero"),
-  fabricant: text("fabricant"),
-  voieInjection: text("voie_injection"),
-  veterinaire: text("veterinaire"),
+  clinicId: text("clinic_id").notNull(),
+  patientId: integer("patient_id").notNull(),
+  ownerId: integer("owner_id"),
+  vaccineType: text("vaccine_type").notNull(), // RAGE, HEPATITE, LEPTO, PARVO, HERPES, etc.
+  vaccineName: text("vaccine_name"),
+  vaccineDate: date("vaccine_date").notNull(),
+  nextDueDate: date("next_due_date"),
+  batchNumber: text("batch_number"),
   notes: text("notes"),
+  consultationId: integer("consultation_id"),
+  createdBy: text("created_by"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-}, (table) => ({
-  clinicIdIdx: index("idx_clinic_id__vaccinations").on(table.clinicId),
-  patientIdIdx: index("idx_vaccinations_patient_id").on(table.patientId),
-  dateRappelIdx: index("idx_vaccinations_date_rappel").on(table.dateRappel),
-}));
+});
 
-export const insertVaccinationSchema = createInsertSchema(vaccinationsTable).omit({ id: true, createdAt: true });
-export type InsertVaccination = z.infer<typeof insertVaccinationSchema>;
-export type Vaccination = typeof vaccinationsTable.$inferSelect;
+export const vaccinationRemindersTable = pgTable("vaccination_reminders", {
+  id: serial("id").primaryKey(),
+  clinicId: text("clinic_id").notNull(),
+  vaccinationId: integer("vaccination_id").notNull(),
+  patientId: integer("patient_id").notNull(),
+  ownerId: integer("owner_id"),
+  reminderDate: date("reminder_date").notNull(),
+  channel: text("channel").notNull().default("email"),
+  status: text("status").notNull().default("PENDING"), // PENDING, SENT, FAILED, CANCELLED
+  sentAt: timestamp("sent_at", { withTimezone: true }),
+  recipientEmail: text("recipient_email"),
+  recipientPhone: text("recipient_phone"),
+  message: text("message"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
