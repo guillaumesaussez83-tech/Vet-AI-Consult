@@ -347,7 +347,7 @@ router.post("/ia/generer", validate(z.object({ consultationId: z.number().int().
           (Date.now() - new Date(dateNaissance).getTime()) /
             (365.25 * 24 * 3600 * 1000),
         )} ans`
-      : "ÃÂÃÂ¢ge inconnu";
+      : "âge inconnu";
     const proprietaire = consultation.patient?.owner
       ? `${consultation.patient.owner.prenom ?? ""} ${consultation.patient.owner.nom ?? ""}`.trim()
       : "";

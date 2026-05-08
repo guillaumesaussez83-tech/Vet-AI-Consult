@@ -71,7 +71,7 @@ type Vente = {
   montantTtc: string;
   statut: string;
   date: string;
-  lignes?: VenteLigne[];
+  lignes?: VenteLigne[];  ownerNom?: string | null;  ownerPrenom?: string | null;
 };
 
 type LigneForm = {
@@ -313,10 +313,10 @@ function VenteTab({ type }: { type: "comptoir" | "prescription" }) {
                   <td className="px-4 py-2 font-mono text-xs">{v.numero}</td>
                   <td className="px-4 py-2">{new Date(v.date).toLocaleDateString("fr-FR")}</td>
                   <td className="px-4 py-2 text-xs text-muted-foreground">
-                    {patient
-                      ? `${owner?.prenom} ${owner?.nom} — ${patient.nom}`
-                      : "—"}
-                  </td>
+          {v.ownerNom
+            ? `${v.ownerPrenom ?? ''} ${v.ownerNom}`.trim()
+            : "—"}
+                          </td>
                   <td className="px-4 py-2 text-xs text-muted-foreground">
                     {modePaiementLabel(v.modePaiement)}
                   </td>

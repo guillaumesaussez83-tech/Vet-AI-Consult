@@ -106,7 +106,7 @@ export default function AgendaPage() {
     },
   });
   const patientsList: any[] = patientsData?.data?.patients ?? [];
-
+  const toLocalStr = (d: Date | string) => { const dt = d instanceof Date ? d : new Date(d); const p = (n: number) => String(n).padStart(2, "0"); return `${dt.getFullYear()}-${p(dt.getMonth()+1)}-${p(dt.getDate())}T${p(dt.getHours())}:${p(dt.getMinutes())}`; };
   // Convert RDV → FullCalendar events
   const calEvents = rdvList
     .filter(r => !selectedVets.length || selectedVets.includes(r.veterinaire_id || r.veterinaire))
@@ -117,8 +117,8 @@ export default function AgendaPage() {
       return {
         id: String(r.id),
         title: `${r.animal_nom || "?"} — ${r.proprietaire_nom || "?"}`,
-        start: r.date_heure,
-        end: new Date(new Date(r.date_heure).getTime() + (r.duree_minutes || 30) * 60000).toISOString(),
+        start: toLocalStr(r.date_heure),
+      end: toLocalStr(new Date(new Date(r.date_heure).getTime() + (r.duree_minutes || 30) * 60000)),
         backgroundColor: r.statut === "NO_SHOW" ? "#DC2626" : r.statut === "ANNULE" ? "#9CA3AF" : color,
         borderColor: r.statut === "NO_SHOW" ? "#B91C1C" : color,
         textColor: "#fff",
