@@ -6,17 +6,17 @@ import { sql } from "drizzle-orm";
 
 const router = Router();
 
-// ── Security: authentication + clinic isolation
+// ââ Security: authentication + clinic isolation
 router.use(requireAuth(), requireClinicId);
 
-// Twilio via REST API (aucune dépendance SDK)
+// Twilio via REST API (aucune dÃ©pendance SDK)
 async function sendTwilioSMS(to: string, body: string): Promise<{ sid?: string; error?: string }> {
   const accountSid = process.env.TWILIO_ACCOUNT_SID;
   const authToken = process.env.TWILIO_AUTH_TOKEN;
   const fromNumber = process.env.TWILIO_FROM_NUMBER;
 
   if (!accountSid || !authToken || !fromNumber) {
-    return { error: "Twilio non configuré (env vars manquants)" };
+    return { error: "Twilio non configurÃ© (env vars manquants)" };
   }
 
   const auth = Buffer.from(`${accountSid}:${authToken}`).toString("base64");
@@ -40,7 +40,7 @@ async function sendTwilioSMS(to: string, body: string): Promise<{ sid?: string; 
   }
 }
 
-// POST /api/sms/send — envoi manuel
+// POST /api/sms/send â envoi manuel
 router.post("/send", async (req: any, res) => {
   try {
     const clinicId = req.auth?.sessionClaims?.clinicId as string;
@@ -64,7 +64,7 @@ router.post("/send", async (req: any, res) => {
   }
 });
 
-// POST /api/sms/send-reminders — envoi automatique J-3 et J-1
+// POST /api/sms/send-reminders â envoi automatique J-3 et J-1
 router.post("/send-reminders", async (req: any, res) => {
   try {
     const now = new Date();
@@ -76,7 +76,7 @@ router.post("/send-reminders", async (req: any, res) => {
     const dateJ3 = j3.toISOString().slice(0, 10);
     const dateJ1 = j1.toISOString().slice(0, 10);
 
-    // Récupérer les RDV J-3 non annulés avec téléphone
+    // RÃ©cupÃ©rer les RDV J-3 non annulÃ©s avec tÃ©lÃ©phone
     const rdvJ3 = await db.execute(sql`
       SELECT r.*, r.proprietaire_telephone as phone
       FROM rendez_vous r
@@ -101,10 +101,10 @@ router.post("/send-reminders", async (req: any, res) => {
 
     const results = { j3: 0, j1: 0, errors: [] as string[] };
 
-    for (const rdv of rdvJ3.rows as any[]) {
+    const _j3sms = await Promise.allSettled((rdvJ3.rows as any[]).map(async (rdv) => {
       const dateStr = new Date(rdv.date_heure).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" });
       const heureStr = new Date(rdv.date_heure).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
-      const msg = `Rappel: RDV vétérinaire le ${dateStr} à ${heureStr} pour ${rdv.animal_nom}. Répondez STOP pour annuler.`;
+      const msg = `Rappel: RDV vÃ©tÃ©rinaire le ${dateStr} Ã  ${heureStr} pour ${rdv.animal_nom}. RÃ©pondez STOP pour annuler.`;
       const r = await sendTwilioSMS(rdv.phone, msg);
       const ts = new Date().toISOString();
       await db.execute(sql`
@@ -112,13 +112,16 @@ router.post("/send-reminders", async (req: any, res) => {
         VALUES (${rdv.clinic_id}, ${rdv.id}, ${rdv.owner_id || null}, ${rdv.phone}, ${msg}, 'RAPPEL_J3',
           ${r.error ? "FAILED" : "SENT"}, ${r.sid || null}, ${r.error || null}, ${r.error ? null : ts}, ${ts})
       `);
-      if (!r.error) results.j3++;
-      else results.errors.push(`RDV ${rdv.id}: ${r.error}`);
+      return { ok: !r.error, rdvId: rdv.id, err: r.error };
+    }));
+    for (const _sr of _j3sms) {
+      if (_sr.status === 'fulfilled' && _sr.value.ok) results.j3++;
+      else results.errors.push(_sr.status === 'rejected' ? String(_sr.reason) : `RDV ${_sr.value.rdvId}: ${_sr.value.err}`);
     }
 
-    for (const rdv of rdvJ1.rows as any[]) {
+    const _j1sms = await Promise.allSettled((rdvJ1.rows as any[]).map(async (rdv) => {
       const heureStr = new Date(rdv.date_heure).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
-      const msg = `Rappel urgent: RDV vétérinaire DEMAIN à ${heureStr} pour ${rdv.animal_nom}. En cas d'empêchement: appelez-nous.`;
+      const msg = `Rappel urgent: RDV vÃ©tÃ©rinaire DEMAIN Ã  ${heureStr} pour ${rdv.animal_nom}. En cas d'empÃªchement: appelez-nous.`;
       const r = await sendTwilioSMS(rdv.phone, msg);
       const ts = new Date().toISOString();
       await db.execute(sql`
@@ -126,8 +129,11 @@ router.post("/send-reminders", async (req: any, res) => {
         VALUES (${rdv.clinic_id}, ${rdv.id}, ${rdv.owner_id || null}, ${rdv.phone}, ${msg}, 'RAPPEL_J1',
           ${r.error ? "FAILED" : "SENT"}, ${r.sid || null}, ${r.error || null}, ${r.error ? null : ts}, ${ts})
       `);
-      if (!r.error) results.j1++;
-      else results.errors.push(`RDV ${rdv.id}: ${r.error}`);
+      return { ok: !r.error, rdvId: rdv.id, err: r.error };
+    }));
+    for (const _sr of _j1sms) {
+      if (_sr.status === 'fulfilled' && _sr.value.ok) results.j1++;
+      else results.errors.push(_sr.status === 'rejected' ? String(_sr.reason) : `RDV ${_sr.value.rdvId}: ${_sr.value.err}`);
     }
 
     res.json({ success: true, data: results });
@@ -136,7 +142,7 @@ router.post("/send-reminders", async (req: any, res) => {
   }
 });
 
-// GET /api/sms/log — historique SMS
+// GET /api/sms/log â historique SMS
 router.get("/log", async (req: any, res) => {
   try {
     const clinicId = req.auth?.sessionClaims?.clinicId as string;
