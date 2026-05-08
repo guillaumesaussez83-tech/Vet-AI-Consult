@@ -1,8 +1,11 @@
 import { Router } from "express";
+import requireClinicId from "../middleware/requireClinicId";
+import { requireAuth } from "@clerk/express";
 import { db } from "@workspace/db";
 import { sql } from "drizzle-orm";
 
 const router = Router();
+router.use(requireAuth(), requireClinicId);
 
 // GET /api/recurring-appointments
 router.get("/", async (req: any, res) => {
