@@ -46,6 +46,31 @@ router.post("/", requireAuth(), async (req: Request, res: Response) => {
     const { patientId, ownerId, vaccineType, vaccineName, vaccineDate, nextDueDate, batchNumber, notes, consultationId } = req.body;
     if (!patientId || !vaccineType || !vaccineDate) return res.status(400).json({ error: "patientId, vaccineType, vaccineDate requis" });
 
+    // Validate vaccineDate format and range
+    const parsedVaccDate = new Date(vaccineDate as string);
+    if (isNaN(parsedVaccDate.getTime())) {
+      return res.status(400).json({ error: "vaccineDate invalide: format ISO YYYY-MM-DD requis" });
+    }
+    const now = new Date();
+    const maxFuture = new Date(now.getFullYear() + 1, now.getMonth(), now.getDate());
+    const maxPast = new Date(now.getFullYear() - 30, now.getMonth(), now.getDate());
+    if (parsedVaccDate > maxFuture) {
+      return res.status(400).json({ error: "vaccineDate invalide: date dans le futur (max +1 an)" });
+    }
+    if (parsedVaccDate < maxPast) {
+      return res.status(400).json({ error: "vaccineDate invalide: date trop ancienne (max -30 ans)" });
+    }
+    // Validate nextDueDate if provided
+    if (nextDueDate) {
+      const parsedNextDue = new Date(nextDueDate as string);
+      if (isNaN(parsedNextDue.getTime())) {
+        return res.status(400).json({ error: "nextDueDate invalide: format ISO YYYY-MM-DD requis" });
+      }
+      if (parsedNextDue < parsedVaccDate) {
+        return res.status(400).json({ error: "nextDueDate doit être postérieur à vaccineDate" });
+      }
+    }
+
     const [row] = await db.execute(sql`
       INSERT INTO vaccinations (clinic_id, patient_id, owner_id, vaccine_type, vaccine_name, vaccine_date, next_due_date, batch_number, notes, consultation_id, created_by)
       VALUES (${clinicId}, ${Number(patientId)}, ${ownerId ? Number(ownerId) : null},
