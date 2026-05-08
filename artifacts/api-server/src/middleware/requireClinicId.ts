@@ -33,7 +33,7 @@ export function requireClinicId(
     (auth.sessionClaims?.clinicId as string) ??
     (auth.sessionClaims?.publicMetadata as any)?.clinicId;
 
-  if (!clinicId) {
+  if (typeof clinicId !== "string" || clinicId.trim() === "") {
     return res.status(403).json({
       error: "FORBIDDEN",
       message:
@@ -52,7 +52,7 @@ export function requireClinicId(
  */
 export function getClinicId(req: Request): string {
   const clinicId = (req as any).clinicId;
-  if (!clinicId) {
+  if (typeof clinicId !== "string" || clinicId.trim() === "") {
     throw new Error(
       "getClinicId called before requireClinicId middleware. " +
         "Ensure requireClinicId is applied to this route."
