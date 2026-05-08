@@ -1,9 +1,13 @@
 import { Router, Request, Response } from "express";
+import requireClinicId from "../../middleware/requireClinicId";
 import { requireAuth, getAuth } from "@clerk/express";
 import { db } from "../../../db";
 import { sql } from "drizzle-orm";
 
 const router = Router();
+
+// ── Enforce clinic isolation on all comptabilite routes
+router.use(requireClinicId);
 
 // âââ GET /api/comptabilite/dashboard ââââââââââââââââââââââââââââââââââââââââ
 // KPIs financiers : CA HT, TVA collectÃ©e, impayÃ©s, nb factures + courbe mensuelle
@@ -13,8 +17,8 @@ router.get("/dashboard", requireAuth(), async (req: Request, res: Response) => {
     const { from, to } = req.query;
 
     const clinicId = (req as any).clinicId;
-
-    const dateFrom = from ? String(from) : new Date(new Date().getFullYear(), 0, 1).toISOString().slice(0, 10);
+  if (!clinicId) return res.status(403).json({ error: "Clinic ID requis" });
+  const dateFrom = from ? String(from) : new Date(new Date().getFullYear(), 0, 1).toISOString().slice(0, 10);
     const dateTo = to ? String(to) : new Date().toISOString().slice(0, 10);
 
     // KPIs globaux sur la pÃ©riode
@@ -79,8 +83,8 @@ router.get("/export-fec", requireAuth(), async (req: Request, res: Response) => 
   try {
     const { from, to } = req.query;
     const clinicId = (req as any).clinicId;
-
-    const dateFrom = from ? String(from) : new Date(new Date().getFullYear(), 0, 1).toISOString().slice(0, 10);
+  if (!clinicId) return res.status(403).json({ error: "Clinic ID requis" });
+  const dateFrom = from ? String(from) : new Date(new Date().getFullYear(), 0, 1).toISOString().slice(0, 10);
     const dateTo = to ? String(to) : new Date().toISOString().slice(0, 10);
 
     // Factures sur la pÃ©riode (journal VTE)
@@ -191,7 +195,8 @@ router.get("/export-fec", requireAuth(), async (req: Request, res: Response) => 
 router.get("/journal-caisse", requireAuth(), async (req: Request, res: Response) => {
   try {
     const clinicId = (req as any).clinicId;
-    const date = req.query.date ? String(req.query.date) : new Date().toISOString().slice(0, 10);
+  if (!clinicId) return res.status(403).json({ error: "Clinic ID requis" });
+  const date = req.query.date ? String(req.query.date) : new Date().toISOString().slice(0, 10);
 
     const journal = await db.execute(sql`
       SELECT
@@ -242,8 +247,8 @@ router.get("/journal-caisse", requireAuth(), async (req: Request, res: Response)
 router.get("/impayes", requireAuth(), async (req: Request, res: Response) => {
   try {
     const clinicId = (req as any).clinicId;
-
-    const impayes = await db.execute(sql`
+  if (!clinicId) return res.status(403).json({ error: "Clinic ID requis" });
+  const impayes = await db.execute(sql`
       SELECT
         i.id,
         i.invoice_number,
@@ -301,7 +306,8 @@ router.post("/relances", requireAuth(), async (req: Request, res: Response) => {
   try {
     const { userId } = getAuth(req);
     const clinicId = (req as any).clinicId;
-    const { invoiceId, channel, recipientEmail, recipientName, message } = req.body;
+  if (!clinicId) return res.status(403).json({ error: "Clinic ID requis" });
+  const { invoiceId, channel, recipientEmail, recipientName, message } = req.body;
 
     if (!invoiceId) return res.status(400).json({ error: "invoiceId requis" });
 
