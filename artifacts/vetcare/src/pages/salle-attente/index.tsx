@@ -220,7 +220,7 @@ export default function SalleAttentePage() {
         <div className="flex items-center gap-6 text-sm">
           <div className="flex items-center gap-1.5 font-mono text-base font-semibold text-foreground">
             <Clock className="h-4 w-4 text-muted-foreground" />
-            {now.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
+            {now.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Paris" })}
           </div>
           <div className="hidden md:flex items-center gap-3 text-muted-foreground">
             {summary.enAttente > 0 && <span><strong className="text-foreground">{summary.enAttente}</strong> en attente</span>}
@@ -238,7 +238,7 @@ export default function SalleAttentePage() {
           )}
           {lastSyncAt && !isFetching && (
             <span className="text-xs text-muted-foreground hidden sm:inline">
-              Sync {lastSyncAt.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
+              Sync {lastSyncAt.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Paris" })}
             </span>
           )}
           {isFetching && <RefreshCw className="h-4 w-4 animate-spin text-muted-foreground" />}

@@ -86,6 +86,7 @@
     "@sentry/react": "^10.49.0",
     "html2pdf.js": "^0.14.0",
     "react-error-boundary": "^6.1.1",
-    "react-markdown": "^10.1.0"
+    "react-markdown": "^10.1.0",
+        "remark-gfm": "^4.0.0"
   }
 }

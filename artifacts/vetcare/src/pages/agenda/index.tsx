@@ -15,6 +15,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Calendar, Clock, User, AlertTriangle, CheckCircle2, XCircle, Phone, ChevronLeft, ChevronRight, RefreshCw, Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { formatTime } from "@/lib/dateUtils";
 import { format, addDays } from "date-fns";
 import { fr } from "date-fns/locale";
 
@@ -58,6 +59,7 @@ export default function AgendaPage() {
   const [showDialog, setShowDialog] = useState(false);
   const [editId, setEditId] = useState<number | null>(null);
   const [form, setForm] = useState<RdvForm>(defaultForm);
+    const [patientFilter, setPatientFilter] = useState("");
   const [activeTab, setActiveTab] = useState("agenda");
 
   // --- Fetch vétérinaires ---
@@ -351,8 +353,8 @@ export default function AgendaPage() {
             ) : (
               salleList.map((rdv: any) => {
                 const statut = STATUT_CONFIG[rdv.statut] || STATUT_CONFIG["EN_ATTENTE"];
-                const heure = new Date(rdv.date_heure).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
-                return (
+        const heure = formatTime(rdv.date_heure);                
+        return (
                   <div key={rdv.id} className="bg-white rounded-lg border p-2 shadow-sm">
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-xs font-semibold text-gray-700">{rdv.animal_nom || "?"}</span>
@@ -454,8 +456,10 @@ export default function AgendaPage() {
             {/* Patient search */}
             <div className="space-y-1">
               <Label className="text-xs">Patient (recherche)</Label>
+                        <Input placeholder="Filtrer les patients..." value={patientFilter} onChange={e => setPatientFilter(e.target.value)} className="mb-1" />
               <Select value={form.patientId} onValueChange={v => {
                 const p = patientsList.find(x => String(x.id) === v);
+                    setPatientFilter("");
                 setForm(f => ({
                   ...f, patientId: v,
                   animalNom: p?.nom || f.animalNom,
@@ -466,7 +470,7 @@ export default function AgendaPage() {
               }}>
                 <SelectTrigger><SelectValue placeholder="Chercher un patient..." /></SelectTrigger>
                 <SelectContent className="max-h-48 overflow-y-auto">
-                  {patientsList.map((p: any) => (
+                  {patientsList.filter((p: any) => !patientFilter || `${p.nom} ${p.owner_nom || ""} ${p.owner_prenom || ""}`.toLowerCase().includes(patientFilter.toLowerCase())).map((p: any) => (
                     <SelectItem key={p.id} value={String(p.id)}>
                       {p.nom} — {p.owner_nom || ""} {p.owner_prenom || ""}
                     </SelectItem>

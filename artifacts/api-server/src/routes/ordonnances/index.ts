@@ -15,6 +15,7 @@ import { anthropic } from "@workspace/integrations-anthropic-ai";
 import { decrementerConsultationFEFO } from "../stock/ia-engine";
 import { checkContraindications } from "../../services/contraindications";
 import { validate } from "../../middlewares/validate";
+import { z } from "zod";
 import { CreateOrdonnanceSchema } from "../../schemas";
 
 const router = Router();
@@ -274,11 +275,9 @@ router.delete("/:id", async (req, res) => {
   }
 });
 
-router.post("/ia/generer", async (req, res) => {
+router.post("/ia/generer", validate(z.object({ consultationId: z.number().int().positive() })), async (req, res) => {})
   try {
     const { consultationId } = req.body;
-    if (!consultationId)
-      return res.status(400).json({ error: "consultationId requis" });
 
     const [consultation] = await db
       .select({

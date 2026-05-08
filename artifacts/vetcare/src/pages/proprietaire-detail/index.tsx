@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useParams, Link } from "wouter";
-
+import ReactMarkdown from "react-markdown";
 type Tab = "infos" | "animaux" | "finances" | "courriers" | "rgpd";
 
 const TABS: { id: Tab; label: string }[] = [
@@ -473,7 +473,7 @@ export default function ProprietaireDetailPage() {
                         {c.patient_nom && <span className="text-xs text-gray-500">— {c.patient_nom}</span>}
                       </div>
                       <div className="font-semibold text-gray-800">{c.subject}</div>
-                      <div className="text-sm text-gray-600 mt-1 whitespace-pre-line line-clamp-2">{c.content}</div>
+                      <div className="text-sm text-gray-600 mt-1 whitespace-pre-line line-clamp-2"><ReactMarkdown>{c.content}</ReactMarkdown></div>
                       <div className="text-xs text-gray-400 mt-2">{new Date(c.created_at).toLocaleDateString("fr-FR")}</div>
                     </div>
                     <button

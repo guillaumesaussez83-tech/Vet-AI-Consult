@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { useToast } from "@/hooks/use-toast";
 import { Award, Loader2, Printer, CheckCircle, FileText, Heart, Shield, ClipboardList, Pill } from "lucide-react";
 import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useListPatients } from "@workspace/api-client-react";
 
@@ -247,7 +248,7 @@ export default function CertificatsPage() {
           <div className="flex-1 overflow-y-auto">
             <div className="print:block">
               <div className="text-sm leading-relaxed bg-white p-6 border rounded-lg min-h-[400px] prose prose-sm max-w-none prose-headings:text-gray-900 prose-p:text-gray-700 prose-strong:text-gray-900 prose-ul:text-gray-700 prose-li:my-0.5">
-                <ReactMarkdown>{certificatText}</ReactMarkdown>
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>{certificatText}</ReactMarkdown>
               </div>
             </div>
           </div>

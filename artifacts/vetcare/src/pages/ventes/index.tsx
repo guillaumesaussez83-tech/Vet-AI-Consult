@@ -325,7 +325,7 @@ function VenteTab({ type }: { type: "comptoir" | "prescription" }) {
                   </td>
                   <td className="px-4 py-2">
                     <Badge variant={v.statut === "completee" ? "default" : "secondary"}>
-                      {v.statut}
+                      {v.statut === "completee" ? "Complétée" : v.statut === "en_cours" ? "En cours" : v.statut === "annulee" ? "Annulée" : v.statut}
                     </Badge>
                   </td>
                   <td className="px-4 py-2 flex gap-1 justify-end">

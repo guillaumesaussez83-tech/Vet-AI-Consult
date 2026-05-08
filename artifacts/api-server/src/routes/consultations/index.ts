@@ -81,40 +81,42 @@ async function getConsultationWithDetails(id: number, clinicId: string) {
 
   if (!c) return null;
 
-  const actes = await db
-    .select({
-      id: actesConsultationsTable.id,
-      acteId: actesConsultationsTable.acteId,
-      consultationId: actesConsultationsTable.consultationId,
-      quantite: actesConsultationsTable.quantite,
-      prixUnitaire: actesConsultationsTable.prixUnitaire,
-      tvaRate: actesConsultationsTable.tvaRate,
-      description: actesConsultationsTable.description,
-      acte: {
-        id: actesTable.id,
-        code: actesTable.code,
-        nom: actesTable.nom,
-        categorie: actesTable.categorie,
-        prixDefaut: actesTable.prixDefaut,
-        description: actesTable.description,
-        unite: actesTable.unite,
-      },
-    })
-    .from(actesConsultationsTable)
-    .leftJoin(actesTable, eq(actesConsultationsTable.acteId, actesTable.id))
-    .where(
-      and(
-        eq(actesConsultationsTable.clinicId, clinicId),
-        eq(actesConsultationsTable.consultationId, id),
+  const [actes, factureRows] = await Promise.all([
+    db
+      .select({
+        id: actesConsultationsTable.id,
+        acteId: actesConsultationsTable.acteId,
+        consultationId: actesConsultationsTable.consultationId,
+        quantite: actesConsultationsTable.quantite,
+        prixUnitaire: actesConsultationsTable.prixUnitaire,
+        tvaRate: actesConsultationsTable.tvaRate,
+        description: actesConsultationsTable.description,
+        acte: {
+          id: actesTable.id,
+          code: actesTable.code,
+          nom: actesTable.nom,
+          categorie: actesTable.categorie,
+          prixDefaut: actesTable.prixDefaut,
+          description: actesTable.description,
+          unite: actesTable.unite,
+        },
+      })
+      .from(actesConsultationsTable)
+      .leftJoin(actesTable, eq(actesConsultationsTable.acteId, actesTable.id))
+      .where(
+        and(
+          eq(actesConsultationsTable.clinicId, clinicId),
+          eq(actesConsultationsTable.consultationId, id),
+        ),
       ),
-    );
-
-  const [facture] = await db
-    .select()
-    .from(facturesTable)
-    .where(
-      and(eq(facturesTable.clinicId, clinicId), eq(facturesTable.consultationId, id)),
-    );
+    db
+      .select()
+      .from(facturesTable)
+      .where(
+        and(eq(facturesTable.clinicId, clinicId), eq(facturesTable.consultationId, id)),
+      ),
+  ]);
+  const facture = factureRows[0] ?? null;
 
   return {
     ...c,

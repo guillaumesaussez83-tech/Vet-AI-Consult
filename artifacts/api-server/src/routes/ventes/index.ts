@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { ventesTable, venteLignesTable, insertVenteSchema, insertVenteLigneSchema } from "@workspace/db/schema";
+import { ventesTable, venteLignesTable, insertVenteSchema, insertVenteLigneSchema, ownersTable } from "@workspace/db/schema";
 import { eq, and, desc } from "drizzle-orm";
 import { ok, fail } from "../../lib/response";
 import { extractClinic } from "../../middlewares/extractClinic";
@@ -18,8 +18,29 @@ router.get("/", extractClinic(), async (req, res) => {
       conditions.push(eq(ventesTable.type, type));
     }
     const ventes = await db
-      .select()
+      .select({
+        id: ventesTable.id,
+        clinicId: ventesTable.clinicId,
+        numero: ventesTable.numero,
+        type: ventesTable.type,
+        patientId: ventesTable.patientId,
+        proprietaireId: ventesTable.proprietaireId,
+        assistantId: ventesTable.assistantId,
+        ordonnanceId: ventesTable.ordonnanceId,
+        notes: ventesTable.notes,
+        modePaiement: ventesTable.modePaiement,
+        montantHt: ventesTable.montantHt,
+        montantTva: ventesTable.montantTva,
+        montantTtc: ventesTable.montantTtc,
+        statut: ventesTable.statut,
+        date: ventesTable.date,
+        createdAt: ventesTable.createdAt,
+        updatedAt: ventesTable.updatedAt,
+        ownerNom: ownersTable.nom,
+        ownerPrenom: ownersTable.prenom,
+      })
       .from(ventesTable)
+      .leftJoin(ownersTable, eq(ventesTable.proprietaireId, ownersTable.id))
       .where(and(...conditions))
       .orderBy(desc(ventesTable.date));
     return res.json(ok(ventes));
