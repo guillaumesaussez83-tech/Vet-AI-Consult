@@ -358,7 +358,7 @@ router.get(
         db.select({ nb: count() }).from(consultationsTable)
           .where(and(eq(consultationsTable.clinicId, clinicId), gte(consultationsTable.createdAt, prevMonthStart), lte(consultationsTable.createdAt, prevMonthEnd), isNull(consultationsTable.deletedAt))),
         db.select({ nb: count() }).from(patientsTable)
-          .where(and(eq(patientsTable.clinicId, clinicId), gte(patientsTable.createdAt, monthStart), isNull(patientsTable.deletedAt))),
+          .where(and(eq(patientsTable.clinicId, clinidId), gte(patientsTable.createdAt, monthStart), isNull(patientsTable.deletedAt))),
         db.select({ nb: count(), mt: sql<string>`COALESCE(SUM(montant_ttc::numeric),0)` }).from(facturesTable)
           .where(and(eq(facturesTable.clinicId, clinicId), ne(facturesTable.statut, "payee"), isNull(facturesTable.deletedAt))),
         db.select({ nb: count() }).from(consultationsTable)
