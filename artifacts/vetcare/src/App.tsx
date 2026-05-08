@@ -42,6 +42,10 @@ import PortailPage from "./pages/portail";
 import RappelsPage from "./pages/rappels";
 import SalleAttentePage from "./pages/salle-attente";
 import StupefiantsPage from "./pages/stupefiants";
+import AnalyticsDashboard from "./pages/analytics";
+import ClientelePage from "./pages/analytics/clientele";
+import GroupePage from "./pages/groupe";
+import ReportsPage from "./pages/reports";
 
 function PrivateRoute({ component: Component, ...rest }: any) {
   const { isLoaded, isSignedIn } = useAuth();
@@ -113,6 +117,10 @@ export default function App() {
           <Route path="/admin" component={() => <PrivateRoute component={AdminPage} />} />
         </Switch>
       </AppLayout>
-    </Switch>
+      <Route path="/analytics" component={AnalyticsDashboard} />
+  <Route path="/analytics/clientele" component={ClientelePage} />
+  <Route path="/groupe" component={GroupePage} />
+  <Route path="/reports" component={ReportsPage} />
+</Switch>
   );
 }
