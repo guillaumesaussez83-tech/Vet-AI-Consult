@@ -50,3 +50,5 @@ export * from "./vaccinations";
 export * from "./ventes";
 export * from "./veterinaires";
 export * from "./weight-history";
+export * from "./analytics-snapshots";
+export * from "./group-reports";
