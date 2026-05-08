@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
 
@@ -24,6 +24,7 @@ const fetchOwners = async (search: string): Promise<Owner[]> => {
 export default function ProprietairesPage() {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const { data: owners = [], isLoading } = useQuery({
     queryKey: ["owners", debouncedSearch],
@@ -32,8 +33,8 @@ export default function ProprietairesPage() {
 
   const handleSearch = (val: string) => {
     setSearch(val);
-    clearTimeout((window as any)._ownerSearchTimer);
-    (window as any)._ownerSearchTimer = setTimeout(() => setDebouncedSearch(val), 300);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => setDebouncedSearch(val), 300);
   };
 
   return (
@@ -41,15 +42,15 @@ export default function ProprietairesPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Propriétaires</h1>
-          <p className="text-gray-500 text-sm mt-1">{owners.length} résultat{owners.length !== 1 ? "s" : ""}</p>
+          <h1 className="text-2xl font-bold text-gray-900">PropriÃ©taires</h1>
+          <p className="text-gray-500 text-sm mt-1">{owners.length} rÃ©sultat{owners.length !== 1 ? "s" : ""}</p>
         </div>
         <Link href="/proprietaires/nouveau">
           <button className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 flex items-center gap-2">
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
             </svg>
-            Nouveau propriétaire
+            Nouveau propriÃ©taire
           </button>
         </Link>
       </div>
@@ -61,7 +62,7 @@ export default function ProprietairesPage() {
         </svg>
         <input
           type="text"
-          placeholder="Rechercher par nom, prénom, email ou téléphone..."
+          placeholder="Rechercher par nom, prÃ©nom, email ou tÃ©lÃ©phone..."
           value={search}
           onChange={e => handleSearch(e.target.value)}
           className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -78,7 +79,7 @@ export default function ProprietairesPage() {
           <svg className="w-12 h-12 mx-auto mb-3 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2h5M12 12a4 4 0 100-8 4 4 0 000 8z" />
           </svg>
-          <p className="font-medium">Aucun propriétaire trouvé</p>
+          <p className="font-medium">Aucun propriÃ©taire trouvÃ©</p>
           {search && <p className="text-sm mt-1">Essayez un autre terme de recherche</p>}
         </div>
       ) : (
@@ -87,7 +88,7 @@ export default function ProprietairesPage() {
             <thead>
               <tr className="bg-gray-50 border-b border-gray-200">
                 <th className="text-left px-4 py-3 font-semibold text-gray-600">Nom</th>
-                <th className="text-left px-4 py-3 font-semibold text-gray-600">Téléphone</th>
+                <th className="text-left px-4 py-3 font-semibold text-gray-600">TÃ©lÃ©phone</th>
                 <th className="text-left px-4 py-3 font-semibold text-gray-600">Email</th>
                 <th className="text-left px-4 py-3 font-semibold text-gray-600">Ville</th>
                 <th className="text-left px-4 py-3 font-semibold text-gray-600">No-show</th>
@@ -105,9 +106,9 @@ export default function ProprietairesPage() {
                       </span>
                     </Link>
                   </td>
-                  <td className="px-4 py-3 text-gray-600">{o.telephone || "—"}</td>
-                  <td className="px-4 py-3 text-gray-600">{o.email || "—"}</td>
-                  <td className="px-4 py-3 text-gray-600">{o.ville || "—"}</td>
+                  <td className="px-4 py-3 text-gray-600">{o.telephone || "â"}</td>
+                  <td className="px-4 py-3 text-gray-600">{o.email || "â"}</td>
+                  <td className="px-4 py-3 text-gray-600">{o.ville || "â"}</td>
                   <td className="px-4 py-3">
                     {(o.no_show_count ?? 0) > 0 ? (
                       <span className="bg-red-100 text-red-700 text-xs font-semibold px-2 py-0.5 rounded-full">
