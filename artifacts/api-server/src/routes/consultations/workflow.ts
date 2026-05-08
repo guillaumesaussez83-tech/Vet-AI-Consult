@@ -7,8 +7,8 @@ import { findMedications, formatMedicationsContext } from "../../lib/ragMedicati
 
 const router = Router();
 
-// âââ POST /:id/anamnese âââââââââââââââââââââââââââââââââââââââââââââââââââââ
-// Phase 1 â GPT-4o-mini (volume task)
+// Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ POST /:id/anamnese Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
+// Phase 1 Ã¢ÂÂ GPT-4o-mini (volume task)
 router.post("/:id/anamnese", async (req, res) => {
   const consultationId = parseInt(req.params.id);
   const { transcription } = req.body;
@@ -86,8 +86,8 @@ router.post("/:id/anamnese", async (req, res) => {
   }
 });
 
-// âââ POST /:id/examen âââââââââââââââââââââââââââââââââââââââââââââââââââââââ
-// Phase 2 â GPT-4o-mini (volume task)
+// Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ POST /:id/examen Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
+// Phase 2 Ã¢ÂÂ GPT-4o-mini (volume task)
 router.post("/:id/examen", async (req, res) => {
   const consultationId = parseInt(req.params.id);
   const { transcription } = req.body;
@@ -172,9 +172,9 @@ router.post("/:id/examen", async (req, res) => {
   }
 });
 
-// âââ POST /:id/valider-examens ââââââââââââââââââââââââââââââââââââââââââââââ
-// Phase 3 â Claude Sonnet + RAG ANMV
-// IMPORTANT: stays in SYNTHESE phase â vet must call /terminer to finalize
+// Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ POST /:id/valider-examens Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
+// Phase 3 Ã¢ÂÂ Claude Sonnet + RAG ANMV
+// IMPORTANT: stays in SYNTHESE phase Ã¢ÂÂ vet must call /terminer to finalize
 router.post("/:id/valider-examens", async (req, res) => {
   const consultationId = parseInt(req.params.id);
   const { examensValides } = req.body;
@@ -206,7 +206,7 @@ router.post("/:id/valider-examens", async (req, res) => {
       req.log?.warn({ err }, 'non-blocking error');
     }
 
-    // ââ RAG ANMV: get patient species and search medications ââââââââââââââ
+    // Ã¢ÂÂÃ¢ÂÂ RAG ANMV: get patient species and search medications Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
     let ragContext = "";
     try {
       const [patient] = await db
@@ -266,7 +266,7 @@ router.post("/:id/valider-examens", async (req, res) => {
       syntheseIA = { raw: rawText };
     }
 
-    // ââ Log to ai_outputs âââââââââââââââââââââââââââââââââââââââââââââââââ
+    // Ã¢ÂÂÃ¢ÂÂ Log to ai_outputs Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
     let aiOutputId: number | null = null;
     try {
       const [inserted] = await db
@@ -285,7 +285,7 @@ router.post("/:id/valider-examens", async (req, res) => {
       req.log?.warn({ err: e }, "ai_outputs insert failed (synthese)");
     }
 
-    // ââ Update consultation (STAY in SYNTHESE â vet must validate) ââââââââ
+    // Ã¢ÂÂÃ¢ÂÂ Update consultation (STAY in SYNTHESE Ã¢ÂÂ vet must validate) Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
     await db
       .update(consultationsTable)
       .set({
@@ -300,7 +300,7 @@ router.post("/:id/valider-examens", async (req, res) => {
         )
       );
 
-    // ââ Auto-create ordonnance ââââââââââââââââââââââââââââââââââââââââââââ
+    // Ã¢ÂÂÃ¢ÂÂ Auto-create ordonnance Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
     let ordonnanceId: number | null = null;
     let ordonnanceNumero: string | null = null;
     try {
@@ -314,7 +314,7 @@ router.post("/:id/valider-examens", async (req, res) => {
           .filter((m: any) => m.molecule || m.specialite)
           .map((m: any) => {
             const nom = m.specialite || m.molecule || "Medicament";
-            const lines = ["â¢ " + nom];
+            const lines = ["Ã¢ÂÂ¢ " + nom];
             if (m.dose_mg) lines.push("  Dose : " + m.dose_mg + "mg");
             if (m.forme) lines.push("  Forme : " + m.forme);
             if (m.posologie) lines.push("  Posologie : " + m.posologie);
@@ -328,7 +328,9 @@ router.post("/:id/valider-examens", async (req, res) => {
              .join("\n\n");
 
         const year = new Date().getFullYear();
-        const [lastOrd] = await db
+        await db.transaction(async (tx) => {
+        await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${clinicId + ':ord:' + String(year)}))`);
+        const [lastOrd] = await tx
           .select({ num: ordonnancesTable.numeroOrdonnance })
           .from(ordonnancesTable)
           .where(
@@ -346,7 +348,7 @@ router.post("/:id/valider-examens", async (req, res) => {
         const numeroOrdonnance =
           "ORD-" + year + "-" + String(lastSeq + 1).padStart(5, "0");
 
-        const [ord] = await db
+        const [ord] = await tx
           .insert(ordonnancesTable)
           .values({
             consultationId,
@@ -363,6 +365,7 @@ router.post("/:id/valider-examens", async (req, res) => {
 
         ordonnanceId = ord.id;
         ordonnanceNumero = ord.numeroOrdonnance;
+        }); // end db.transaction ordonnance
       }
     } catch (ordErr) {
       req.log?.warn(
@@ -371,7 +374,7 @@ router.post("/:id/valider-examens", async (req, res) => {
       );
     }
 
-    // ââ Auto-create actes devis âââââââââââââââââââââââââââââââââââââââââââ
+    // Ã¢ÂÂÃ¢ÂÂ Auto-create actes devis Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
     try {
       const lignesDevis: Array<{
         description: string;
@@ -391,7 +394,7 @@ router.post("/:id/valider-examens", async (req, res) => {
           ]
             .filter(Boolean)
             .join(" ");
-          const description = nom + (details ? " â " + details : "");
+          const description = nom + (details ? " Ã¢ÂÂ " + details : "");
           lignesDevis.push({
             description,
             prixUnitaire: Number(med.prix_estime) || 0,
@@ -412,7 +415,8 @@ router.post("/:id/valider-examens", async (req, res) => {
       }
 
       if (lignesDevis.length > 0) {
-        await db
+        await db.transaction(async (tx) => {
+        await tx
           .delete(actesConsultationsTable)
           .where(
             and(
@@ -420,7 +424,7 @@ router.post("/:id/valider-examens", async (req, res) => {
               eq(actesConsultationsTable.clinicId, clinicId)
             )
           );
-        await db.insert(actesConsultationsTable).values(
+        await tx.insert(actesConsultationsTable).values(
           lignesDevis.map((l) => ({
             consultationId,
             acteId: null,
@@ -431,6 +435,7 @@ router.post("/:id/valider-examens", async (req, res) => {
             clinicId,
           }))
         );
+        }); // end db.transaction actes
       }
     } catch (devisErr) {
       req.log?.warn(
@@ -453,8 +458,8 @@ router.post("/:id/valider-examens", async (req, res) => {
   }
 });
 
-// âââ POST /:id/terminer ââââââââââââââââââââââââââââââââââââââââââââââââââââââ
-// Validation checkpoint â requires Clerk user ID before TERMINEE
+// Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ POST /:id/terminer Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
+// Validation checkpoint Ã¢ÂÂ requires Clerk user ID before TERMINEE
 router.post("/:id/terminer", async (req, res) => {
   const consultationId = parseInt(req.params.id);
   const { validated_by, validation_changes } = req.body;
@@ -462,7 +467,7 @@ router.post("/:id/terminer", async (req, res) => {
 
   if (!validated_by?.trim()) {
     return res.status(400).json({
-      error: "validated_by requis â identifiant veterinaire manquant",
+      error: "validated_by requis Ã¢ÂÂ identifiant veterinaire manquant",
     });
   }
 
@@ -546,7 +551,7 @@ router.post("/:id/terminer", async (req, res) => {
   }
 });
 
-// âââ GET /:id/workflow-state âââââââââââââââââââââââââââââââââââââââââââââââââ
+// Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ GET /:id/workflow-state Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 router.get("/:id/workflow-state", async (req, res) => {
   const consultationId = parseInt(req.params.id);
   const clinicId = req.clinicId;
