@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from "express";
+import { logger } from "../lib/logger";
 
 /**
  * Phase 0B â Centralized error handler middleware
@@ -34,7 +35,7 @@ export function errorHandler(
   const isDev = process.env.NODE_ENV === "development" && process.env.EXPOSE_ERRORS === "true";
 
   // Structured log for Railway / observability tools
-  console.error({
+  logger.error({
     level: "error",
     timestamp: new Date().toISOString(),
     method: req.method,
