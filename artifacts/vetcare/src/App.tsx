@@ -61,60 +61,60 @@ export default function App() {
       <AppLayout>
         <Switch>
           <Route path="/" component={() => <Redirect to="/dashboard" />} />
-          <Route path="/dashboard" component={() => <PrivateRoute component={Dashboard} />} />
-          <Route path="/agenda" component={() => <PrivateRoute component={AgendaPage} />} />
+          <Route path="/dashboard">{() => <PrivateRoute component={Dashboard} />}</Route>
+          <Route path="/agenda">{() => <PrivateRoute component={AgendaPage} />}</Route>
 
           {/* Patients */}
-          <Route path="/patients" component={() => <PrivateRoute component={PatientsPage} />} />
-          <Route path="/patients/:id" component={() => <PrivateRoute component={PatientDetailPage} />} />
+          <Route path="/patients">{() => <PrivateRoute component={PatientsPage} />}</Route>
+          <Route path="/patients/:id">{() => <PrivateRoute component={PatientDetailPage} />}</Route>
 
           {/* Proprietaires -- Sprint 7 */}
-          <Route path="/proprietaires" component={() => <PrivateRoute component={ProprietairesPage} />} />
-          <Route path="/proprietaires/:id" component={() => <PrivateRoute component={ProprietaireDetailPage} />} />
+          <Route path="/proprietaires">{() => <PrivateRoute component={ProprietairesPage} />}</Route>
+          <Route path="/proprietaires/:id">{() => <PrivateRoute component={ProprietaireDetailPage} />}</Route>
 
           {/* Consultations */}
-          <Route path="/consultations" component={() => <PrivateRoute component={ConsultationPage} />} />
-          <Route path="/consultations/:id" component={() => <PrivateRoute component={ConsultationPage} />} />
+          <Route path="/consultations">{() => <PrivateRoute component={ConsultationPage} />}</Route>
+          <Route path="/consultations/:id">{() => <PrivateRoute component={ConsultationPage} />}</Route>
 
           {/* Facturation */}
-          <Route path="/factures" component={() => <PrivateRoute component={FacturesPage} />} />
-          <Route path="/encaissements" component={() => <PrivateRoute component={EncaissementsPage} />} />
+          <Route path="/factures">{() => <PrivateRoute component={FacturesPage} />}</Route>
+          <Route path="/encaissements">{() => <PrivateRoute component={EncaissementsPage} />}</Route>
 
           {/* Stock & Fournisseurs */}
-          <Route path="/stocks" component={() => <PrivateRoute component={StockPage} />} />
-          <Route path="/fournisseurs" component={() => <PrivateRoute component={FournisseursPage} />} />
+          <Route path="/stocks">{() => <PrivateRoute component={StockPage} />}</Route>
+          <Route path="/fournisseurs">{() => <PrivateRoute component={FournisseursPage} />}</Route>
 
           {/* Ordonnances */}
-          <Route path="/ordonnances" component={() => <PrivateRoute component={OrdonnancesPage} />} />
+          <Route path="/ordonnances">{() => <PrivateRoute component={OrdonnancesPage} />}</Route>
 
           {/* Equipe & Ventes */}
-          <Route path="/equipe" component={() => <PrivateRoute component={EquipePage} />} />
-          <Route path="/ventes" component={() => <PrivateRoute component={VentesPage} />} />
+          <Route path="/equipe">{() => <PrivateRoute component={EquipePage} />}</Route>
+          <Route path="/ventes">{() => <PrivateRoute component={VentesPage} />}</Route>
 
           {/* Vaccinations */}
-          <Route path="/vaccinations" component={() => <PrivateRoute component={VaccinationsPage} />} />
+          <Route path="/vaccinations">{() => <PrivateRoute component={VaccinationsPage} />}</Route>
 
           {/* Caisse */}
-          <Route path="/caisse" component={() => <PrivateRoute component={CaissePage} />} />
+          <Route path="/caisse">{() => <PrivateRoute component={CaissePage} />}</Route>
 
           {/* Statistiques */}
-          <Route path="/statistiques" component={() => <PrivateRoute component={StatistiquesPage} />} />
+          <Route path="/statistiques">{() => <PrivateRoute component={StatistiquesPage} />}</Route>
 
           {/* Permissions -- Sprint 7 */}
-          <Route path="/permissions" component={() => <PrivateRoute component={PermissionsPage} />} />
+          <Route path="/permissions">{() => <PrivateRoute component={PermissionsPage} />}</Route>
 
-          <Route path="/parametres" component={() => <PrivateRoute component={ParametresPage} />} />
+          <Route path="/parametres">{() => <PrivateRoute component={ParametresPage} />}</Route>
           {/* Modules clinique -- audit Phase 0 */}
-          <Route path="/actes" component={() => <PrivateRoute component={ActesPage} />} />
-          <Route path="/catalogue" component={() => <PrivateRoute component={CataloguePage} />} />
-          <Route path="/certificats" component={() => <PrivateRoute component={CertificatsPage} />} />
-          <Route path="/comptabilite" component={() => <PrivateRoute component={ComptabilitePage} />} />
-          <Route path="/cremation" component={() => <PrivateRoute component={CremationPage} />} />
-          <Route path="/portail" component={() => <PrivateRoute component={PortailPage} />} />
-          <Route path="/rappels" component={() => <PrivateRoute component={RappelsPage} />} />
-          <Route path="/salle-attente" component={() => <PrivateRoute component={SalleAttentePage} />} />
-          <Route path="/stupefiants" component={() => <PrivateRoute component={StupefiantsPage} />} />
-          <Route path="/admin" component={() => <PrivateRoute component={AdminPage} />} />
+          <Route path="/actes">{() => <PrivateRoute component={ActesPage} />}</Route>
+          <Route path="/catalogue">{() => <PrivateRoute component={CataloguePage} />}</Route>
+          <Route path="/certificats">{() => <PrivateRoute component={CertificatsPage} />}</Route>
+          <Route path="/comptabilite">{() => <PrivateRoute component={ComptabilitePage} />}</Route>
+          <Route path="/cremation">{() => <PrivateRoute component={CremationPage} />}</Route>
+          <Route path="/portail">{() => <PrivateRoute component={PortailPage} />}</Route>
+          <Route path="/rappels">{() => <PrivateRoute component={RappelsPage} />}</Route>
+          <Route path="/salle-attente">{() => <PrivateRoute component={SalleAttentePage} />}</Route>
+          <Route path="/stupefiants">{() => <PrivateRoute component={StupefiantsPage} />}</Route>
+          <Route path="/admin">{() => <PrivateRoute component={AdminPage} />}</Route>
         </Switch>
       </AppLayout>
       <Route path="/analytics" component={AnalyticsDashboard} />
