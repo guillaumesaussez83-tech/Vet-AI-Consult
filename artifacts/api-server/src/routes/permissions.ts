@@ -1,8 +1,13 @@
 import { Router } from "express";
+import requireClinicId from "../middleware/requireClinicId";
+import { requireAuth } from "@clerk/express";
 import { db } from "@workspace/db";
 import { sql } from "drizzle-orm";
 
 const router = Router();
+
+// ── Security: authentication + clinic isolation required on ALL routes
+router.use(requireAuth(), requireClinicId);
 
 // GET /api/permissions/:userId — tous les modules pour un user
 router.get("/:userId", async (req: any, res) => {
@@ -77,7 +82,7 @@ router.get("/check/:userId/:module", async (req: any, res) => {
     `);
     if (rows.rows.length === 0) {
       // Pas de règle = accès complet par défaut (admin-first)
-      return res.json({ success: true, data: { canRead: true, canWrite: true, canDelete: true } });
+      return res.json({ success: true, data: { canRead: false, canWrite: false, canDelete: false } });
     }
     const p = rows.rows[0] as any;
     res.json({ success: true, data: { canRead: p.can_read, canWrite: p.can_write, canDelete: p.can_delete } });
