@@ -31,7 +31,7 @@ import logger from "../../lib/logger";
 
 const router = Router();
 
-// ─── Middleware vérification rôle DIRECTION_GROUPE ───────────────────────────
+// ─── Middleware vérification role DIRECTION_GROUPE ──────────────────────────
 async function requireGroupRole(req: Request, res: Response, next: Function) {
   // Vérifie que l'utilisateur a DIRECTION_GROUPE ou ADMIN sur au moins une clinique
   const userId = req.auth?.userId;
@@ -40,7 +40,7 @@ async function requireGroupRole(req: Request, res: Response, next: Function) {
   const [userRole] = await db
     .select()
     .from(clinicUsersTable)
-  2 .where(
+    .where(
       and(
         eq(clinicUsersTable.userId, userId),
         eq(clinicUsersTable.isActive, true),
@@ -115,7 +115,7 @@ router.get(
       .limit(pageSize)
       .offset(offset);
 
-    // Pour chaque clinique, on récupère les KPIs du mois en cours
+    // Pour chaque clinique, on recupère les KPIs du mois en cours
     const kpisPromises = cliniques.map(async (c) => {
       const [[ca], [consults], [patients]] = await Promise.all([
         db
@@ -151,7 +151,7 @@ router.get(
 
       return {
         ...c,
-        kpisMois: {
+        kpisMois: { 
           caTtcMois: parseFloat(ca.v || "0"),
           nbConsultations: consults.nb,
           nbPatientsTotal: patients.nb,
@@ -183,7 +183,7 @@ router.get(
   })
 );
 
-// ─── GET /api/groupe/dashboard ────────────────────────────────────────────────
+// ─── GET /api/groupe/dashboard ─────────────────────────────────────────────────
 // KPIs consolidés multi-cliniques
 router.get(
   "/dashboard",
@@ -448,7 +448,7 @@ router.get(
       comparatif: comparatif.map((c, i) => ({
         ...c,
         rang: i + 1,
-        vsMovenneCAPct:
+        vsMoyenneCAPct:
           avgCA > 0
             ? (((c.caTtcMois - avgCA) / avgCA) * 100).toFixed(1)
             : null,
