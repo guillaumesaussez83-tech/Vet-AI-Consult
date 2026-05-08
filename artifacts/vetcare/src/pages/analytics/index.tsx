@@ -192,7 +192,7 @@ function SimpleBarChart({
             <line x1={0} y1={0} x2={0} y2={6} stroke="#3498DB" strokeWidth={2} />
           </pattern>
         </defs>
-      2 <line x1={30} y1={0} x2={30} y2={chartH} stroke="#ddd" />
+        <line x1={30} y1={0} x2={30} y2={chartH} stroke="#ddd" />
         <line x1={30} y1={chartH} x2={combined.length * (barW + 4) + 34} y2={chartH} stroke="#ddd" />
       </svg>
       <div style={{ fontSize: 11, color: "#888", marginTop: 4 }}>
