@@ -22,6 +22,7 @@ router.get("/", async (req: any, res) => {
         LEFT JOIN patients p ON p.id = cl.patient_id
         WHERE cl.clinic_id = ${clinicId} AND cl.owner_id = ${ownerId}
         ORDER BY cl.created_at DESC
+      LIMIT 200
       `;
     } else {
       query = sql`
