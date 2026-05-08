@@ -42,6 +42,9 @@ import parametresClinique from "./parametres-clinique";
 import portailRouter from "./portail";
 import searchRouter from "./search";
 import vetKnowledgeRouter from "./vet-knowledge";
+import analyticsRouter from "./analytics";
+import groupeRouter from "./groupe";
+import reportsRouter from "./reports";
 
 const router = Router();
 
@@ -86,5 +89,11 @@ router.use("/parametres-clinique", parametresClinique);
 router.use("/portail", portailRouter);
 router.use("/search", searchRouter);
 router.use("/vet-knowledge", vetKnowledgeRouter);
+
+router.use("/analytics", requireClinicId, analyticsRouter);
+
+router.use("/groupe", requireClinicId, groupeRouter);
+
+router.use("/reports", requireClinicId, reportsRouter);
 
 export default router;
