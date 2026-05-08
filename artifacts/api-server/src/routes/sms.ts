@@ -1,8 +1,13 @@
 import { Router } from "express";
+import requireClinicId from "../middleware/requireClinicId";
+import { requireAuth } from "@clerk/express";
 import { db } from "@workspace/db";
 import { sql } from "drizzle-orm";
 
 const router = Router();
+
+// ── Security: authentication + clinic isolation
+router.use(requireAuth(), requireClinicId);
 
 // Twilio via REST API (aucune dépendance SDK)
 async function sendTwilioSMS(to: string, body: string): Promise<{ sid?: string; error?: string }> {
