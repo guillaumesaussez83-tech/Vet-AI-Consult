@@ -3,11 +3,15 @@ import { requireAuth } from "@clerk/express";
 import { db } from "../../../db";
 import { userPermissions } from "../../../../lib/db/src/schema/user-permissions";
 import { eq, and } from "drizzle-orm";
+import { isAdmin } from "../../middleware/isAdmin";
 
 const router = Router();
 
+// RBAC: all admin permission routes require auth + admin role
+router.use(requireAuth(), isAdmin);
+
 // GET /api/admin/permissions?userId=xxx  OR  GET /api/admin/permissions (all)
-router.get("/", requireAuth(), async (req: Request, res: Response) => {
+router.get("/", async (req: Request, res: Response) => {
   try {
     const { userId } = req.query;
     let rows;
@@ -23,7 +27,7 @@ router.get("/", requireAuth(), async (req: Request, res: Response) => {
 });
 
 // POST /api/admin/permissions
-router.post("/", requireAuth(), async (req: Request, res: Response) => {
+router.post("/", async (req: Request, res: Response) => {
   try {
     const { userId, module, canRead, canWrite, canDelete } = req.body;
     if (!userId || !module) {
@@ -44,7 +48,7 @@ router.post("/", requireAuth(), async (req: Request, res: Response) => {
 });
 
 // PATCH /api/admin/permissions/:id
-router.patch("/:id", requireAuth(), async (req: Request, res: Response) => {
+router.patch("/:id", async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { canRead, canWrite, canDelete } = req.body;
@@ -61,7 +65,7 @@ router.patch("/:id", requireAuth(), async (req: Request, res: Response) => {
 });
 
 // DELETE /api/admin/permissions/:id
-router.delete("/:id", requireAuth(), async (req: Request, res: Response) => {
+router.delete("/:id", async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     await db.delete(userPermissions).where(eq(userPermissions.id, id));
