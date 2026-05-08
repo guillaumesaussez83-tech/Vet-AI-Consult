@@ -5,7 +5,7 @@ import { AI_MODEL, GPT_MODEL } from "../constants";
 import type { AIResponse } from "./claudeClient";
 
 
-const AI_TIMEOUT_MS = 30_000; // 30s -- audit Phase 0
+const AI_TIMEOUT_MS = parseInt(process.env["AI_TIMEOUT_MS"] ?? "30000", 10); // configurable via env
 
 function withAITimeout<T>(promise: Promise<T>): Promise<T> {
   return Promise.race([
