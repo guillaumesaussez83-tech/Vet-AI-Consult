@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 interface UserInfo {
@@ -19,13 +19,13 @@ interface Permission {
 }
 
 const MODULES = [
-  { id: "agenda", label: "Agenda", icon: "📅" },
-  { id: "patients", label: "Patients", icon: "🐾" },
-  { id: "owners", label: "Propriétaires", icon: "👤" },
-  { id: "consultations", label: "Consultations", icon: "🩺" },
-  { id: "factures", label: "Facturation", icon: "💶" },
-  { id: "ordonnances", label: "Ordonnances", icon: "📋" },
-  { id: "stocks", label: "Stocks", icon: "📦" t�(��쁥�耉͵̈�������耉M5L�������耋�~NĈ���(��쁥�耉Ʌ�����̈�������耉I������̈������耋�~N(����(��쁥�耉��ɵ��ͥ��̈�������耉A�ɵ��ͥ��̈������耋�~R@����)t�()����ЁI=1}AIMQL�I���ɐ���ɥ����I���ɐ���ɥ����쁍��I���聉������쁍��]ɥє聉������쁍�����є聉�������������(��ٕѼ�=����й�ɽ���ɥ�̡5=U1L����������m������쁍��I������Ք�����]ɥє���Ք��������є聴���������ɵ��ͥ��̈��t���(���̈́�=����й�ɽ���ɥ�̡5=U1L����ѕȡ������l�Ʌ�����̈�����ɵ��ͥ��̉t�����Ց�̡����������������m������쁍��I������Ք�����]ɥє�l�������������ѥ���̈����ݹ��̉t�����Ց�̡�������������є聙��͔��t���(���х����ɔ�=����й�ɽ���ɥ�̡5=U1L����������m������쁍��I����l�������������ѥ���̈����ݹ�rs"].includes(m.id), canWrite: false, canDelete: false }])),
+  { id: "agenda", label: "Agenda", icon: "ï¿½ï¿½" },
+  { id: "patients", label: "Patients", icon: "ï¿½î§" },
+  { id: "owners", label: "Propriçtaires", icon: "ï¿½îª" },
+  { id: "consultations", label: "Consultations", icon: "ï¿½å¾" },
+  { id: "factures", label: "Facturation", icon: "ï¿½î" },
+  { id: "ordonnances", label: "Ordonnances", icon: "ï¿½ï¿½" },
+  { id: "stocks", label: "Stocks", icon: "ï¿½î¦" tï¿½(Âî½î»»îÂïèïî¼ï¿½îªï¿½ï­5Lïî»»ï¯è²Âïº~Nï¿½î½ï¿½(Âî½î»»îÂïïè¬å¥·ï¿½ï¿½ï¿½ï¿½åÂï©ïè¬å¥·ï¿½ï¿½ï¿½èï¿½ïº~N(ï¿½ç¾º(Âî½î»»îÂï¿îç­è¿æ«åïî¼ï¿½îªï¿½ï¡îç­è¿æ«åïî»»ï¯è²Âïº~R@ï¿½ç¾º)tï¿½()ï¯å¶ï¿½I=1}AIMQLï¿½Iï¿½è¤îè¿ç®ï¿½ï¿½Iï¿½è¤îè¿ç®ï¿½ï¿½ï¿½ï¿½éï¿½îï¿½è¸ï¿½ïï¿½ï¿½éç®ï¿½ï¿½ï»è£ï¿½è³ï¿½ïî«îîï¿½è¸ï¿½ïî½çÂï¿½ï¿½(Âî¼¯îæ½¸ï¿½=ï§ï¿½é¿î¨·è¥å¡¾ç®îï¿½5=U1Lå±ïâÂéî»¥æ¶ï¿½ï¿½ï¿½ï¿½éï¿½îî¼§å°¥îï¿½ï]ç®ï¿½ï¿½æ¸ï¿½ï¿½ï¿½ï¿½î«îîî¼é¦´ï¿½ï¡ï¿½ï¿îç­è¿æ«åï¿½é°ä¸­ï¿½(Âï¿½ï¿½ï¿½=ï§ï¿½é¿î¨·è¥å¡¾ç®îï¿½5=U1Lï¿½å¼ï¿½ï«ï¿½éÂïïïè¬å¥·ï¿½ï¿½ï¿îç­è¿æ«åïé¦´ï¿½æï¿½æ´æ¶ï¿½ä¸­å±ïâÂéî»¥æ¶ï¿½ï¿½ï¿½ï¿½éï¿½îî¼§å°¥îï¿½ï]ç®ï¿½ï¿½lï¿½ï¿½ï¿½ï¿½ï¿½ï¿ïï¿½å¡¾ï¿½ï¿½ï»æ®îï¿½té¦´ï¿½æï¿½æ´æ¶ï¿½ä»ï¿½ïî«îîï¿½ï»ï¿½î½tä¸­ï¿½(Âî¼£ï¿½î²ï¯ï¿½ï¿½=ï§ï¿½é¿î¨·è¥å¡¾ç®îï¿½5=U1Lå±ïâÂéî»¥æ¶ï¿½ï¿½ï¿½ï¿½éï¿½îî»¤ï¿½ï¿½ï¿½ï¿½ï¿½ï¿ïï¿½å¡¾ï¿½ï¿½ï»æ®î±s"].includes(m.id), canWrite: false, canDelete: false }])),
 };
 
 export default function PermissionsPage() {
@@ -62,6 +62,10 @@ export default function PermissionsPage() {
   const [localPerms, setLocalPerms] = useState<Record<string, { canRead: boolean; canWrite: boolean; canDelete: boolean }>>({});
 
   // When user changes, reset local perms
+  useEffect(() => {
+    setLocalPerms({});
+  }, [selectedUser]);
+
   const effectivePerms = selectedUser
     ? Object.fromEntries(MODULES.map(m => [m.id, localPerms[m.id] ?? permMap[m.id] ?? { canRead: false, canWrite: false, canDelete: false }]))
     : {};
@@ -98,7 +102,7 @@ export default function PermissionsPage() {
   const togglePerm = (module: string, field: "canRead" | "canWrite" | "canDelete") => {
     const current = effectivePerms[module] || { canRead: false, canWrite: false, canDelete: false };
     const updated = { ...current, [field]: !current[field] };
-    // Si on décoche canRead, on décoche aussi les autres
+    // Si on dçcoche canRead, on dçcoche aussi les autres
     if (field === "canRead" && !updated.canRead) {
       updated.canWrite = false;
       updated.canDelete = false;
@@ -116,7 +120,7 @@ export default function PermissionsPage() {
     <div className="p-6 max-w-5xl mx-auto">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Gestion des droits</h1>
-        <p className="text-gray-500 text-sm mt-1">Configurez les permissions d'accès par module pour chaque membre de la clinique</p>
+        <p className="text-gray-500 text-sm mt-1">Configurez les permissions d'accç¡s par module pour chaque membre de la clinique</p>
       </div>
 
       <div className="grid grid-cols-3 gap-6">
@@ -124,14 +128,14 @@ export default function PermissionsPage() {
         <div className="col-span-1">
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
             <div className="px-4 py-3 border-b border-gray-100 bg-gray-50">
-              <h2 className="text-sm font-semibold text-gray-700">Équipe</h2>
+              <h2 className="text-sm font-semibold text-gray-700">ï¿½quipe</h2>
             </div>
             {usersLoading ? (
               <div className="p-6 flex justify-center">
                 <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
               </div>
             ) : users.length === 0 ? (
-              <div className="p-6 text-sm text-gray-400 text-center">Aucun utilisateur trouvé</div>
+              <div className="p-6 text-sm text-gray-400 text-center">Aucun utilisateur trouvç</div>
             ) : (
               <div className="divide-y divide-gray-100">
                 {users.map(u => (
@@ -164,9 +168,9 @@ export default function PermissionsPage() {
         <div className="col-span-2">
           {!selectedUser ? (
             <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-12 text-center text-gray-400">
-              <div className="text-4xl mb-3">🔐</div>
-              <p className="font-medium">Sélectionnez un utilisateur</p>
-              <p className="text-sm mt-1">pour gérer ses permissions</p>
+              <div className="text-4xl mb-3">ï¿½ï¿½</div>
+              <p className="font-medium">Sçlectionnez un utilisateur</p>
+              <p className="text-sm mt-1">pour gçrer ses permissions</p>
             </div>
           ) : (
             <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
@@ -187,9 +191,9 @@ export default function PermissionsPage() {
                 </div>
                 {/* Presets */}
                 <div className="flex gap-2">
-                  <span className="text-xs text-gray-500 self-center">Préréglages :</span>
+                  <span className="text-xs text-gray-500 self-center">Prçrçglages :</span>
                   {[
-                    { key: "veto", label: "Vétérinaire" },
+                    { key: "veto", label: "Vçtçrinaire" },
                     { key: "asa", label: "ASA" },
                     { key: "stagiaire", label: "Stagiaire" },
                   ].map(p => (
@@ -211,7 +215,7 @@ export default function PermissionsPage() {
                     <tr className="bg-gray-50 border-b border-gray-100">
                       <th className="text-left px-5 py-3 font-semibold text-gray-600">Module</th>
                       <th className="text-center px-4 py-3 font-semibold text-gray-600">Lecture</th>
-                      <th className="text-center px-4 py-3 font-semibold text-gray-600">Écriture</th>
+                      <th className="text-center px-4 py-3 font-semibold text-gray-600">ï¿½criture</th>
                       <th className="text-center px-4 py-3 font-semibold text-gray-600">Suppression</th>
                     </tr>
                   </thead>
@@ -225,7 +229,7 @@ export default function PermissionsPage() {
                             <div className="flex items-center gap-2">
                               <span>{m.icon}</span>
                               <span className="font-medium text-gray-700">{m.label}</span>
-                              {isDirty && <span className="w-1.5 h-1.5 rounded-full bg-yellow-400" title="Modifié" />}
+                              {isDirty && <span className="w-1.5 h-1.5 rounded-full bg-yellow-400" title="Modifiç" />}
                             </div>
                           </td>
                           <td className="text-center px-4 py-3">
@@ -284,12 +288,12 @@ export default function PermissionsPage() {
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                     </svg>
-                    Permissions enregistrées
+                    Permissions enregistrçes
                   </span>
                 ) : (
                   <span className="text-xs text-gray-400">
                     {Object.keys(localPerms).length > 0
-                      ? `${Object.keys(localPerms).length} module(s) modifié(s) — non enregistré`
+                      ? `${Object.keys(localPerms).length} module(s) modifiç(s) ï¿½ï¿½ non enregistrç`
                       : "Aucune modification en attente"}
                   </span>
                 )}
@@ -312,7 +316,7 @@ export default function PermissionsPage() {
             </div>
             <div className="flex items-center gap-1.5">
               <div className="w-3 h-3 rounded bg-green-500" />
-              Écriture : peut créer/modifier
+              ï¿½criture : peut crçer/modifier
             </div>
             <div className="flex items-center gap-1.5">
               <div className="w-3 h-3 rounded bg-red-500" />
