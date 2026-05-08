@@ -93,7 +93,7 @@ if (twilioSid || twilioToken || twilioFrom) {
       !twilioToken && "TWILIO_AUTH_TOKEN",
       !twilioFrom && "TWILIO_FROM",
     ].filter(Boolean).join(", ");
-    console.error(`[validateEnv] Twilio partial config detected. Missing: ${missing}. All three must be set together.`);
+    logger.error(`[validateEnv] Twilio partial config detected. Missing: ${missing}. All three must be set together.`);
     process.exit(1);
   }
 }
@@ -125,18 +125,18 @@ export function validateEnv(): void {
   }
 
   if (warnings.length > 0) {
-    console.warn("\n[env] Optional variables not set:");
-    warnings.forEach((w) => console.warn(w));
+    logger.warn("\n[env] Optional variables not set:");
+    warnings.forEach((w) => logger.warn(w));
   }
 
   if (errors.length > 0) {
-    console.error("\n[env] FATAL — Required environment variables are missing or invalid:"),
-    errors.forEach((e) => console.error(e));
-    console.error(
+    logger.error("\n[env] FATAL — Required environment variables are missing or invalid:"),
+    errors.forEach((e) => logger.error(e));
+    logger.error(
       "\n  → Copy .env.example to .env and fill in all required values.\n"
     );
     process.exit(1);
   }
 
-  console.log(`[env] ✅ All required environment variables are valid (NODE_ENV=${process.env.NODE_ENV ?? "development"})`);
+  logger.info(`[env] ✅ All required environment variables are valid (NODE_ENV=${process.env.NODE_ENV ?? "development"})`);
 }
