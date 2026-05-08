@@ -2,8 +2,14 @@ import { Router } from "express";
 import { db, aiUsageLogsTable } from "@workspace/db";
 import { sql, gte, eq, and } from "drizzle-orm";
 import { MODEL_COSTS } from "../../lib/ai/aiMetrics";
+import { requireAuth } from "@clerk/express";
+import { requireClinicId } from "../../middleware/requireClinicId";
+import { isAdmin } from "../../middleware/isAdmin";
 
 const router = Router();
+
+// RBAC: all admin routes require auth + clinic + admin role
+router.use(requireAuth(), requireClinicId, isAdmin);
 
 /**
  * GET /api/admin/ai-costs?period=30d
