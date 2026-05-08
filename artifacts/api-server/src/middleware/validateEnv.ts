@@ -61,7 +61,42 @@ const ENV_SPECS: EnvSpec[] = [
     validate: (v) => v.startsWith("AC"),
     hint: "Must start with AC",
   },
+  {
+    key: "TWILIO_AUTH_TOKEN",
+    required: false,
+    validate: (v: string) => v.length >= 32,
+    hint: "TWILIO_AUTH_TOKEN must be at least 32 characters",
+  },
+  {
+    key: "TWILIO_FROM",
+    required: false,
+    validate: (v: string) => v.startsWith("+"),
+    hint: "TWILIO_FROM must be an E.164 phone number starting with +",
+  },
+  {
+    key: "AI_TIMEOUT_MS",
+    required: false,
+    validate: (v: string) => !isNaN(parseInt(v, 10)) && parseInt(v, 10) > 0,
+    hint: "AI_TIMEOUT_MS must be a positive integer (milliseconds)",
+  },
 ];
+
+
+// Cross-validation: if any Twilio var is set, all three must be set
+const twilioSid = process.env["TWILIO_ACCOUNT_SID"];
+const twilioToken = process.env["TWILIO_AUTH_TOKEN"];
+const twilioFrom = process.env["TWILIO_FROM"];
+if (twilioSid || twilioToken || twilioFrom) {
+  if (!twilioSid || !twilioToken || !twilioFrom) {
+    const missing = [
+      !twilioSid && "TWILIO_ACCOUNT_SID",
+      !twilioToken && "TWILIO_AUTH_TOKEN",
+      !twilioFrom && "TWILIO_FROM",
+    ].filter(Boolean).join(", ");
+    console.error(`[validateEnv] Twilio partial config detected. Missing: ${missing}. All three must be set together.`);
+    process.exit(1);
+  }
+}
 
 export function validateEnv(): void {
   const errors: string[] = [];
