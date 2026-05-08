@@ -1,3 +1,4 @@
+import { logger } from "../lib/logger";
 import { db } from "@workspace/db";
 import { medicationsAnmvTable } from "@workspace/db";
 import { sql } from "drizzle-orm";
@@ -59,7 +60,7 @@ export async function findMedications(
     return results;
   } catch (error) {
     // RAG failure must never break the main AI flow
-    console.error("[ragMedications] Error fetching medications:", error);
+    logger.error({ err: error }, "[ragMedications] Error fetching medications:");
     return [];
   }
 }
