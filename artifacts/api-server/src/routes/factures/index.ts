@@ -166,9 +166,9 @@ router.get("/", async (req, res) => {
       .filter((x): x is { id: number; fresh: ReturnType<typeof computeInvoiceTotals> } => !!x);
 
     if (staleUpdates.length > 0) {
-      Promise.all(
-        staleUpdates.map((s) =>
-          db
+      db.transaction(async (tx) => {
+        for (const s of staleUpdates) {
+          await tx
             .update(facturesTable)
             .set({
               montantHT: s.fresh.montantHT,
@@ -176,9 +176,9 @@ router.get("/", async (req, res) => {
               tva: s.fresh.tvaMoyenne,
               tvaBreakdown: s.fresh.tvaBreakdown,
             })
-            .where(and(eq(facturesTable.clinicId, req.clinicId), eq(facturesTable.id, s.id))),
-        ),
-      ).catch((err) => req.log.warn({ err }, "Stale facture background update failed"));
+            .where(and(eq(facturesTable.clinicId, req.clinicId), eq(facturesTable.id, s.id)));
+        }
+      }).catch((err) => req.log.warn({ err }, "Stale facture background update failed"));
     }
 
     const result = factures.map((f) => {
