@@ -1,3 +1,4 @@
+import { logger } from "../lib/logger";
 import { Request, Response, NextFunction } from "express";
 import { getAuth } from "@clerk/express";
 import { db } from "../db";
@@ -76,7 +77,7 @@ export function auditLogger(
   res.json = function (body: any) {
     // Fire-and-forget: don't block response
     writeAuditLog(req, action, body).catch((err) => {
-      console.error("[audit] Failed to write log:", err.message);
+      logger.error({ err: err.message }, "[audit] Failed to write log:");
     });
     return originalJson(body);
   };
