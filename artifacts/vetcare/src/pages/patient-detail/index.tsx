@@ -10,14 +10,21 @@ type Tab = "infos" | "poids" | "medical" | "rappels" | "ordonnances";
 const TABS: { id: Tab; label: string }[] = [
   { id: "infos", label: "Informations" },
   { id: "poids", label: "Courbe de poids" },
-  { id: "medical", label: "Historique médical" },
+  { id: "medical", label: "Historique mÃ©dical" },
   { id: "rappels", label: "Rappels vaccins" },
   { id: "ordonnances", label: "Ordonnances" },
 ];
 
 const ESPECES_ICONS: Record<string, string> = {
-  chien: "🐕", chat: "🐈", nac: "🐇", oiseau: "🦜", reptile: "🦎",
+  chien: "ð", chat: "ð", nac: "ð", oiseau: "ð¦", reptile: "ð¦",
 };
+
+// Safe JSON array parser — prevents crash on malformed data
+function safeParseArray(val: unknown): any[] {
+  if (Array.isArray(val)) return val;
+  if (typeof val !== 'string' || !val.trim()) return [];
+  try { return JSON.parse(val) as any[]; } catch { return []; }
+}
 
 export default function PatientDetailPage() {
   const params = useParams<{ id: string }>();
@@ -140,7 +147,7 @@ export default function PatientDetailPage() {
     ? Math.floor((Date.now() - new Date(patient.date_naissance).getTime()) / (365.25 * 24 * 3600 * 1000))
     : null;
 
-  // Préparer données courbe poids
+  // PrÃ©parer donnÃ©es courbe poids
   const weightData = weights.map((w: any) => ({
     date: new Date(w.measured_at).toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "2-digit" }),
     poids: parseFloat(w.weight),
@@ -152,7 +159,7 @@ export default function PatientDetailPage() {
   const weightMax = weightData.length > 0 ? Math.max(...weightData.map((w: any) => w.poids)) : 10;
   const weightPad = (weightMax - weightMin) * 0.15 || 1;
 
-  const icon = ESPECES_ICONS[(patient.espece || "").toLowerCase()] || "🐾";
+  const icon = ESPECES_ICONS[(patient.espece || "").toLowerCase()] || "ð¾";
 
   const vaccinsAVenir = rappels.filter((r: any) => r.statut !== "FAIT" && new Date(r.date_rappel) <= new Date(Date.now() + 60 * 24 * 3600 * 1000));
 
@@ -165,7 +172,7 @@ export default function PatientDetailPage() {
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
-            Retour au propriétaire
+            Retour au propriÃ©taire
           </button>
         </Link>
       )}
@@ -182,19 +189,19 @@ export default function PatientDetailPage() {
                 <h1 className="text-xl font-bold text-gray-900">{patient.nom}</h1>
                 {vaccinsAVenir.length > 0 && (
                   <span className="bg-orange-100 text-orange-700 text-xs font-semibold px-2 py-0.5 rounded-full">
-                    {vaccinsAVenir.length} rappel{vaccinsAVenir.length > 1 ? "s" : ""} à venir
+                    {vaccinsAVenir.length} rappel{vaccinsAVenir.length > 1 ? "s" : ""} Ã  venir
                   </span>
                 )}
               </div>
               <div className="flex gap-3 text-sm text-gray-500 mt-1">
-                <span>{patient.espece} · {patient.race}</span>
-                {patient.sexe && <span>· {patient.sexe === "M" ? "♂ Mâle" : "♀ Femelle"}</span>}
-                {age !== null && <span>· {age} ans</span>}
-                {patient.poids && <span>· {patient.poids} kg</span>}
+                <span>{patient.espece} Â· {patient.race}</span>
+                {patient.sexe && <span>Â· {patient.sexe === "M" ? "â MÃ¢le" : "â Femelle"}</span>}
+                {age !== null && <span>Â· {age} ans</span>}
+                {patient.poids && <span>Â· {patient.poids} kg</span>}
               </div>
               {patient.owner_nom && (
                 <div className="text-xs text-gray-400 mt-1">
-                  Propriétaire : <Link href={`/proprietaires/${patient.owner_id}`}><span className="text-blue-600 hover:underline cursor-pointer">{patient.owner_prenom} {patient.owner_nom}</span></Link>
+                  PropriÃ©taire : <Link href={`/proprietaires/${patient.owner_id}`}><span className="text-blue-600 hover:underline cursor-pointer">{patient.owner_prenom} {patient.owner_nom}</span></Link>
                 </div>
               )}
             </div>
@@ -232,12 +239,12 @@ export default function PatientDetailPage() {
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 {[
-                  { k: "nom", l: "Nom" }, { k: "espece", l: "Espèce" },
+                  { k: "nom", l: "Nom" }, { k: "espece", l: "EspÃ¨ce" },
                   { k: "race", l: "Race" }, { k: "sexe", l: "Sexe" },
                   { k: "date_naissance", l: "Date de naissance", type: "date" },
                   { k: "poids", l: "Poids (kg)", type: "number" },
-                  { k: "couleur", l: "Couleur/robe" }, { k: "puce", l: "N° puce/tatouage" },
-                  { k: "sterilise", l: "Stérilisé(e)" }, { k: "assurance", l: "Assurance" },
+                  { k: "couleur", l: "Couleur/robe" }, { k: "puce", l: "NÂ° puce/tatouage" },
+                  { k: "sterilise", l: "StÃ©rilisÃ©(e)" }, { k: "assurance", l: "Assurance" },
                 ].map(({ k, l, type }) => (
                   <div key={k}>
                     <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">{l}</label>
@@ -252,7 +259,7 @@ export default function PatientDetailPage() {
                 ))}
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Antécédents / Notes</label>
+                <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">AntÃ©cÃ©dents / Notes</label>
                 <textarea
                   className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm h-20 resize-none"
                   value={editData.antecedents || ""}
@@ -272,23 +279,23 @@ export default function PatientDetailPage() {
           ) : (
             <div className="grid grid-cols-2 gap-x-8 gap-y-4">
               {[
-                ["Espèce", patient.espece], ["Race", patient.race],
-                ["Sexe", patient.sexe === "M" ? "Mâle" : patient.sexe === "F" ? "Femelle" : patient.sexe],
+                ["EspÃ¨ce", patient.espece], ["Race", patient.race],
+                ["Sexe", patient.sexe === "M" ? "MÃ¢le" : patient.sexe === "F" ? "Femelle" : patient.sexe],
                 ["Date de naissance", patient.date_naissance ? new Date(patient.date_naissance).toLocaleDateString("fr-FR") : null],
-                ["Âge", age !== null ? `${age} ans` : null],
+                ["Ãge", age !== null ? `${age} ans` : null],
                 ["Poids actuel", patient.poids ? `${patient.poids} kg` : null],
-                ["Couleur/robe", patient.couleur], ["N° puce/tatouage", patient.puce],
-                ["Stérilisé(e)", patient.sterilise ? "Oui" : "Non"],
+                ["Couleur/robe", patient.couleur], ["NÂ° puce/tatouage", patient.puce],
+                ["StÃ©rilisÃ©(e)", patient.sterilise ? "Oui" : "Non"],
                 ["Assurance", patient.assurance],
               ].map(([label, val]) => (
                 <div key={label as string}>
                   <span className="text-xs font-semibold text-gray-400 uppercase">{label}</span>
-                  <p className="text-sm text-gray-800 mt-0.5">{val || <span className="text-gray-400 italic">Non renseigné</span>}</p>
+                  <p className="text-sm text-gray-800 mt-0.5">{val || <span className="text-gray-400 italic">Non renseignÃ©</span>}</p>
                 </div>
               ))}
               {patient.antecedents && (
                 <div className="col-span-2">
-                  <span className="text-xs font-semibold text-gray-400 uppercase">Antécédents / Notes</span>
+                  <span className="text-xs font-semibold text-gray-400 uppercase">AntÃ©cÃ©dents / Notes</span>
                   <p className="text-sm text-gray-800 mt-0.5 whitespace-pre-line">{patient.antecedents}</p>
                 </div>
               )}
@@ -302,14 +309,14 @@ export default function PatientDetailPage() {
         <div>
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-lg font-semibold text-gray-800">
-              Suivi pondéral
-              {patient.poids && <span className="text-base font-normal text-gray-500 ml-2">— Actuel : {patient.poids} kg</span>}
+              Suivi pondÃ©ral
+              {patient.poids && <span className="text-base font-normal text-gray-500 ml-2">â Actuel : {patient.poids} kg</span>}
             </h2>
             <button
               onClick={() => setShowAddWeight(true)}
               className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700"
             >
-              + Ajouter une pesée
+              + Ajouter une pesÃ©e
             </button>
           </div>
 
@@ -360,8 +367,8 @@ export default function PatientDetailPage() {
 
           {weightData.length < 2 ? (
             <div className="bg-white rounded-xl border border-gray-200 p-12 text-center text-gray-400 shadow-sm">
-              <p className="font-medium">Pas assez de données pour afficher la courbe</p>
-              <p className="text-sm mt-1">Ajoutez au moins 2 pesées</p>
+              <p className="font-medium">Pas assez de donnÃ©es pour afficher la courbe</p>
+              <p className="text-sm mt-1">Ajoutez au moins 2 pesÃ©es</p>
             </div>
           ) : (
             <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
@@ -394,7 +401,7 @@ export default function PatientDetailPage() {
             </div>
           )}
 
-          {/* Tableau pesées */}
+          {/* Tableau pesÃ©es */}
           {weights.length > 0 && (
             <div className="mt-4 bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
               <table className="w-full text-sm">
@@ -411,10 +418,10 @@ export default function PatientDetailPage() {
                     <tr key={w.id} className="hover:bg-gray-50">
                       <td className="px-4 py-3">{new Date(w.measured_at).toLocaleDateString("fr-FR")}</td>
                       <td className="px-4 py-3 font-semibold">{parseFloat(w.weight).toFixed(2)} kg</td>
-                      <td className="px-4 py-3 text-gray-500">{w.consultation_motif || w.notes || "—"}</td>
+                      <td className="px-4 py-3 text-gray-500">{w.consultation_motif || w.notes || "â"}</td>
                       <td className="px-4 py-3 text-right">
                         <button
-                          onClick={() => { if (confirm("Supprimer cette pesée ?")) deleteWeight.mutate(w.id); }}
+                          onClick={() => { if (confirm("Supprimer cette pesÃ©e ?")) deleteWeight.mutate(w.id); }}
                           className="text-gray-300 hover:text-red-500"
                         >
                           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -431,11 +438,11 @@ export default function PatientDetailPage() {
         </div>
       )}
 
-      {/* Tab: Historique médical */}
+      {/* Tab: Historique mÃ©dical */}
       {activeTab === "medical" && (
         <div className="space-y-3">
           {consultations.length === 0 ? (
-            <div className="text-center py-12 text-gray-400 bg-white rounded-xl border border-gray-200">Aucune consultation enregistrée</div>
+            <div className="text-center py-12 text-gray-400 bg-white rounded-xl border border-gray-200">Aucune consultation enregistrÃ©e</div>
           ) : (
             consultations.map((c: any) => (
               <div key={c.id} className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
@@ -445,7 +452,7 @@ export default function PatientDetailPage() {
                       <span className="text-xs font-semibold text-gray-500">
                         {new Date(c.date_heure || c.created_at).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
                       </span>
-                      {c.veterinaire && <span className="text-xs text-blue-600">· Dr {c.veterinaire}</span>}
+                      {c.veterinaire && <span className="text-xs text-blue-600">Â· Dr {c.veterinaire}</span>}
                     </div>
                     <div className="font-semibold text-gray-800">{c.motif}</div>
                     {c.diagnostic && <p className="text-sm text-gray-600 mt-1"><strong>Diagnostic :</strong> {c.diagnostic}</p>}
@@ -469,7 +476,7 @@ export default function PatientDetailPage() {
       {activeTab === "rappels" && (
         <div className="space-y-3">
           {rappels.length === 0 ? (
-            <div className="text-center py-12 text-gray-400 bg-white rounded-xl border border-gray-200">Aucun rappel enregistré</div>
+            <div className="text-center py-12 text-gray-400 bg-white rounded-xl border border-gray-200">Aucun rappel enregistrÃ©</div>
           ) : (
             rappels.map((r: any) => {
               const dueDate = new Date(r.date_rappel);
@@ -484,19 +491,19 @@ export default function PatientDetailPage() {
                       <div className="font-semibold text-gray-800">{r.type}</div>
                       <div className="text-sm text-gray-500 mt-0.5">{r.nom_vaccin}</div>
                       <div className="text-xs text-gray-400 mt-1">
-                        Prévu le {dueDate.toLocaleDateString("fr-FR")}
-                        {r.last_date && ` · Dernier : ${new Date(r.last_date).toLocaleDateString("fr-FR")}`}
+                        PrÃ©vu le {dueDate.toLocaleDateString("fr-FR")}
+                        {r.last_date && ` Â· Dernier : ${new Date(r.last_date).toLocaleDateString("fr-FR")}`}
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
                       {r.statut === "FAIT" ? (
-                        <span className="bg-green-100 text-green-700 text-xs font-semibold px-2.5 py-1 rounded-full">✓ Fait</span>
+                        <span className="bg-green-100 text-green-700 text-xs font-semibold px-2.5 py-1 rounded-full">â Fait</span>
                       ) : isOverdue ? (
                         <span className="bg-red-100 text-red-700 text-xs font-semibold px-2.5 py-1 rounded-full">En retard</span>
                       ) : isSoon ? (
-                        <span className="bg-orange-100 text-orange-700 text-xs font-semibold px-2.5 py-1 rounded-full">Bientôt</span>
+                        <span className="bg-orange-100 text-orange-700 text-xs font-semibold px-2.5 py-1 rounded-full">BientÃ´t</span>
                       ) : (
-                        <span className="bg-gray-100 text-gray-600 text-xs font-semibold px-2.5 py-1 rounded-full">Planifié</span>
+                        <span className="bg-gray-100 text-gray-600 text-xs font-semibold px-2.5 py-1 rounded-full">PlanifiÃ©</span>
                       )}
                     </div>
                   </div>
@@ -524,10 +531,10 @@ export default function PatientDetailPage() {
                     {o.veterinaire && <div className="text-sm text-gray-500">Dr {o.veterinaire}</div>}
                     {o.lignes && (
                       <div className="mt-2 space-y-1">
-                        {(Array.isArray(o.lignes) ? o.lignes : JSON.parse(o.lignes || "[]")).map((l: any, i: number) => (
+                        {safeParseArray(o.lignes).map((l: any, i: number) => (
                           <div key={i} className="text-sm text-gray-700">
                             <span className="font-medium">{l.medicament}</span>
-                            {l.posologie && <span className="text-gray-500"> — {l.posologie}</span>}
+                            {l.posologie && <span className="text-gray-500"> â {l.posologie}</span>}
                           </div>
                         ))}
                       </div>
