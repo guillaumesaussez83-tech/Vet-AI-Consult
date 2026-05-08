@@ -1,13 +1,17 @@
 import { Router } from "express";
+import { requireAuth } from "@clerk/express";
 import { db } from "@workspace/db";
 import { sql } from "drizzle-orm";
 
 const router = Router();
+router.use(requireAuth());
 
 // GET /api/weight-history/:patientId
 router.get("/:patientId", async (req: any, res) => {
   try {
-    const clinicId = req.auth?.sessionClaims?.clinicId as string;
+      const patientId = parseInt(req.params.patientId);
+  if (isNaN(patientId)) return res.status(400).json({ error: "patientId invalide" });
+  const clinicId = req.auth?.sessionClaims?.clinicId as string;
     const rows = await db.execute(sql`
       SELECT wh.*, c.motif as consultation_motif
       FROM weight_history wh
