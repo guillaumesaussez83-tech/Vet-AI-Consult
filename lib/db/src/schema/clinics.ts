@@ -1,5 +1,6 @@
 // lib/db/src/schema/clinics.ts
 // Phase 4 — Architecture multi-cliniques scalable (10+ cliniques)
+// Sprint e-invoicing — Champs Factur-X EN16931 / BASIC ajoutés
 
 import {
   pgTable,
@@ -15,19 +16,42 @@ import {
 export const clinicsTable = pgTable("clinics", {
   id: text("id").primaryKey(), // = Clerk organizationId ou UUID court
   name: text("name").notNull(),
+
+  // Adresse (champs séparés pour Factur-X BT-35..BT-40)
   address: text("address"),
   city: text("city"),
   postalCode: text("postal_code"),
+  paysIso2: text("pays_iso2").default("FR"), // BT-40, ISO 3166-1 alpha-2
+
+  // Contact
   phone: text("phone"),
   email: text("email"),
-  siret: text("siret"),
-  ordreVet: text("ordre_vet"), // N° Ordre National des Vétérinaires
-  groupId: integer("group_id").references(() => clinicGroupsTable.id), // null = standalone
+
+  // Identifiants légaux — BG-4 Seller
+  siret: text("siret"),                          // 14 chiffres — BT-30
+  siren: text("siren"),                          // 9 chiffres (3 premiers chiffres SIRET)
+  tvaIntra: text("tva_intra"),                   // FR + 11 chiffres — BT-31
+  rcsVille: text("rcs_ville"),                   // Ex: "Paris"
+  rcsNumero: text("rcs_numero"),                 // Ex: "RCS Paris 123 456 789"
+  formeJuridique: text("forme_juridique"),        // SELARL | SARL | SCP | EURL | SASU | SAS | EARL
+  codeNaf: text("code_naf").default("8520Z"),    // Code APE, défaut activités vétérinaires
+
+  // Coordonnées bancaires — BT-84 (modalités paiement Factur-X)
+  iban: text("iban"),
+  bic: text("bic"),
+  nomCompteBancaire: text("nom_compte_bancaire"),
+
+  // Spécifique vétérinaire
+  ordreVet: text("ordre_vet"),                   // N° Ordre National des Vétérinaires
+
+  // Multi-cliniques
+  groupId: integer("group_id").references(() => clinicGroupsTable.id),
   plan: text("plan").notNull().default("starter"), // starter | pro | enterprise
   maxUsers: integer("max_users").notNull().default(5),
   isActive: boolean("is_active").notNull().default(true),
   logoUrl: text("logo_url"),
   timezone: text("timezone").notNull().default("Europe/Paris"),
+
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
