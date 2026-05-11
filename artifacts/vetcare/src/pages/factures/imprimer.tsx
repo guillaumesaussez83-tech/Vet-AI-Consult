@@ -71,7 +71,7 @@ export default function FactureImprimerPage() {
   );
 
   if (!facture) return (
-    <div className="text-center py-16 text-muted-foreground">Facture non trouvée</div>
+    <div className="text-center py-16 text-muted-foreground">Facture non trouvee</div>
   );
 
   const patient = facture.consultation?.patient;
@@ -88,7 +88,7 @@ export default function FactureImprimerPage() {
     consultation: "Consultations",
     vaccination: "Vaccinations",
     chirurgie: "Chirurgie",
-    medicament: "Médicaments",
+    medicament: "Medicaments",
     analyse: "Analyses",
     imagerie: "Imagerie",
     autre: "Divers",
@@ -116,8 +116,8 @@ export default function FactureImprimerPage() {
           disabled={downloadingPDF}
         >
           {downloadingPDF
-            ? <><Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />Génération…</>
-            : <><Download className="mr-1.5 h-3.5 w-3.5" />Télécharger PDF</>
+            ? <><Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />Generation…</>
+            : <><Download className="mr-1.5 h-3.5 w-3.5" />Telecharger PDF</>
           }
         </Button>
         <Button size="sm" onClick={() => window.print()}>
@@ -129,11 +129,11 @@ export default function FactureImprimerPage() {
       <div id="facture-content" className="max-w-3xl mx-auto px-8 py-12">
         <div className="flex items-start justify-between mb-10">
           <div>
-            <div className="text-2xl font-bold text-blue-900">{clinique.nomClinique ?? "Cabinet Vétérinaire"}</div>
+            <div className="text-2xl font-bold text-blue-900">{clinique.nomClinique ?? "Cabinet Veterinaire"}</div>
             <div className="text-sm text-gray-500 mt-3">
               {clinique.adresse && <>{clinique.adresse}<br /></>}
               {(clinique.codePostal || clinique.ville) && <>{[clinique.codePostal, clinique.ville].filter(Boolean).join(" ")}<br /></>}
-              {clinique.telephone && <>Tél : {clinique.telephone}<br /></>}
+              {clinique.telephone && <>Tel : {clinique.telephone}<br /></>}
               {clinique.email && <>Email : {clinique.email}</>}
             </div>
           </div>
@@ -141,7 +141,7 @@ export default function FactureImprimerPage() {
             <div className="text-3xl font-bold text-gray-800">FACTURE</div>
             <div className="text-lg font-semibold text-blue-800 mt-1">{facture.numero}</div>
             <div className="text-sm text-gray-500 mt-2">
-              Date d'émission : <strong>{formatDateFR(facture.dateEmission)}</strong>
+              Date d emission : <strong>{formatDateFR(facture.dateEmission)}</strong>
             </div>
             {facture.datePaiement && (
               <div className="text-sm text-gray-500">
@@ -156,7 +156,7 @@ export default function FactureImprimerPage() {
                   ? "bg-red-100 text-red-700"
                   : "bg-yellow-100 text-yellow-700"
               }`}>
-                {facture.statut === "payee" ? "Payée" : facture.statut === "annulee" ? "Annulée" : "En attente"}
+                {facture.statut === "payee" ? "Payee" : facture.statut === "annulee" ? "Annulee" : "En attente"}
               </span>
             </div>
           </div>
@@ -164,16 +164,16 @@ export default function FactureImprimerPage() {
 
         <div className="grid grid-cols-2 gap-8 mb-10">
           <div className="border rounded-lg p-4">
-            <div className="text-xs uppercase text-gray-400 font-semibold mb-2 tracking-wider">Propriétaire</div>
+            <div className="text-xs uppercase text-gray-400 font-semibold mb-2 tracking-wider">Proprietaire</div>
             {owner ? (
               <>
                 <div className="font-semibold text-gray-800">{owner.prenom} {owner.nom}</div>
                 {owner.adresse && <div className="text-sm text-gray-600 mt-1">{owner.adresse}</div>}
-                {owner.telephone && <div className="text-sm text-gray-600">Tél : {owner.telephone}</div>}
+                {owner.telephone && <div className="text-sm text-gray-600">Tel : {owner.telephone}</div>}
                 {owner.email && <div className="text-sm text-gray-600">{owner.email}</div>}
               </>
             ) : (
-              <div className="text-sm text-gray-400">Non renseigné</div>
+              <div className="text-sm text-gray-400">Non renseigne</div>
             )}
           </div>
           <div className="border rounded-lg p-4">
@@ -188,7 +188,7 @@ export default function FactureImprimerPage() {
                 {patient.sexe && <div className="text-sm text-gray-500">{patient.sexe}</div>}
               </>
             ) : (
-              <div className="text-sm text-gray-400">Non renseigné</div>
+              <div className="text-sm text-gray-400">Non renseigne</div>
             )}
             {facture.consultation && (
               <div className="text-xs text-gray-400 mt-2">
@@ -203,7 +203,7 @@ export default function FactureImprimerPage() {
           <thead>
             <tr className="bg-blue-900 text-white">
               <th className="text-left px-3 py-2 rounded-tl-md">Description</th>
-              <th className="text-center px-3 py-2">Qté</th>
+              <th className="text-center px-3 py-2">Qte</th>
               <th className="text-right px-3 py-2">PU HT</th>
               <th className="text-right px-3 py-2">PU TTC</th>
               <th className="text-right px-3 py-2">Total HT</th>
@@ -213,7 +213,7 @@ export default function FactureImprimerPage() {
           <tbody>
             {lignes.length === 0 ? (
               <tr>
-                <td colSpan={6} className="text-center py-6 text-gray-400 italic">Aucun acte enregistré</td>
+                <td colSpan={6} className="text-center py-6 text-gray-400 italic">Aucun acte enregistre</td>
               </tr>
             ) : (
               lignes.map((ligne: any, idx: number) => (
@@ -237,7 +237,7 @@ export default function FactureImprimerPage() {
           <div className="w-72 space-y-1">
             {Object.entries(parCategorie).length > 1 && (
               <div className="mb-3">
-                <div className="text-xs uppercase text-gray-400 font-semibold mb-1 tracking-wider">Récapitulatif par catégorie</div>
+                <div className="text-xs uppercase text-gray-400 font-semibold mb-1 tracking-wider">Recapitulatif par categorie</div>
                 {Object.entries(parCategorie).map(([cat, montant]) => (
                   <div key={cat} className="flex justify-between text-sm text-gray-600 py-0.5">
                     <span>{categorieLabel[cat] ?? cat}</span>
@@ -266,15 +266,15 @@ export default function FactureImprimerPage() {
 
         <div className="border-t pt-6 text-xs text-gray-400 space-y-1">
           {(clinique.nomClinique || clinique.siret) && (
-            <p>{clinique.nomClinique ?? ""}{(clinique.siret || '80015370200041') ? ` — SIRET : ${clinique.siret || '80015370200041'}` : ""}</p>
+            <p>{clinique.nomClinique ?? ""}{clinique.siret ? ` — SIRET : ${clinique.siret}` : ""}</p>
           )}
           {clinique.numeroOrdre && (
-            <p>N° Ordre National des Vétérinaires : {clinique.numeroOrdre}</p>
+            <p>N Ordre National des Veterinaires : {clinique.numeroOrdre}</p>
           )}
           {clinique.numTVA && (
-            <p>N° TVA intracommunautaire : {clinique.numTVA} — Code NAF : 7500Z (Activités vétérinaires)</p>
+            <p>N TVA intracommunautaire : {clinique.numTVA} — Code NAF : 7500Z (Activites veterinaires)</p>
           )}
-          <p>Règlement par virement, espèces ou carte bancaire. Tout retard de paiement entraîne des pénalités de 3 fois le taux légal.</p>
+          <p>Reglement par virement, especes ou carte bancaire. Tout retard de paiement entraine des penalites de 3 fois le taux legal.</p>
         </div>
       </div>
 
