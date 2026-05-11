@@ -12,7 +12,7 @@ export const ordonnancesTable = pgTable("ordonnances", {
   veterinaire: text("veterinaire"),
   contenu: text("contenu").notNull(),
   numeroOrdonnance: text("numero_ordonnance"),
-  numeroAmm: text("numero_amm"), // N° AMM UE 2019/6
+  numeroAmm: text("numero_amm"), // NÂ° AMM UE 2019/6
   genereIA: boolean("genere_ia").default(false),
   instructionsClient: text("instructions_client"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
