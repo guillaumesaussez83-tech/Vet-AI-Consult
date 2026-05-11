@@ -1,7 +1,10 @@
 // artifacts/api-server/src/routes/index.ts
 // MODIFIE -- fix imports + ajout routes manquantes (audit Phase 0)
+// hotfix/audit-verification-p0: ajout imports requireClinicId + aiRateLimiter manquants
 
 import { Router } from "express";
+import { requireClinicId } from "../middleware/requireClinicId";
+import { aiRateLimiter, pdfRateLimiter } from "../middleware/aiRateLimiter";
 import rendezVousRouter from "./rendez-vous";
 import agendaRouter from "./agenda";
 import patientsRouter from "./patients";
@@ -11,7 +14,6 @@ import facturesRouter from "./factures";
 import ordonnancesRouter from "./ordonnances";
 import stockRouter from "./stock";
 import rappelsRouter from "./rappels";
-// NOTE: import clinicRouter supprime -- repertoire inexistant
 
 // Sprint 7 -- Phase 1 MVP Clinique
 import permissionsRouter from "./permissions";
@@ -27,7 +29,6 @@ import ventesRouter from "./ventes";
 import statistiquesRouter from "./statistiques";
 import vaccinationsRouter from "./vaccinations";
 import fournisseursRouter from "./fournisseurs";
-
 
 // Routes orphelines branchees -- audit Phase 0
 import actesRouter from "./actes";
@@ -58,7 +59,6 @@ router.use("/factures", facturesRouter);
 router.use("/ordonnances", ordonnancesRouter);
 router.use("/stocks", stockRouter);
 router.use("/rappels", rappelsRouter);
-// NOTE: route /clinic supprimee -- module inexistant
 
 // Sprint 7 -- nouvelles routes
 router.use("/permissions", permissionsRouter);
@@ -75,11 +75,11 @@ router.use("/statistiques", statistiquesRouter);
 router.use("/vaccinations", vaccinationsRouter);
 router.use("/fournisseurs", fournisseursRouter);
 
-
 // Routes orphelines -- audit Phase 0
 router.use("/actes", actesRouter);
 router.use("/admin", adminRouter);
-router.use("/ai", aiRouter);
+// fix: ajout requireClinicId + aiRateLimiter sur /ai (manquants - audit verification)
+router.use("/ai", requireClinicId, aiRateLimiter, aiRouter);
 router.use("/anesthesie", anesthesieRouter);
 router.use("/communications", communicationsRouter);
 router.use("/comptabilite", comptabiliteRouter);
@@ -90,10 +90,9 @@ router.use("/portail", portailRouter);
 router.use("/search", searchRouter);
 router.use("/vet-knowledge", vetKnowledgeRouter);
 
+// fix: requireClinicId desormais importe correctement (manquant - audit verification)
 router.use("/analytics", requireClinicId, analyticsRouter);
-
 router.use("/groupe", requireClinicId, groupeRouter);
-
 router.use("/reports", requireClinicId, reportsRouter);
 
 export default router;
