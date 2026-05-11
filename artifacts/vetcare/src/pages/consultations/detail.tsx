@@ -269,6 +269,16 @@ export default function ConsultationDetailPage() {
         </Badge>
       </div>
 
+      {consultation.statut === "terminee" && !factureExistante && (
+        <a
+          href={"/factures/nouvelle?consultationId=" + consultation.id}
+          className="inline-flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white font-medium px-4 py-2 rounded-lg transition-colors text-sm"
+        >
+          <span>💳</span>
+          Créer la facture
+        </a>
+      )}
+
       {factureExistante?.id && (
         <div className="flex items-center justify-between bg-green-50 border border-green-200 rounded-lg px-4 py-3">
           <div className="flex items-center gap-3">
