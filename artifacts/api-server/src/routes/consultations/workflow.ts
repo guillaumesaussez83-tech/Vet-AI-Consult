@@ -1,14 +1,15 @@
 import { Router } from "express";
 import { db, consultationsTable } from "@workspace/db";
-import { ordonnancesTable, actesConsultationsTable, patientsTable, aiOutputsTable } from "@workspace/db";
+import { ordonnancesTable, actesConsultationsTable, patientsTable, aiOutputsTable, assistantsTable } from "@workspace/db";
 import { eq, and, desc, sql } from "drizzle-orm";
 import { runAITask } from "../../lib/ai/aiRouter";
 import { findMedications, formatMedicationsContext } from "../../lib/ragMedications";
+import { getAuth } from "@clerk/express";
 
 const router = Router();
 
-// Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ POST /:id/anamnese Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
-// Phase 1 Ã¢ÂÂ GPT-4o-mini (volume task)
+// --- POST /:id/anamnese ---
+// Phase 1 - GPT-4o-mini (volume task)
 router.post("/:id/anamnese", async (req, res) => {
   const consultationId = parseInt(req.params.id);
   const { transcription } = req.body;
@@ -51,7 +52,6 @@ router.post("/:id/anamnese", async (req, res) => {
       anamneseIA = { raw: rawText };
     }
 
-    // Log to ai_outputs (fire-and-forget)
     void db
       .insert(aiOutputsTable)
       .values({
@@ -86,8 +86,8 @@ router.post("/:id/anamnese", async (req, res) => {
   }
 });
 
-// Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ POST /:id/examen Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
-// Phase 2 Ã¢ÂÂ GPT-4o-mini (volume task)
+// --- POST /:id/examen ---
+// Phase 2 - GPT-4o-mini (volume task)
 router.post("/:id/examen", async (req, res) => {
   const consultationId = parseInt(req.params.id);
   const { transcription } = req.body;
@@ -137,7 +137,6 @@ router.post("/:id/examen", async (req, res) => {
       examenIA = { raw: rawText };
     }
 
-    // Log to ai_outputs (fire-and-forget)
     void db
       .insert(aiOutputsTable)
       .values({
@@ -172,9 +171,8 @@ router.post("/:id/examen", async (req, res) => {
   }
 });
 
-// Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ POST /:id/valider-examens Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
-// Phase 3 Ã¢ÂÂ Claude Sonnet + RAG ANMV
-// IMPORTANT: stays in SYNTHESE phase Ã¢ÂÂ vet must call /terminer to finalize
+// --- POST /:id/valider-examens ---
+// Phase 3 - Claude Sonnet + RAG ANMV
 router.post("/:id/valider-examens", async (req, res) => {
   const consultationId = parseInt(req.params.id);
   const { examensValides } = req.body;
@@ -206,7 +204,6 @@ router.post("/:id/valider-examens", async (req, res) => {
       req.log?.warn({ err }, 'non-blocking error');
     }
 
-    // Ã¢ÂÂÃ¢ÂÂ RAG ANMV: get patient species and search medications Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
     let ragContext = "";
     try {
       const [patient] = await db
@@ -222,7 +219,6 @@ router.post("/:id/valider-examens", async (req, res) => {
             ? "FE"
             : "CA";
 
-        // Build indication from clinical data
         const indication =
           (typeof examenData?.diagnostic_probable === "string"
             ? examenData.diagnostic_probable
@@ -266,7 +262,6 @@ router.post("/:id/valider-examens", async (req, res) => {
       syntheseIA = { raw: rawText };
     }
 
-    // Ã¢ÂÂÃ¢ÂÂ Log to ai_outputs Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
     let aiOutputId: number | null = null;
     try {
       const [inserted] = await db
@@ -285,13 +280,11 @@ router.post("/:id/valider-examens", async (req, res) => {
       req.log?.warn({ err: e }, "ai_outputs insert failed (synthese)");
     }
 
-    // Ã¢ÂÂÃ¢ÂÂ Update consultation (STAY in SYNTHESE Ã¢ÂÂ vet must validate) Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
     await db
       .update(consultationsTable)
       .set({
         examensComplementairesValides: JSON.stringify(examensValides || []),
         syntheseIA: JSON.stringify(syntheseIA),
-        // phase stays SYNTHESE
       })
       .where(
         and(
@@ -300,7 +293,6 @@ router.post("/:id/valider-examens", async (req, res) => {
         )
       );
 
-    // Ã¢ÂÂÃ¢ÂÂ Auto-create ordonnance Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
     let ordonnanceId: number | null = null;
     let ordonnanceNumero: string | null = null;
     try {
@@ -314,7 +306,7 @@ router.post("/:id/valider-examens", async (req, res) => {
           .filter((m: any) => m.molecule || m.specialite)
           .map((m: any) => {
             const nom = m.specialite || m.molecule || "Medicament";
-            const lines = ["Ã¢ÂÂ¢ " + nom];
+            const lines = ["- " + nom];
             if (m.dose_mg) lines.push("  Dose : " + m.dose_mg + "mg");
             if (m.forme) lines.push("  Forme : " + m.forme);
             if (m.posologie) lines.push("  Posologie : " + m.posologie);
@@ -325,47 +317,47 @@ router.post("/:id/valider-examens", async (req, res) => {
             if (m.voie) lines.push("  Voie : " + m.voie);
             return lines.join("\n");
           })
-             .join("\n\n");
+          .join("\n\n");
 
         const year = new Date().getFullYear();
         await db.transaction(async (tx) => {
-        await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${clinicId + ':ord:' + String(year)}))`);
-        const [lastOrd] = await tx
-          .select({ num: ordonnancesTable.numeroOrdonnance })
-          .from(ordonnancesTable)
-          .where(
-            and(
-              eq(ordonnancesTable.clinicId, clinicId),
-              sql`numero_ordonnance LIKE ${"ORD-" + year + "-%"}`
+          await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${clinicId + ':ord:' + String(year)}))`);
+          const [lastOrd] = await tx
+            .select({ num: ordonnancesTable.numeroOrdonnance })
+            .from(ordonnancesTable)
+            .where(
+              and(
+                eq(ordonnancesTable.clinicId, clinicId),
+                sql`numero_ordonnance LIKE ${"ORD-" + year + "-%"}`
+              )
             )
-          )
-          .orderBy(desc(ordonnancesTable.id))
-          .limit(1);
+            .orderBy(desc(ordonnancesTable.id))
+            .limit(1);
 
-        const lastSeq = lastOrd?.num
-          ? parseInt(lastOrd.num.split("-")[2] ?? "0")
-          : 0;
-        const numeroOrdonnance =
-          "ORD-" + year + "-" + String(lastSeq + 1).padStart(5, "0");
+          const lastSeq = lastOrd?.num
+            ? parseInt(lastOrd.num.split("-")[2] ?? "0")
+            : 0;
+          const numeroOrdonnance =
+            "ORD-" + year + "-" + String(lastSeq + 1).padStart(5, "0");
 
-        const [ord] = await tx
-          .insert(ordonnancesTable)
-          .values({
-            consultationId,
-            patientId: consult.patientId,
-            veterinaire: consult.veterinaire ?? null,
-            contenu,
-            numeroOrdonnance,
-            genereIA: true,
-            instructionsClient:
-              typeof syntheseIA.suivi === "string" ? syntheseIA.suivi : null,
-            clinicId,
-          })
-          .returning();
+          const [ord] = await tx
+            .insert(ordonnancesTable)
+            .values({
+              consultationId,
+              patientId: consult.patientId,
+              veterinaire: consult.veterinaire ?? null,
+              contenu,
+              numeroOrdonnance,
+              genereIA: true,
+              instructionsClient:
+                typeof syntheseIA.suivi === "string" ? syntheseIA.suivi : null,
+              clinicId,
+            })
+            .returning();
 
-        ordonnanceId = ord.id;
-        ordonnanceNumero = ord.numeroOrdonnance;
-        }); // end db.transaction ordonnance
+          ordonnanceId = ord.id;
+          ordonnanceNumero = ord.numeroOrdonnance;
+        });
       }
     } catch (ordErr) {
       req.log?.warn(
@@ -374,7 +366,7 @@ router.post("/:id/valider-examens", async (req, res) => {
       );
     }
 
-    // Ã¢ÂÂÃ¢ÂÂ Auto-create actes devis Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
+    // P1-5: UPSERT actes IA (remplace DELETE+INSERT destructeur)
     try {
       const lignesDevis: Array<{
         description: string;
@@ -394,7 +386,7 @@ router.post("/:id/valider-examens", async (req, res) => {
           ]
             .filter(Boolean)
             .join(" ");
-          const description = nom + (details ? " Ã¢ÂÂ " + details : "");
+          const description = nom + (details ? " - " + details : "");
           lignesDevis.push({
             description,
             prixUnitaire: Number(med.prix_estime) || 0,
@@ -415,27 +407,22 @@ router.post("/:id/valider-examens", async (req, res) => {
       }
 
       if (lignesDevis.length > 0) {
-        await db.transaction(async (tx) => {
-        await tx
-          .delete(actesConsultationsTable)
-          .where(
-            and(
-              eq(actesConsultationsTable.consultationId, consultationId),
-              eq(actesConsultationsTable.clinicId, clinicId)
-            )
-          );
-        await tx.insert(actesConsultationsTable).values(
-          lignesDevis.map((l) => ({
-            consultationId,
-            acteId: null,
-            description: l.description,
-            prixUnitaire: l.prixUnitaire,
-            quantite: l.quantite,
-            tvaRate: 20,
-            clinicId,
-          }))
-        );
-        }); // end db.transaction actes
+        // P1-5: UPSERT — preserve existing manual entries, update AI ones
+        for (const ligne of lignesDevis) {
+          await db
+            .insert(actesConsultationsTable)
+            .values({
+              consultationId,
+              acteId: null,
+              description: ligne.description,
+              prixUnitaire: ligne.prixUnitaire,
+              quantite: ligne.quantite,
+              tvaRate: 20,
+              clinicId,
+              sourceIa: true,
+            } as any)
+            .onConflictDoNothing();
+        }
       }
     } catch (devisErr) {
       req.log?.warn(
@@ -458,17 +445,42 @@ router.post("/:id/valider-examens", async (req, res) => {
   }
 });
 
-// Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ POST /:id/terminer Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
-// Validation checkpoint Ã¢ÂÂ requires Clerk user ID before TERMINEE
+// --- POST /:id/terminer ---
+// P0-2: validated_by utilise identite Clerk reelle, non modifiable client
 router.post("/:id/terminer", async (req, res) => {
   const consultationId = parseInt(req.params.id);
-  const { validated_by, validation_changes } = req.body;
+  const { validation_changes } = req.body;
+  // SECURITY: ignore any validated_by from body — use Clerk userId only
   const clinicId = req.clinicId;
 
-  if (!validated_by?.trim()) {
-    return res.status(400).json({
-      error: "validated_by requis Ã¢ÂÂ identifiant veterinaire manquant",
+  // Get Clerk auth
+  const authData = getAuth(req as any);
+  const clerkUserId = authData?.userId;
+
+  if (!clerkUserId) {
+    return res.status(401).json({
+      error: "Authentification requise — userId Clerk manquant",
     });
+  }
+
+  // Build validated_by from Clerk identity + assistant table
+  let validatedBy = clerkUserId;
+  try {
+    const [vet] = await db
+      .select({ prenom: assistantsTable.prenom, nom: assistantsTable.nom })
+      .from(assistantsTable)
+      .where(
+        and(
+          eq(assistantsTable.clerkUserId, clerkUserId),
+          eq(assistantsTable.clinicId, clinicId)
+        )
+      )
+      .limit(1);
+    if (vet) {
+      validatedBy = `${vet.prenom || ""} ${vet.nom || ""} (${clerkUserId})`.trim();
+    }
+  } catch (e) {
+    req.log?.warn({ err: e }, "Could not fetch vet name, using userId");
   }
 
   try {
@@ -491,13 +503,12 @@ router.post("/:id/terminer", async (req, res) => {
       });
     }
 
-    // Mark ai_output as validated
     try {
       await db
         .update(aiOutputsTable)
         .set({
           wasValidated: true,
-          validatedBy: validated_by,
+          validatedBy,
           validationChanges: validation_changes || null,
         })
         .where(
@@ -518,7 +529,6 @@ router.post("/:id/terminer", async (req, res) => {
       req.log?.warn({ err }, 'non-blocking error');
     }
 
-    // Transition to TERMINEE
     await db
       .update(consultationsTable)
       .set({
@@ -542,7 +552,7 @@ router.post("/:id/terminer", async (req, res) => {
 
     return res.json({
       phase: "TERMINEE",
-      validated_by,
+      validated_by: validatedBy,
       consultationId,
     });
   } catch (err) {
@@ -551,7 +561,7 @@ router.post("/:id/terminer", async (req, res) => {
   }
 });
 
-// Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ GET /:id/workflow-state Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
+// --- GET /:id/workflow-state ---
 router.get("/:id/workflow-state", async (req, res) => {
   const consultationId = parseInt(req.params.id);
   const clinicId = req.clinicId;
@@ -600,7 +610,6 @@ router.get("/:id/workflow-state", async (req, res) => {
         )
       );
 
-    // Check synthese validation state
     const [syntheseOutput] = await db
       .select({
         wasValidated: aiOutputsTable.wasValidated,
