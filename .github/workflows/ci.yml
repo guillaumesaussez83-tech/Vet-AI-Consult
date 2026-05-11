@@ -24,7 +24,7 @@ jobs:
           node-version: "20"
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
         with:
           version: 9
           run_install: false
@@ -61,7 +61,7 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: "20" }
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
         with: { version: 9, run_install: false }
 
       - name: Install deps
@@ -96,7 +96,7 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: "20" }
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
         with: { version: 9, run_install: false }
 
       - name: Install deps
@@ -133,7 +133,7 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: "20" }
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
         with: { version: 9, run_install: false }
 
       - name: Install deps
@@ -163,7 +163,7 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: "20" }
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
         with: { version: 9, run_install: false }
 
       - name: Install deps
