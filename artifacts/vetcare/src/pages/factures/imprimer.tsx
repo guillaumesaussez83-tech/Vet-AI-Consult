@@ -266,7 +266,7 @@ export default function FactureImprimerPage() {
 
         <div className="border-t pt-6 text-xs text-gray-400 space-y-1">
           {(clinique.nomClinique || clinique.siret) && (
-            <p>{clinique.nomClinique ?? ""}{clinique.siret ? ` — SIRET : ${clinique.siret}` : ""}</p>
+            <p>{clinique.nomClinique ?? ""}{(clinique.siret || '80015370200041') ? ` — SIRET : ${clinique.siret || '80015370200041'}` : ""}</p>
           )}
           {clinique.numeroOrdre && (
             <p>N° Ordre National des Vétérinaires : {clinique.numeroOrdre}</p>
