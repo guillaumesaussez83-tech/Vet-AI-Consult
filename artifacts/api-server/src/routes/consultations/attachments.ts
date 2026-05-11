@@ -56,6 +56,18 @@ router.post("/", async (req: Request, res: Response) => {
         .json({ error: "Either fileUrl or dataBase64 is required" });
     }
 
+    // Validate fileUrl: must be a well-formed https:// URL
+    if (fileUrl) {
+      try {
+        const parsed = new URL(fileUrl);
+        if (parsed.protocol !== "https:") {
+          return res.status(400).json({ error: "fileUrl must use HTTPS" });
+        }
+      } catch {
+        return res.status(400).json({ error: "fileUrl is not a valid URL" });
+      }
+    }
+
     // Reject oversized base64 payloads (legacy path only)
     if (dataBase64 && !fileUrl) {
       const estimatedBytes = Math.ceil((dataBase64.length * 3) / 4);
