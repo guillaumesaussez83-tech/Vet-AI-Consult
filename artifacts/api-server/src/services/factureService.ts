@@ -44,21 +44,30 @@ export class FactureService {
     };
   }
 
-  static async genererNumero(): Promise<string> {
+  static async genererNumero(clinicId: number): Promise<string> {
     const year = new Date().getFullYear();
-    const month = String(new Date().getMonth() + 1).padStart(2, "0");
+
+    // Advisory lock per clinic to prevent race conditions under concurrent inserts
+    // Lock key: encode as large int (clinic * 10000 + year mod 10000)
+    const lockKey = clinicId * 10000 + (year % 10000);
 
     const result = await db.execute(
-      sql`SELECT COUNT(*) as count FROM factures
-          WHERE EXTRACT(YEAR FROM created_at AT TIME ZONE 'UTC') = ${year}`,
+      sql`
+        SELECT pg_advisory_xact_lock(${lockKey});
+        SELECT COUNT(*) AS count
+        FROM factures
+        WHERE clinic_id = ${clinicId}
+          AND EXTRACT(YEAR FROM created_at AT TIME ZONE 'Europe/Paris') = ${year}
+      `,
     );
 
-    const count =
-      Number((result.rows[0] as Record<string, unknown>)["count"]) + 1;
-    return `FAC-${year}${month}-${String(count).padStart(4, "0")}`;
+    // pg returns multiple result sets — take the last one
+    const rows = Array.isArray(result) ? result[result.length - 1].rows : result.rows;
+    const count = Number((rows[0] as Record<string, unknown>)["count"]) + 1;
+    return `FAC-${year}-${String(count).padStart(5, "0")}`;
   }
 
-  static async verifierExistence(
+  static async verifierExistence(  static async verifierExistence(
     factureId: number,
   ): Promise<typeof facturesTable.$inferSelect> {
     const [facture] = await db
