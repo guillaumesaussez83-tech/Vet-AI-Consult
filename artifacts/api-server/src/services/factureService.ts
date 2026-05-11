@@ -5,7 +5,7 @@ import {
   actesConsultationsTable,
   actesTable,
 } from "@workspace/db";
-import { eq, sql } from "drizzle-orm";
+import { eq, sql, and } from "drizzle-orm";
 import { NotFoundError, ValidationError } from "../middlewares/errorHandler";
 import { logger } from "../lib/logger";
 
@@ -16,7 +16,7 @@ export interface MontantsFacture {
 }
 
 export class FactureService {
-  static async recalculerDepuisActes(consultationId: number): Promise<MontantsFacture> {
+  static async recalculerDepuisActes(consultationId: number, clinicId: string): Promise<MontantsFacture> {
     const actes = await db
       .select({
         quantite: actesConsultationsTable.quantite,
@@ -25,7 +25,12 @@ export class FactureService {
       })
       .from(actesConsultationsTable)
       .leftJoin(actesTable, eq(actesConsultationsTable.acteId, actesTable.id))
-      .where(eq(actesConsultationsTable.consultationId, consultationId));
+      .where(
+        and(
+          eq(actesConsultationsTable.consultationId, consultationId),
+          eq(actesConsultationsTable.clinicId, clinicId),
+        ),
+      );
 
     let montantHT = 0;
     let montantTVA = 0;
