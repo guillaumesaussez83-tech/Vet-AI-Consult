@@ -44,30 +44,49 @@ export class FactureService {
     };
   }
 
-  static async genererNumero(clinicId: number): Promise<string> {
+  /**
+   * Generate a sequential invoice number scoped to (clinicId, year).
+   *
+   * MUST be called inside a db.transaction() so that the advisory lock,
+   * the COUNT query, and the INSERT all share the same PG connection/transaction.
+   * The lock is released automatically when the transaction commits or rolls back.
+   *
+   * @param tx  - Drizzle transaction object (from db.transaction callback)
+   * @param clinicId - Clerk organisation string ID (e.g. "org_xxx")
+   */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  static async genererNumero(tx: any, clinicId: string): Promise<string> {
     const year = new Date().getFullYear();
 
-    // Advisory lock per clinic to prevent race conditions under concurrent inserts
-    // Lock key: encode as large int (clinic * 10000 + year mod 10000)
-    const lockKey = clinicId * 10000 + (year % 10000);
-
-    const result = await db.execute(
-      sql`
-        SELECT pg_advisory_xact_lock(${lockKey});
-        SELECT COUNT(*) AS count
-        FROM factures
-        WHERE clinic_id = ${clinicId}
-          AND EXTRACT(YEAR FROM created_at AT TIME ZONE 'Europe/Paris') = ${year}
-      `,
+    // Derive an int4 advisory lock key from the string clinicId using PostgreSQL
+    // hashtext(). XOR with year to prevent cross-year contention.
+    const lockRaw = await tx.execute(
+      sql`SELECT hashtext(${clinicId} || '_' || ${String(year)}) AS lock_key`,
     );
+    const lockRows: Record<string, unknown>[] = Array.isArray(lockRaw)
+      ? (lockRaw[0]?.rows ?? lockRaw)
+      : (lockRaw.rows ?? lockRaw);
+    const lockKey = Number(lockRows[0]["lock_key"]);
 
-    // pg returns multiple result sets — take the last one
-    const rows = Array.isArray(result) ? result[result.length - 1].rows : result.rows;
-    const count = Number((rows[0] as Record<string, unknown>)["count"]) + 1;
+    // Acquire advisory lock — held until this transaction ends (xact-scoped).
+    await tx.execute(sql`SELECT pg_advisory_xact_lock(${lockKey})`);
+
+    // COUNT existing invoices for this clinic + year INSIDE the same transaction.
+    const countRaw = await tx.execute(
+      sql`SELECT COUNT(*) AS count
+           FROM factures
+           WHERE clinic_id = ${clinicId}
+           AND EXTRACT(YEAR FROM created_at AT TIME ZONE 'Europe/Paris') = ${year}`,
+    );
+    const countRows: Record<string, unknown>[] = Array.isArray(countRaw)
+      ? (countRaw[0]?.rows ?? countRaw)
+      : (countRaw.rows ?? countRaw);
+    const count = Number(countRows[0]["count"]) + 1;
+
     return `FAC-${year}-${String(count).padStart(5, "0")}`;
   }
 
-  static async verifierExistence(  static async verifierExistence(
+  static async verifierExistence(
     factureId: number,
   ): Promise<typeof facturesTable.$inferSelect> {
     const [facture] = await db
@@ -91,7 +110,7 @@ export class FactureService {
     const facture = await this.verifierExistence(factureId);
 
     if (facture.statut === "payee") {
-      throw new ValidationError("Cette facture est déjà payée");
+      throw new ValidationError("Cette facture est deja payee");
     }
 
     const montants = await this.recalculerDepuisActes(facture.consultationId);
@@ -100,11 +119,11 @@ export class FactureService {
 
     if (modePaiement === "especes") {
       if (!montantEspecesRecu) {
-        throw new ValidationError("Montant reçu en espèces requis");
+        throw new ValidationError("Montant recu en especes requis");
       }
       if (montantEspecesRecu < montants.montantTTC) {
         throw new ValidationError(
-          `Montant insuffisant : ${montants.montantTTC.toFixed(2)} € requis`,
+          `Montant insuffisant : ${montants.montantTTC.toFixed(2)} EUR requis`,
         );
       }
       renduMonnaie =
@@ -127,7 +146,7 @@ export class FactureService {
 
     logger.info(
       { factureId, modePaiement, montantTTC: montants.montantTTC },
-      "Facture payée",
+      "Facture payee",
     );
 
     return { renduMonnaie };
@@ -143,7 +162,7 @@ export class FactureService {
       .limit(1);
 
     if (!consultation) {
-      throw new NotFoundError("Consultation liée à la facture");
+      throw new NotFoundError("Consultation liee a la facture");
     }
 
     return { facture, consultation };
