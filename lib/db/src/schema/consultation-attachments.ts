@@ -1,18 +1,26 @@
-import { pgTable, serial, integer, varchar, text, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, uuid, text, integer, timestamp } from "drizzle-orm/pg-core";
 import { consultationsTable } from "./consultations";
+import { clinicsTable } from "./clinics";
 
 export const consultationAttachmentsTable = pgTable("consultation_attachments", {
-  id: serial("id").primaryKey(),
-  consultationId: integer("consultation_id")
+  id: uuid("id").primaryKey().defaultRandom(),
+  consultationId: uuid("consultation_id")
     .notNull()
     .references(() => consultationsTable.id, { onDelete: "cascade" }),
-  filename: varchar("filename", { length: 255 }).notNull(),
-  mimeType: varchar("mime_type", { length: 100 }).notNull().default("application/octet-stream"),
-  sizeBytes: integer("size_bytes").notNull().default(0),
-  dataBase64: text("data_base64").notNull(),
-  uploadedBy: varchar("uploaded_by", { length: 255 }),
+  clinicId: text("clinic_id")
+    .notNull()
+    .references(() => clinicsTable.id),
+
+  // Colonnes de stockage par référence (nouvelle architecture)
+  fileUrl: text("file_url"),
+  fileName: text("file_name"),
+  fileSize: integer("file_size"),
+  mimeType: text("mime_type"),
+
+  // Colonne legacy base64 — nullable pour migration progressive
+  dataBase64: text("data_base64"),
+
+  nom: text("nom"),
+  type: text("type"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
-
-export type ConsultationAttachment = typeof consultationAttachmentsTable.$inferSelect;
-export type NewConsultationAttachment = typeof consultationAttachmentsTable.$inferInsert;
