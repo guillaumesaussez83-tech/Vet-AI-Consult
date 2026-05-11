@@ -419,18 +419,22 @@ router.post("/", validate(CreateFactureSchema), async (req, res) => {
       return res.status(409).json({ success: false, error: { code: "ALREADY_EXISTS", message: "Facture dÃÂÃÂ©jÃÂÃÂ  crÃÂÃÂ©ÃÂÃÂ©e pour cette consultation" } });
     }
     const montants = await FactureService.recalculerDepuisActes(consultationId, req.clinicId);
-    const numero = await FactureService.genererNumero(req.clinicId);
     const today = new Date().toISOString().split("T")[0];
-    const [facture] = await db.insert(facturesTable).values({
-      clinicId: req.clinicId,
-      consultationId,
-      numero,
-      montantHT: montants.montantHT,
-      tva: TVA_DEFAULT_RATE,
-      montantTTC: montants.montantTTC,
-      statut: "en_attente",
-      dateEmission: today,
-    }).returning();
+    // Wrap numero generation + INSERT in same transaction: advisory lock atomicity
+    const facture = await db.transaction(async (tx) => {
+      const numero = await FactureService.genererNumero(tx, req.clinicId);
+      const [row] = await tx.insert(facturesTable).values({
+        clinicId: req.clinicId,
+        consultationId,
+        numero,
+        montantHT: montants.montantHT,
+        tva: TVA_DEFAULT_RATE,
+        montantTTC: montants.montantTTC,
+        statut: "en_attente",
+        dateEmission: today,
+      }).returning();
+      return row;
+    });
     return res.json({ success: true, data: facture });
   } catch (err) {
     req.log.error(err);
