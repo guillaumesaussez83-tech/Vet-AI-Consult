@@ -50,6 +50,7 @@ export default defineConfig(async () => {
       alias: {
         "@": path.resolve(import.meta.dirname, "src"),
         "@assets": path.resolve(import.meta.dirname, "..", "..", "attached_assets"),
+      "@clerk/clerk-react": "@clerk/react",
       },
       dedupe: ["react", "react-dom"],
     },
