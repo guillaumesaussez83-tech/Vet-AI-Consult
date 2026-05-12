@@ -1,7 +1,7 @@
 import { Router, Request, Response } from "express";
 import { requireAuth } from "@clerk/express";
-import { db } from "../../../db";
-import { userPermissions } from "../../../../lib/db/src/schema/user-permissions";
+import { db } from "@workspace/db";
+import { userPermissions } from "@workspace/db/schema";
 import { eq, and } from "drizzle-orm";
 import { isAdmin } from "../../middleware/isAdmin";
 
@@ -22,7 +22,7 @@ router.get("/", async (req: Request, res: Response) => {
     }
     res.json({ data: rows });
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: err.message });
   }
 });
 
@@ -41,9 +41,9 @@ router.post("/", async (req: Request, res: Response) => {
         set: { canRead: !!canRead, canWrite: !!canWrite, canDelete: !!canDelete, updatedAt: new Date() },
       })
       .returning();
-    res.status(201).json({ data: row });
+    return res.status(201).json({ data: row });
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: err.message });
   }
 });
 
@@ -60,7 +60,7 @@ router.patch("/:id", async (req: Request, res: Response) => {
     if (!row) return res.status(404).json({ error: "Permission not found" });
     res.json({ data: row });
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: err.message });
   }
 });
 
@@ -71,7 +71,7 @@ router.delete("/:id", async (req: Request, res: Response) => {
     await db.delete(userPermissions).where(eq(userPermissions.id, id));
     res.json({ success: true });
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: err.message });
   }
 });
 
