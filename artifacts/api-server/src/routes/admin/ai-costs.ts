@@ -21,7 +21,7 @@ router.get("/ai-costs", async (req, res) => {
     const days = parseInt(rawPeriod.replace(/\D/g, "")) || 30;
     const since = new Date();
     since.setDate(since.getDate() - days);
-    const clinicId = req.clinicId;
+    const clinicId = req.clinicId!;
 
     const rows = await db
       .select({
