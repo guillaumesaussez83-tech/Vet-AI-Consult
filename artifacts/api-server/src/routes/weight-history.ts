@@ -19,9 +19,9 @@ router.get("/:patientId", async (req: any, res) => {
       WHERE wh.patient_id = ${req.params.patientId} AND wh.clinic_id = ${clinicId}
       ORDER BY wh.measured_at ASC
     `);
-    res.json({ success: true, data: rows.rows });
+    return res.json({ success: true, data: rows.rows });
   } catch (e: any) {
-    res.status(500).json({ success: false, error: e.message });
+    return res.status(500).json({ success: false, error: e.message });
   }
 });
 
@@ -44,9 +44,9 @@ router.post("/", async (req: any, res) => {
       UPDATE patients SET poids = ${weight} WHERE id = ${patientId} AND clinic_id = ${clinicId}
     `);
 
-    res.json({ success: true, data: { id: (result.rows[0] as any).id } });
+    return res.json({ success: true, data: { id: (result.rows[0] as any).id } });
   } catch (e: any) {
-    res.status(500).json({ success: false, error: e.message });
+    return res.status(500).json({ success: false, error: e.message });
   }
 });
 
@@ -57,9 +57,9 @@ router.delete("/:id", async (req: any, res) => {
     await db.execute(sql`
       DELETE FROM weight_history WHERE id = ${req.params.id} AND clinic_id = ${clinicId}
     `);
-    res.json({ success: true });
+    return res.json({ success: true });
   } catch (e: any) {
-    res.status(500).json({ success: false, error: e.message });
+    return res.status(500).json({ success: false, error: e.message });
   }
 });
 
