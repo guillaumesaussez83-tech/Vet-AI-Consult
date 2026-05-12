@@ -153,7 +153,7 @@ router.get("/veterinaires", async (req, res) => {
       .select()
       .from(veterinairesTable)
       .where(and(
-        eq(veterinairesTable.clinicId, req.clinicId),
+        eq(veterinairesTable.clinicId, req.clinicId!),
         eq(veterinairesTable.actif, true),
       ))
       .orderBy(asc(veterinairesTable.nom));
@@ -170,7 +170,7 @@ router.get("/veterinaires/tous", async (req, res) => {
     const vets = await db
       .select()
       .from(veterinairesTable)
-      .where(eq(veterinairesTable.clinicId, req.clinicId))
+      .where(eq(veterinairesTable.clinicId, req.clinicId!))
       .orderBy(asc(veterinairesTable.nom));
     return res.json(vets);
   } catch (err) {
@@ -187,7 +187,7 @@ router.post("/veterinaires", async (req, res) => {
     const [vet] = await db.insert(veterinairesTable).values({
       nom, prenom, couleur: couleur ?? "#2563EB",
       initiales: initiales ?? `${prenom[0]}${nom[0]}`.toUpperCase(),
-      rpps, clinicId: req.clinicId,
+      rpps, clinicId: req.clinicId!,
     }).returning();
     return res.status(201).json(vet);
   } catch (err) {
@@ -203,7 +203,7 @@ router.put("/veterinaires/:id", async (req, res) => {
     const [vet] = await db
       .update(veterinairesTable)
       .set({ nom, prenom, couleur, initiales, rpps, actif })
-      .where(and(eq(veterinairesTable.id, req.params.id), eq(veterinairesTable.clinicId, req.clinicId)))
+      .where(and(eq(veterinairesTable.id, req.params.id), eq(veterinairesTable.clinicId, req.clinicId!)))
       .returning();
     if (!vet) return res.status(404).json({ error: "Vétérinaire non trouvé" });
     return res.json(vet);
@@ -217,7 +217,7 @@ router.put("/veterinaires/:id", async (req, res) => {
 router.delete("/veterinaires/:id", async (req, res) => {
   try {
     await db.update(veterinairesTable).set({ actif: false })
-      .where(and(eq(veterinairesTable.id, req.params.id), eq(veterinairesTable.clinicId, req.clinicId)));
+      .where(and(eq(veterinairesTable.id, req.params.id), eq(veterinairesTable.clinicId, req.clinicId!)));
     return res.status(204).send();
   } catch (err) {
     req.log.error(err);
@@ -230,7 +230,7 @@ router.get("/slots/:vetId/:date", async (req, res) => {
   try {
     const { vetId, date } = req.params;
     const duration = parseInt(req.query.duree as string) || 20;
-    const slots = await getAvailableSlots(vetId, date, req.clinicId, duration);
+    const slots = await getAvailableSlots(vetId, date, req.clinicId!, duration);
     return res.json(slots);
   } catch (err) {
     req.log.error(err);
@@ -244,13 +244,13 @@ router.get("/slots/multi/:date", async (req, res) => {
     const { date } = req.params;
     const duration = parseInt(req.query.duree as string) || 20;
     const vets = await db.select().from(veterinairesTable).where(and(
-      eq(veterinairesTable.clinicId, req.clinicId),
+      eq(veterinairesTable.clinicId, req.clinicId!),
       eq(veterinairesTable.actif, true),
     ));
 
     const result: Record<string, unknown> = {};
     for (const vet of vets) {
-      const slots = await getAvailableSlots(vet.id, date, req.clinicId, duration);
+      const slots = await getAvailableSlots(vet.id, date, req.clinicId!, duration);
       result[vet.id] = { vet, slots, travaille: slots.length > 0 };
     }
     return res.json(result);
@@ -308,7 +308,7 @@ router.get("/rendez-vous/semaine/:dateDebut", async (req, res) => {
       .leftJoin(ownersTable, eq(rendezVousTable.ownerId, ownersTable.id))
       .leftJoin(veterinairesTable, eq(rendezVousTable.veterinaireId, veterinairesTable.id))
       .where(and(
-        eq(rendezVousTable.clinicId, req.clinicId),
+        eq(rendezVousTable.clinicId, req.clinicId!),
         gte(rendezVousTable.dateHeure, dateDebut + "T00:00:00"),
         lte(rendezVousTable.dateHeure, endStr + "T23:59:59"),
       ))
@@ -330,7 +330,7 @@ router.get("/planning/mois/:annee/:mois", async (req, res) => {
     const lastDay = new Date(annee, mois, 0).getDate();
     const end = `${annee}-${String(mois).padStart(2, "0")}-${lastDay}`;
 
-    const cid = req.clinicId;
+    const cid = req.clinicId!;
     const vets = await db.select().from(veterinairesTable).where(and(
       eq(veterinairesTable.clinicId, cid),
       eq(veterinairesTable.actif, true),
@@ -418,7 +418,7 @@ router.post("/rendez-vous", async (req, res) => {
     if (veterinaireId) {
       const date = dateHeure.split("T")[0];
       const heure = dateHeure.split("T")[1]?.slice(0, 5) ?? "00:00";
-      const slots = await getAvailableSlots(veterinaireId, date, req.clinicId, dureeMinutes);
+      const slots = await getAvailableSlots(veterinaireId, date, req.clinicId!, dureeMinutes);
       const slot = slots.find(s => s.heure === heure);
       if (slot && !slot.disponible) {
         const next = slots.filter(s => s.disponible && s.heure > heure).slice(0, 3);
@@ -431,13 +431,13 @@ router.post("/rendez-vous", async (req, res) => {
     if (veterinaireId && !veterinaire) {
       const [vet] = await db.select().from(veterinairesTable).where(and(
         eq(veterinairesTable.id, veterinaireId),
-        eq(veterinairesTable.clinicId, req.clinicId),
+        eq(veterinairesTable.clinicId, req.clinicId!),
       ));
       if (vet) veterinaire = `Dr. ${vet.prenom} ${vet.nom}`;
     }
 
     const [rdv] = await db.insert(rendezVousTable).values({
-      clinicId: req.clinicId,
+      clinicId: req.clinicId!,
       veterinaireId, veterinaire, dateHeure, dureeMinutes: dureeMinutes ?? 20,
       motif, typeRdv: typeRdv ?? "consultation",
       animalNom, animalEspece, proprietaireNom, proprietaireTelephone,
@@ -459,7 +459,7 @@ router.put("/rendez-vous/:id", async (req, res) => {
     const id = parseInt(req.params.id);
     const { clinicId: _ignored, ...payload } = req.body;
     const [rdv] = await db.update(rendezVousTable).set(payload)
-      .where(and(eq(rendezVousTable.id, id), eq(rendezVousTable.clinicId, req.clinicId)))
+      .where(and(eq(rendezVousTable.id, id), eq(rendezVousTable.clinicId, req.clinicId!)))
       .returning();
     if (!rdv) return res.status(404).json({ error: "RDV non trouvé" });
     return res.json(rdv);
@@ -475,7 +475,7 @@ router.put("/rendez-vous/:id/statut-salle", async (req, res) => {
     const id = parseInt(req.params.id);
     const { statutSalle } = req.body;
     const [rdv] = await db.update(rendezVousTable).set({ statutSalle })
-      .where(and(eq(rendezVousTable.id, id), eq(rendezVousTable.clinicId, req.clinicId)))
+      .where(and(eq(rendezVousTable.id, id), eq(rendezVousTable.clinicId, req.clinicId!)))
       .returning();
     if (!rdv) return res.status(404).json({ error: "RDV non trouvé" });
     return res.json(rdv);
@@ -492,7 +492,7 @@ router.get("/planning/semaine-type/:vetId", async (req, res) => {
       .select()
       .from(planningSeamineTypeTable)
       .where(and(
-        eq(planningSeamineTypeTable.clinicId, req.clinicId),
+        eq(planningSeamineTypeTable.clinicId, req.clinicId!),
         eq(planningSeamineTypeTable.veterinaireId, req.params.vetId),
       ))
       .orderBy(asc(planningSeamineTypeTable.jourSemaine));
@@ -511,7 +511,7 @@ router.post("/planning/semaine-type", async (req, res) => {
 
     // Upsert by delete + insert
     await db.delete(planningSeamineTypeTable).where(and(
-      eq(planningSeamineTypeTable.clinicId, req.clinicId),
+      eq(planningSeamineTypeTable.clinicId, req.clinicId!),
       eq(planningSeamineTypeTable.veterinaireId, veterinaireId),
       eq(planningSeamineTypeTable.jourSemaine, jourSemaine),
     ));
@@ -519,7 +519,7 @@ router.post("/planning/semaine-type", async (req, res) => {
       const [row] = await db.insert(planningSeamineTypeTable).values({
         veterinaireId, jourSemaine, heureDebut: heureDebut ?? "08:30",
         heureFin: heureFin ?? "19:00", pauseDebut, pauseFin,
-        actif: true, clinicId: req.clinicId,
+        actif: true, clinicId: req.clinicId!,
       }).returning();
       return res.status(201).json(row);
     }
@@ -548,7 +548,7 @@ router.post("/planning/exception", async (req, res) => {
       })
       .from(rendezVousTable)
       .where(and(
-        eq(rendezVousTable.clinicId, req.clinicId),
+        eq(rendezVousTable.clinicId, req.clinicId!),
         eq(rendezVousTable.veterinaireId, veterinaireId),
         gte(rendezVousTable.dateHeure, dateDebut + "T00:00:00"),
         lte(rendezVousTable.dateHeure, dateFin + "T23:59:59"),
@@ -556,7 +556,7 @@ router.post("/planning/exception", async (req, res) => {
 
     const [exc] = await db.insert(exceptionsPlanningTable).values({
       veterinaireId, dateDebut, dateFin, typeException, motif,
-      heureDebutOverride, heureFinOverride, clinicId: req.clinicId,
+      heureDebutOverride, heureFinOverride, clinicId: req.clinicId!,
     }).returning();
 
     return res.status(201).json({ exception: exc, conflits: rdvConflicts });
@@ -571,7 +571,7 @@ router.delete("/planning/exception/:id", async (req, res) => {
   try {
     await db.delete(exceptionsPlanningTable).where(and(
       eq(exceptionsPlanningTable.id, req.params.id),
-      eq(exceptionsPlanningTable.clinicId, req.clinicId),
+      eq(exceptionsPlanningTable.clinicId, req.clinicId!),
     ));
     return res.status(204).send();
   } catch (err) {
@@ -587,7 +587,7 @@ router.get("/exceptions/:vetId", async (req, res) => {
       .select()
       .from(exceptionsPlanningTable)
       .where(and(
-        eq(exceptionsPlanningTable.clinicId, req.clinicId),
+        eq(exceptionsPlanningTable.clinicId, req.clinicId!),
         eq(exceptionsPlanningTable.veterinaireId, req.params.vetId),
       ))
       .orderBy(asc(exceptionsPlanningTable.dateDebut));
@@ -627,7 +627,7 @@ router.post("/rotations/generer", async (req, res) => {
     for (const rot of preview) {
       try {
         await db.insert(rotationsWeekendTable).values({
-          clinicId: req.clinicId,
+          clinicId: req.clinicId!,
           dateWeekend: rot.date,
           veterinaireId: rot.veterinaireId,
           typeGarde: rot.typeGarde,
@@ -649,7 +649,7 @@ router.get("/prochain-creneau", async (req, res) => {
     const vets = vetId
       ? [{ id: vetId }]
       : await db.select({ id: veterinairesTable.id }).from(veterinairesTable).where(and(
-          eq(veterinairesTable.clinicId, req.clinicId),
+          eq(veterinairesTable.clinicId, req.clinicId!),
           eq(veterinairesTable.actif, true),
         ));
 
@@ -659,7 +659,7 @@ router.get("/prochain-creneau", async (req, res) => {
       d.setDate(today.getDate() + i);
       const dateStr = d.toISOString().split("T")[0];
       for (const vet of vets) {
-        const slots = await getAvailableSlots(vet.id, dateStr, req.clinicId);
+        const slots = await getAvailableSlots(vet.id, dateStr, req.clinicId!);
         const next = slots.find(s => s.disponible);
         if (next) return res.json({ date: dateStr, heure: next.heure, veterinaireId: vet.id });
       }
