@@ -75,7 +75,7 @@ router.get("/export-csv", requireAuth(), async (req, res) => {
     const rows = await db.select().from(actesTable);
     const header = "code,nom,categorie,prix_ht,tva_rate,description,unite";
     const csvRows = rows.map(r => [
-      r.code, r.nom, r.categorie, r.prixDefault, r.tvaRate, r.description ?? "", r.unite
+      r.code, r.nom, r.categorie, r.prixDefaut, r.tvaRate, r.description ?? "", r.unite
     ].map(v => {
       const s = String(v ?? "");
       return s.includes(",") || s.includes('"') ? `"${s.replace(/"/g,'""')}"` : s;
@@ -122,7 +122,7 @@ router.post("/import-csv", requireAuth(), async (req, res) => {
       if (ex.length > 0) { await db.update(actesTable).set(vals).where(eq(actesTable.code, code)); updated++; }
       else { await db.insert(actesTable).values(vals); inserted++; }
     }
-    res.json({ success: true, inserted, updated });
+    return res.json({ success: true, inserted, updated });
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Internal server error" });
