@@ -1,6 +1,6 @@
 import { Router, Request, Response } from "express";
 import { requireAuth } from "@clerk/express";
-import { db } from "../../../db";
+import { db } from "@workspace/db";
 import { sql } from "drizzle-orm";
 
 const router = Router();
@@ -71,13 +71,13 @@ router.post("/", requireAuth(), async (req: Request, res: Response) => {
       }
     }
 
-    const [row] = await db.execute(sql`
+    const row = (await db.execute(sql`
       INSERT INTO vaccinations (clinic_id, patient_id, owner_id, vaccine_type, vaccine_name, vaccine_date, next_due_date, batch_number, notes, consultation_id, created_by)
       VALUES (${clinicId}, ${Number(patientId)}, ${ownerId ? Number(ownerId) : null},
               ${vaccineType}, ${vaccineName||null}, ${vaccineDate}, ${nextDueDate||null},
               ${batchNumber||null}, ${notes||null}, ${consultationId ? Number(consultationId) : null}, ${userId||null})
       RETURNING *
-    `);
+    `)).rows[0];
 
     // Créer un rappel auto si nextDueDate est renseigné
     if (nextDueDate) {
@@ -103,7 +103,7 @@ router.post("/", requireAuth(), async (req: Request, res: Response) => {
       `).catch(() => {});
     }
 
-    res.status(201).json({ data: row });
+    return res.status(201).json({ data: row });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
