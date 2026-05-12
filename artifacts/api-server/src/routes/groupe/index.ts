@@ -90,7 +90,7 @@ router.get(
       });
     }
 
-    const clinicIds = accessibleClinics.map((r) => r.clinicId);
+    const clinicIds = accessibleClinics.map((r: { clinicId: string }) => r.clinicId);
 
     // Infos cliniques + KPIs agrégés du mois courant
     const now = new Date();
@@ -125,7 +125,6 @@ router.get(
             and(
               eq(facturesTable.clinicId, c.id),
               gte(facturesTable.createdAt, monthStart),
-              isNull(facturesTable.deletedAt)
             )
           ),
         db
@@ -135,7 +134,6 @@ router.get(
             and(
               eq(consultationsTable.clinicId, c.id),
               gte(consultationsTable.createdAt, monthStart),
-              isNull(consultationsTable.deletedAt)
             )
           ),
         db
@@ -144,7 +142,6 @@ router.get(
           .where(
             and(
               eq(patientsTable.clinicId, c.id),
-              isNull(patientsTable.deletedAt)
             )
           ),
       ]);
@@ -207,7 +204,7 @@ router.get(
         )
       );
 
-    const clinicIds = accessibleClinics.map((r) => r.clinicId);
+    const clinicIds = accessibleClinics.map((r: { clinicId: string }) => r.clinicId);
 
     if (clinicIds.length === 0) {
       return res.json({ message: "Aucune clinique accessible", kpis: null });
@@ -229,7 +226,6 @@ router.get(
           and(
             inArray(facturesTable.clinicId, clinicIds),
             gte(facturesTable.createdAt, monthStart),
-            isNull(facturesTable.deletedAt)
           )
         ),
       db
@@ -240,7 +236,6 @@ router.get(
             inArray(facturesTable.clinicId, clinicIds),
             gte(facturesTable.createdAt, prevMonthStart),
             sql`created_at <= ${prevMonthEnd}`,
-            isNull(facturesTable.deletedAt)
           )
         ),
       db
@@ -250,7 +245,6 @@ router.get(
           and(
             inArray(facturesTable.clinicId, clinicIds),
             gte(facturesTable.createdAt, yearStart),
-            isNull(facturesTable.deletedAt)
           )
         ),
       db
@@ -260,7 +254,6 @@ router.get(
           and(
             inArray(consultationsTable.clinicId, clinicIds),
             gte(consultationsTable.createdAt, monthStart),
-            isNull(consultationsTable.deletedAt)
           )
         ),
       db
@@ -269,7 +262,6 @@ router.get(
         .where(
           and(
             inArray(patientsTable.clinicId, clinicIds),
-            isNull(patientsTable.deletedAt)
           )
         ),
       db
@@ -282,7 +274,6 @@ router.get(
           and(
             inArray(facturesTable.clinicId, clinicIds),
             ne(facturesTable.statut, "payee"),
-            isNull(facturesTable.deletedAt)
           )
         ),
     ]);
@@ -308,7 +299,7 @@ router.get(
       ORDER BY 1, 2
     `).catch(() => ({ rows: [] }));
 
-    res.json({
+    return res.json({
       nbCliniques: clinicIds.length,
       kpis: {
         caTtcMois: caMoisV,
@@ -345,7 +336,7 @@ router.get(
         )
       );
 
-    const clinicIds = accessibleClinics.map((r) => r.clinicId);
+    const clinicIds = accessibleClinics.map((r: { clinicId: string }) => r.clinicId);
     if (clinicIds.length === 0) return res.json({ comparatif: [] });
 
     const cliniquesInfo = await db
@@ -366,7 +357,6 @@ router.get(
                 and(
                   eq(facturesTable.clinicId, c.id),
                   gte(facturesTable.createdAt, monthStart),
-                  isNull(facturesTable.deletedAt)
                 )
               ),
             db
@@ -376,7 +366,6 @@ router.get(
                 and(
                   eq(consultationsTable.clinicId, c.id),
                   gte(consultationsTable.createdAt, monthStart),
-                  isNull(consultationsTable.deletedAt)
                 )
               ),
             db
@@ -385,7 +374,6 @@ router.get(
               .where(
                 and(
                   eq(patientsTable.clinicId, c.id),
-                  isNull(patientsTable.deletedAt)
                 )
               ),
             db
@@ -395,7 +383,6 @@ router.get(
                 and(
                   eq(facturesTable.clinicId, c.id),
                   ne(facturesTable.statut, "payee"),
-                  isNull(facturesTable.deletedAt)
                 )
               ),
             db
@@ -406,7 +393,6 @@ router.get(
                   eq(consultationsTable.clinicId, c.id),
                   gte(consultationsTable.createdAt, monthStart),
                   sql`synthese_ia IS NOT NULL`,
-                  isNull(consultationsTable.deletedAt)
                 )
               ),
           ]);
@@ -445,7 +431,7 @@ router.get(
       comparatif.length;
 
     res.json({
-      comparatif: comparatif.map((c, i) => ({
+      comparatif: comparatif.map((c: any, i: number) => ({
         ...c,
         rang: i + 1,
         vsMoyenneCAPct:
