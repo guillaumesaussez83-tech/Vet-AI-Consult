@@ -19,7 +19,7 @@ export function requireClinicId(
   req: Request,
   res: Response,
   next: NextFunction
-) {
+): void {
   const auth = getAuth(req);
 
   if (!auth?.userId) {
