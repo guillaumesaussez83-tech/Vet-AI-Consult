@@ -75,7 +75,7 @@ router.get(
         and(
           eq(facturesTable.clinicId, clinicId),
           gte(facturesTable.createdAt, todayStart),
-          isNull(facturesTable.deletedAt)
+          
         )
       );
 
@@ -87,7 +87,7 @@ router.get(
         and(
           eq(facturesTable.clinicId, clinicId),
           gte(facturesTable.createdAt, monthStart),
-          isNull(facturesTable.deletedAt)
+          
         )
       );
 
@@ -100,7 +100,7 @@ router.get(
           eq(facturesTable.clinicId, clinicId),
           gte(facturesTable.createdAt, prevMonthStart),
           lte(facturesTable.createdAt, prevMonthEnd),
-          isNull(facturesTable.deletedAt)
+          
         )
       );
 
@@ -112,7 +112,7 @@ router.get(
         and(
           eq(facturesTable.clinicId, clinicId),
           gte(facturesTable.createdAt, yearStart),
-          isNull(facturesTable.deletedAt)
+          
         )
       );
 
@@ -124,7 +124,7 @@ router.get(
         and(
           eq(consultationsTable.clinicId, clinicId),
           gte(consultationsTable.createdAt, todayStart),
-          isNull(consultationsTable.deletedAt)
+          
         )
       );
 
@@ -136,7 +136,7 @@ router.get(
         and(
           eq(consultationsTable.clinicId, clinicId),
           gte(consultationsTable.createdAt, monthStart),
-          isNull(consultationsTable.deletedAt)
+          
         )
       );
 
@@ -148,7 +148,7 @@ router.get(
         and(
           eq(patientsTable.clinicId, clinicId),
           gte(patientsTable.createdAt, monthStart),
-          isNull(patientsTable.deletedAt)
+          
         )
       );
 
@@ -159,7 +159,7 @@ router.get(
       .where(
         and(
           eq(patientsTable.clinicId, clinicId),
-          isNull(patientsTable.deletedAt)
+          
         )
       );
 
@@ -174,7 +174,7 @@ router.get(
         and(
           eq(facturesTable.clinicId, clinicId),
           ne(facturesTable.statut, "payee"),
-          isNull(facturesTable.deletedAt)
+          
         )
       );
 
@@ -187,7 +187,7 @@ router.get(
           eq(consultationsTable.clinicId, clinicId),
           gte(consultationsTable.createdAt, monthStart),
           sql`synthese_ia IS NOT NULL AND synthese_ia != ''`,
-          isNull(consultationsTable.deletedAt)
+          
         )
       );
 
@@ -350,19 +350,19 @@ router.get(
     const [[caMois], [caPrev], [consultMois], [consultPrev], [newPat], [impayees], [tauxIA]] =
       await Promise.all([
         db.select({ v: sql<string>`COALESCE(SUM(montant_ttc::numeric),0)` }).from(facturesTable)
-          .where(and(eq(facturesTable.clinicId, clinicId), gte(facturesTable.createdAt, monthStart), isNull(facturesTable.deletedAt))),
+          .where(and(eq(facturesTable.clinicId, clinicId), gte(facturesTable.createdAt, monthStart))),
         db.select({ v: sql<string>`COALESCE(SUM(montant_ttc::numeric),0)` }).from(facturesTable)
-          .where(and(eq(facturesTable.clinicId, clinicId), gte(facturesTable.createdAt, prevMonthStart), lte(facturesTable.createdAt, prevMonthEnd), isNull(facturesTable.deletedAt))),
+          .where(and(eq(facturesTable.clinicId, clinicId), gte(facturesTable.createdAt, prevMonthStart), lte(facturesTable.createdAt, prevMonthEnd))),
         db.select({ nb: count() }).from(consultationsTable)
-          .where(and(eq(consultationsTable.clinicId, clinicId), gte(consultationsTable.createdAt, monthStart), isNull(consultationsTable.deletedAt))),
+          .where(and(eq(consultationsTable.clinicId, clinicId), gte(consultationsTable.createdAt, monthStart))),
         db.select({ nb: count() }).from(consultationsTable)
-          .where(and(eq(consultationsTable.clinicId, clinicId), gte(consultationsTable.createdAt, prevMonthStart), lte(consultationsTable.createdAt, prevMonthEnd), isNull(consultationsTable.deletedAt))),
+          .where(and(eq(consultationsTable.clinicId, clinicId), gte(consultationsTable.createdAt, prevMonthStart), lte(consultationsTable.createdAt, prevMonthEnd))),
         db.select({ nb: count() }).from(patientsTable)
-          .where(and(eq(patientsTable.clinicId, clinidId), gte(patientsTable.createdAt, monthStart), isNull(patientsTable.deletedAt))),
+          .where(and(eq(patientsTable.clinicId, clinicId), gte(patientsTable.createdAt, monthStart), isNull(patientsTable.deletedAt))),
         db.select({ nb: count(), mt: sql<string>`COALESCE(SUM(montant_ttc::numeric),0)` }).from(facturesTable)
-          .where(and(eq(facturesTable.clinicId, clinicId), ne(facturesTable.statut, "payee"), isNull(facturesTable.deletedAt))),
+          .where(and(eq(facturesTable.clinicId, clinicId), ne(facturesTable.statut, "payee"))),
         db.select({ nb: count() }).from(consultationsTable)
-          .where(and(eq(consultationsTable.clinicId, clinicId), gte(consultationsTable.createdAt, monthStart), sql`synthese_ia IS NOT NULL`, isNull(consultationsTable.deletedAt))),
+          .where(and(eq(consultationsTable.clinicId, clinicId), gte(consultationsTable.createdAt, monthStart), sql`synthese_ia IS NOT NULL`)),
       ]);
 
     const caMoisV = parseFloat(caMois.v || "0");
@@ -521,7 +521,7 @@ router.get(
     // Total patients inactifs et actifs
     const [[totInactifs], [totActifs]] = await Promise.all([
       db.select({ nb: count() }).from(patientsTable).where(
-        and(eq(patientsTable.clinicId, clinicId), isNull(patientsTable.deletedAt))
+        and(eq(patientsTable.clinicId, clinicId))
       ),
       db.execute(sql`
         SELECT COUNT(DISTINCT p.id) AS nb
@@ -583,28 +583,28 @@ router.post(
       [alertesRow],
     ] = await Promise.all([
       db.select({ v: sql<string>`COALESCE(SUM(montant_ttc::numeric),0)` }).from(facturesTable)
-        .where(and(eq(facturesTable.clinicId, clinicId), gte(facturesTable.createdAt, startOfDay(now)), isNull(facturesTable.deletedAt))),
+        .where(and(eq(facturesTable.clinicId, clinicId), gte(facturesTable.createdAt, startOfDay(now)))),
       db.select({ v: sql<string>`COALESCE(SUM(montant_ttc::numeric),0)` }).from(facturesTable)
-        .where(and(eq(facturesTable.clinicId, clinicId), gte(facturesTable.createdAt, monthStart), isNull(facturesTable.deletedAt))),
+        .where(and(eq(facturesTable.clinicId, clinicId), gte(facturesTable.createdAt, monthStart))),
       db.select({ v: sql<string>`COALESCE(SUM(montant_ttc::numeric),0)` }).from(facturesTable)
-        .where(and(eq(facturesTable.clinicId, clinicId), gte(facturesTable.createdAt, yearStart), isNull(facturesTable.deletedAt))),
+        .where(and(eq(facturesTable.clinicId, clinicId), gte(facturesTable.createdAt, yearStart))),
       db.select({ nb: count() }).from(consultationsTable)
-        .where(and(eq(consultationsTable.clinicId, clinicId), gte(consultationsTable.createdAt, startOfDay(now)), isNull(consultationsTable.deletedAt))),
+        .where(and(eq(consultationsTable.clinicId, clinicId), gte(consultationsTable.createdAt, startOfDay(now)))),
       db.select({ nb: count() }).from(consultationsTable)
-        .where(and(eq(consultationsTable.clinicId, clinicId), eq(consultationsTable.statut, "TERMINEE"), gte(consultationsTable.createdAt, startOfDay(now)), isNull(consultationsTable.deletedAt))),
+        .where(and(eq(consultationsTable.clinicId, clinicId), eq(consultationsTable.statut, "TERMINEE"), gte(consultationsTable.createdAt, startOfDay(now)))),
       db.select({ nb: count() }).from(consultationsTable)
-        .where(and(eq(consultationsTable.clinicId, clinicId), sql`synthese_ia IS NOT NULL`, gte(consultationsTable.createdAt, startOfDay(now)), isNull(consultationsTable.deletedAt))),
+        .where(and(eq(consultationsTable.clinicId, clinicId), sql`synthese_ia IS NOT NULL`, gte(consultationsTable.createdAt, startOfDay(now)))),
       db.select({ nb: count() }).from(patientsTable)
-        .where(and(eq(patientsTable.clinicId, clinicId), gte(patientsTable.createdAt, monthStart), isNull(patientsTable.deletedAt))),
+        .where(and(eq(patientsTable.clinicId, clinicId), gte(patientsTable.createdAt, monthStart))),
       db.execute(sql`
         SELECT COUNT(DISTINCT p.id) AS nb FROM patients p
         JOIN consultations c ON c.patient_id = p.id AND c.deleted_at IS NULL
         WHERE p.clinic_id = ${clinicId} AND p.deleted_at IS NULL AND c.created_at >= ${sixMonthsAgo}
       `),
       db.select({ nb: count(), pays: sql<string>`COALESCE(SUM(CASE WHEN statut='payee' THEN 1 ELSE 0 END),0)` }).from(facturesTable)
-        .where(and(eq(facturesTable.clinicId, clinicId), isNull(facturesTable.deletedAt))),
+        .where(and(eq(facturesTable.clinicId, clinicId))),
       db.select({ nb: count(), mt: sql<string>`COALESCE(SUM(montant_ttc::numeric),0)` }).from(facturesTable)
-        .where(and(eq(facturesTable.clinicId, clinicId), ne(facturesTable.statut, "payee"), isNull(facturesTable.deletedAt))),
+        .where(and(eq(facturesTable.clinicId, clinicId), ne(facturesTable.statut, "payee"))),
       db.execute(sql`SELECT COUNT(*) AS nb FROM stock_alertes WHERE clinic_id = ${clinicId}`).catch(() => [{ rows: [{ nb: 0 }] }]),
     ]);
 
