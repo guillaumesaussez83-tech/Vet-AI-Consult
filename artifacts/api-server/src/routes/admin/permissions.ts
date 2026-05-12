@@ -35,7 +35,7 @@ router.post("/", async (req: Request, res: Response) => {
     }
     const [row] = await db
       .insert(userPermissions)
-      .values({ userId, module, canRead: !!canRead, canWrite: !!canWrite, canDelete: !!canDelete })
+      .values({ userId, clinicId: req.clinicId!, module, canRead: !!canRead, canWrite: !!canWrite, canDelete: !!canDelete })
       .onConflictDoUpdate({
         target: [userPermissions.userId, userPermissions.module],
         set: { canRead: !!canRead, canWrite: !!canWrite, canDelete: !!canDelete, updatedAt: new Date() },
@@ -55,7 +55,7 @@ router.patch("/:id", async (req: Request, res: Response) => {
     const [row] = await db
       .update(userPermissions)
       .set({ canRead: !!canRead, canWrite: !!canWrite, canDelete: !!canDelete, updatedAt: new Date() })
-      .where(eq(userPermissions.id, id))
+      .where(eq(userPermissions.id, String(id)))
       .returning();
     if (!row) return res.status(404).json({ error: "Permission not found" });
     return res.json({ data: row });
