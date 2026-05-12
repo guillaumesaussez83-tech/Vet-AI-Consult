@@ -47,7 +47,7 @@ router.get("/", requireAuth(), async (req: Request, res: Response) => {
       WHERE clinic_id = '${clinicId}' AND active = true
     `));
 
-    res.json({ data: { items: items.rows, stats: stats.rows[0] } });
+    return res.json({ data: { items: items.rows, stats: stats.rows[0] } });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
@@ -60,13 +60,13 @@ router.post("/", requireAuth(), async (req: Request, res: Response) => {
     const { name, reference, category, unit, minStock, unitPriceBuy, unitPriceSell, tvaRate, supplierId, location } = req.body;
     if (!name) return res.status(400).json({ error: "name requis" });
 
-    const [row] = await db.execute(sql`
+    const row = (await db.execute(sql`
       INSERT INTO stock_items (clinic_id, name, reference, category, unit, min_stock, unit_price_buy, unit_price_sell, tva_rate, supplier_id, location)
       VALUES (${clinicId}, ${name}, ${reference||null}, ${category||'MEDICAMENT'}, ${unit||'unité'},
               ${Number(minStock)||0}, ${Number(unitPriceBuy)||0}, ${Number(unitPriceSell)||0},
               ${Number(tvaRate)||20}, ${supplierId||null}, ${location||null})
       RETURNING *
-    `);
+    `)).rows[0];
     res.status(201).json({ data: row });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -80,7 +80,7 @@ router.put("/:id", requireAuth(), async (req: Request, res: Response) => {
     const { id } = req.params;
     const { name, reference, category, unit, minStock, unitPriceBuy, unitPriceSell, tvaRate, supplierId, location, active } = req.body;
 
-    const [row] = await db.execute(sql`
+    const row = (await db.execute(sql`
       UPDATE stock_items SET
         name = COALESCE(${name}, name),
         reference = COALESCE(${reference||null}, reference),
@@ -96,9 +96,9 @@ router.put("/:id", requireAuth(), async (req: Request, res: Response) => {
         updated_at = NOW()
       WHERE id = ${Number(id)} AND clinic_id = ${clinicId}
       RETURNING *
-    `);
+    `)).rows[0];
     if (!row) return res.status(404).json({ error: "Article non trouvé" });
-    res.json({ data: row });
+    return res.json({ data: row });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
@@ -121,12 +121,12 @@ router.post("/:id/mouvement", requireAuth(), async (req: Request, res: Response)
     const qty = type === 'SORTIE' ? -Math.abs(Number(quantity)) : Math.abs(Number(quantity));
 
     // Enregistrer le mouvement
-    const [mvt] = await db.execute(sql`
+    const mvt = (await db.execute(sql`
       INSERT INTO stock_movements (clinic_id, stock_item_id, type, quantity, unit_price, expiration_date, batch_number, reference, notes, created_by)
       VALUES (${clinicId}, ${Number(id)}, ${type}, ${qty}, ${unitPrice ? Number(unitPrice) : null},
               ${expirationDate||null}, ${batchNumber||null}, ${reference||null}, ${notes||null}, ${userId||null})
       RETURNING *
-    `);
+    `)).rows[0];
 
     // Mettre à jour le stock actuel
     await db.execute(sql`
@@ -171,7 +171,7 @@ router.get("/:id/mouvements", requireAuth(), async (req: Request, res: Response)
       ORDER BY created_at DESC
       LIMIT 100
     `);
-    res.json({ data: mvts.rows });
+    return res.json({ data: mvts.rows });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
@@ -208,7 +208,7 @@ router.get("/alertes/actives", requireAuth(), async (req: Request, res: Response
         )
       ORDER BY si.current_stock ASC
     `);
-    res.json({ data: alertes.rows });
+    return res.json({ data: alertes.rows });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
