@@ -1,5 +1,5 @@
 import { Router } from "express";
-import requireClinicId from "../middleware/requireClinicId";
+import { requireClinicId } from "../middleware/requireClinicId";
 import { requireAuth } from "@clerk/express";
 import { db } from "@workspace/db";
 import { sql } from "drizzle-orm";
@@ -58,7 +58,7 @@ router.get("/check/:userId/:module", async (req: any, res) => {
     const rows = await db.execute(sql`SELECT * FROM user_permissions WHERE user_id = ${userId} AND module = ${module} AND clinic_id = ${clinicId}`);
     if (rows.rows.length === 0) return res.json({ success: true, data: { canRead: false, canWrite: false, canDelete: false } });
     const p = rows.rows[0] as any;
-    res.json({ success: true, data: { canRead: p.can_read, canWrite: p.can_write, canDelete: p.can_delete } });
+    return res.json({ success: true, data: { canRead: p.can_read, canWrite: p.can_write, canDelete: p.can_delete } });
   } catch (e: any) { res.status(500).json({ success: false, error: e.message }); }
 });
 
