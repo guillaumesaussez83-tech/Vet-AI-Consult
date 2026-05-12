@@ -20,7 +20,7 @@ router.get("/", requireAuth(), async (req, res) => {
     res.json({ data: rows });
   } catch (err) {
     req.log.error(err);
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -32,10 +32,10 @@ router.post("/", requireAuth(), async (req, res) => {
     const [row] = await db.insert(cremationPartnersTable)
       .values({ nom, adresse, telephone, email, tarifIndividuel, tarifCollectif, notes, clinicId: clinicId || "default", active: true })
       .returning();
-    res.status(201).json({ data: row });
+    return res.status(201).json({ data: row });
   } catch (err) {
     req.log.error(err);
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -52,7 +52,7 @@ router.put("/:id", requireAuth(), async (req, res) => {
     res.json({ data: row });
   } catch (err) {
     req.log.error(err);
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -66,7 +66,7 @@ router.delete("/:id", requireAuth(), async (req, res) => {
     res.json({ success: true });
   } catch (err) {
     req.log.error(err);
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
