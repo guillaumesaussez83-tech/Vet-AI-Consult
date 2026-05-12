@@ -64,8 +64,8 @@ export async function nextOrdonnanceNumber(tx: Tx, clinicId: string): Promise<st
     )
     .orderBy(desc(ordonnancesTable.id))
     .limit(1);
-  const lastSeq = row?.numeroOrdonnance
-    ? parseInt(row.numeroOrdonnance.split("-")[2] ?? "0", 10) || 0
+  const lastSeq = row?.numero
+    ? parseInt(row.numero.split("-")[2] ?? "0", 10) || 0
     : 0;
   return `${prefix}${String(lastSeq + 1).padStart(5, "0")}`;
 }
