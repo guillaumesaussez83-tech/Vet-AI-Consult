@@ -41,7 +41,7 @@ router.post("/:id/anamnese", async (req, res) => {
     const rawText = await runAITask("anamnese", prompt, {
       clinicId,
       consultationId,
-      maxTokens: 2048,
+      maxTokens: "short",
     });
 
     let anamneseIA: Record<string, unknown>;
@@ -126,7 +126,7 @@ router.post("/:id/examen", async (req, res) => {
     const rawText = await runAITask("examen_clinique", prompt, {
       clinicId,
       consultationId,
-      maxTokens: 2048,
+      maxTokens: "short",
     });
 
     let examenIA: Record<string, unknown>;
@@ -251,7 +251,7 @@ router.post("/:id/valider-examens", async (req, res) => {
     const rawText = await runAITask("diagnostic_differentiel", prompt, {
       clinicId,
       consultationId,
-      maxTokens: 4096,
+      maxTokens: "long",
     });
 
     let syntheseIA: Record<string, unknown>;
