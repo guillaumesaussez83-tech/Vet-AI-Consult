@@ -441,7 +441,7 @@ router.get(
     return res.json({
       reports: reports.map((r) => ({
         ...r,
-        kpiSummary: r.kpiSummary ? JSON.parse(r.kpiSummary) : null,
+        kpiSummary: r.kpiSummary ? JSON.parse(r.kpiSummary as string) : null,
         pdfSizeKb: r.pdfSizeBytes ? Math.round(r.pdfSizeBytes / 1024) : null,
       })),
       total,
@@ -458,7 +458,7 @@ router.get(
   requireClinicId,
   asyncHandler(async (req: Request, res: Response) => {
     const clinicId = req.clinicId!;
-    const id = parseInt(req.params.id);
+    const id = parseInt(req.params.id as string);
     if (isNaN(id)) return res.status(400).json({ error: "ID invalide" });
 
     const [report] = await db
@@ -476,7 +476,7 @@ router.get(
 
     return res.json({
       ...report,
-      kpiSummary: report.kpiSummary ? JSON.parse(report.kpiSummary) : null,
+      kpiSummary: report.kpiSummary ? JSON.parse(report.kpiSummary as string) : null,
       // Ne renvoie pas pdfData dans le listing (trop lourd)
       hasPdf: !!report.pdfData,
     });
@@ -489,7 +489,7 @@ router.get(
   requireClinicId,
   asyncHandler(async (req: Request, res: Response) => {
     const clinicId = req.clinicId!;
-    const id = parseInt(req.params.id);
+    const id = parseInt(req.params.id as string);
     if (isNaN(id)) return res.status(400).json({ error: "ID invalide" });
 
     const [report] = await db
@@ -534,7 +534,7 @@ router.get(
   requireClinicId,
   asyncHandler(async (req: Request, res: Response) => {
     const clinicId = req.clinicId!;
-    const id = parseInt(req.params.id);
+    const id = parseInt(req.params.id as string);
     if (isNaN(id)) return res.status(400).json({ error: "ID invalide" });
 
     const [report] = await db
