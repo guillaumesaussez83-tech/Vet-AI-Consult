@@ -418,11 +418,11 @@ router.post("/", validate(CreateFactureSchema), async (req, res) => {
     if (existing) {
       return res.status(409).json({ success: false, error: { code: "ALREADY_EXISTS", message: "Facture dÃÂÃÂ©jÃÂÃÂ  crÃÂÃÂ©ÃÂÃÂ©e pour cette consultation" } });
     }
-    const montants = await FactureService.recalculerDepuisActes(consultationId, req.clinicId);
-    const numero = await FactureService.genererNumero(req.clinicId);
+    const montants = await FactureService.recalculerDepuisActes(consultationId, req.clinicId!);
+    const numero = await FactureService.genererNumero(req.clinicId!);
     const today = new Date().toISOString().split("T")[0];
     const [facture] = await db.insert(facturesTable).values({
-      clinicId: req.clinicId,
+      clinicId: req.clinicId!,
       consultationId,
       numero,
       montantHT: montants.montantHT,
@@ -574,7 +574,7 @@ router.patch("/:id", async (req, res) => {
           .map((l) => ({ nom: l.nom!, quantite: l.quantite ?? 1 }));
 
         if (medicamentLignes.length > 0) {
-          await decrementerConsultationFEFO(req.clinicId, facture.consultationId, medicamentLignes);
+          await decrementerConsultationFEFO(req.clinicId!, facture.consultationId, medicamentLignes);
         }
       } catch (fefoErr) {
         req.log.warn({ err: fefoErr }, "FEFO auto-decrement failed (non-blocking)");
