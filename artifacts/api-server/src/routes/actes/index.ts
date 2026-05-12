@@ -10,7 +10,7 @@ const router = Router();
 router.get("/", async (req, res) => {
   try {
     const actes = await db.select().from(actesTable)
-      .where(eq(actesTable.clinicId, req.clinicId))
+      .where(eq(actesTable.clinicId, req.clinicId!))
       .orderBy(actesTable.nom);
     return res.json(actes);
   } catch (err) {
@@ -42,7 +42,7 @@ router.patch("/:id", async (req, res) => {
 
     const [acte] = await db.update(actesTable).set(body.data).where(and(
       eq(actesTable.id, params.data.id),
-      eq(actesTable.clinicId, req.clinicId),
+      eq(actesTable.clinicId, req.clinicId!),
     )).returning();
     if (!acte) return res.status(404).json({ error: "Acte non trouvÃ©" });
 
@@ -60,7 +60,7 @@ router.delete("/:id", async (req, res) => {
 
     await db.delete(actesTable).where(and(
       eq(actesTable.id, params.data.id),
-      eq(actesTable.clinicId, req.clinicId),
+      eq(actesTable.clinicId, req.clinicId!),
     ));
     return res.status(204).send();
   } catch (err) {
