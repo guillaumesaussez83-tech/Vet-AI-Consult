@@ -12,7 +12,7 @@ router.get("/:userId", async (req: any, res) => {
     const { userId } = req.params;
     const clinicId = req.clinicId;
     const rows = await db.execute(sql`SELECT * FROM user_permissions WHERE user_id = ${userId} AND clinic_id = ${clinicId}`);
-    res.json({ success: true, data: rows.rows });
+    return res.json({ success: true, data: rows.rows });
   } catch (e: any) { return res.status(500).json({ success: false, error: e.message }); }
 });
 
@@ -20,7 +20,7 @@ router.get("/", async (req: any, res) => {
   try {
     const clinicId = req.clinicId;
     const rows = await db.execute(sql`SELECT user_id, module, can_read, can_write, can_delete, created_at, updated_at FROM user_permissions WHERE clinic_id = ${clinicId} ORDER BY user_id, module`);
-    res.json({ success: true, data: rows.rows });
+    return res.json({ success: true, data: rows.rows });
   } catch (e: any) { return res.status(500).json({ success: false, error: e.message }); }
 });
 
@@ -38,7 +38,7 @@ router.put("/:userId/:module", async (req: any, res) => {
         can_delete = EXCLUDED.can_delete, clinic_id = EXCLUDED.clinic_id,
         updated_at = EXCLUDED.updated_at
     `);
-    res.json({ success: true });
+    return res.json({ success: true });
   } catch (e: any) { return res.status(500).json({ success: false, error: e.message }); }
 });
 
@@ -47,7 +47,7 @@ router.delete("/:userId/:module", async (req: any, res) => {
     const { userId, module } = req.params;
     const clinicId = req.clinicId;
     await db.execute(sql`DELETE FROM user_permissions WHERE user_id = ${userId} AND module = ${module} AND clinic_id = ${clinicId}`);
-    res.json({ success: true });
+    return res.json({ success: true });
   } catch (e: any) { return res.status(500).json({ success: false, error: e.message }); }
 });
 
