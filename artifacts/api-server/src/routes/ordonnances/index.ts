@@ -275,7 +275,7 @@ router.delete("/:id", async (req, res) => {
   }
 });
 
-router.post("/ia/generer", validate(z.object({ consultationId: z.number().int().positive() })), async (req, res) => {})
+router.post("/ia/generer", validate(z.object({ consultationId: z.number().int().positive() })), async (req, res) => {
   try {
     const { consultationId } = req.body;
 
