@@ -1,7 +1,7 @@
 import { logger } from "../lib/logger";
 import { Request, Response, NextFunction } from "express";
 import { getAuth } from "@clerk/express";
-import { db } from "../db";
+import { db } from "@workspace/db";
 import { auditLogs } from "../../../../lib/db/src/schema/audit-logs";
 
 /**
