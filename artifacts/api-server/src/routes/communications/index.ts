@@ -84,7 +84,7 @@ Pour toute question, n'hésitez pas à nous contacter.
 Cordialement,
 L'équipe vétérinaire`;
 
-    const [comm] = await db.execute(sql`
+    const { rows: [comm] } = await db.execute(sql`
       INSERT INTO communications (clinic_id, type, channel, recipient_email, recipient_name, subject, body, status, ref_id, ref_type, sent_at, created_by)
       VALUES (${clinicId}, 'POST_CONSULTATION', 'email', ${c.owner_email}, ${c.owner_name}, ${subject}, ${body}, 'SENT', ${Number(consultationId)}, 'consultation', NOW(), ${userId||null})
       RETURNING *
@@ -174,7 +174,7 @@ router.post("/custom", requireAuth(), async (req: Request, res: Response) => {
     const { recipientEmail, recipientName, subject, body, channel = 'email', refId, refType } = req.body;
     if (!recipientEmail || !subject || !body) return res.status(400).json({ error: "recipientEmail, subject, body requis" });
 
-    const [comm] = await db.execute(sql`
+    const { rows: [comm] } = await db.execute(sql`
       INSERT INTO communications (clinic_id, type, channel, recipient_email, recipient_name, subject, body, status, ref_id, ref_type, sent_at, created_by)
       VALUES (${clinicId}, 'CUSTOM', ${channel}, ${recipientEmail}, ${recipientName||null}, ${subject}, ${body}, 'SENT', ${refId||null}, ${refType||null}, NOW(), ${userId||null})
       RETURNING *
