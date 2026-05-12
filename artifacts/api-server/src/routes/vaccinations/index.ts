@@ -32,7 +32,7 @@ router.get("/", requireAuth(), async (req: Request, res: Response) => {
       ${whereExtra}
       ORDER BY v.next_due_date ASC NULLS LAST, v.vaccine_date DESC
     `));
-    res.json({ data: rows.rows });
+    return res.json({ data: rows.rows });
   } catch (err: any) {
     return res.status(500).json({ error: err.message });
   }
@@ -131,7 +131,7 @@ router.get("/rappels", requireAuth(), async (req: Request, res: Response) => {
       ORDER BY v.next_due_date ASC
     `);
 
-    res.json({ data: rappels.rows });
+    return res.json({ data: rappels.rows });
   } catch (err: any) {
     return res.status(500).json({ error: err.message });
   }
@@ -167,7 +167,7 @@ router.post("/rappels/:id/send", requireAuth(), async (req: Request, res: Respon
       `).catch(() => {});
     }
 
-    res.json({ success: true });
+    return res.json({ success: true });
   } catch (err: any) {
     return res.status(500).json({ error: err.message });
   }
@@ -187,7 +187,7 @@ router.get("/stats", requireAuth(), async (req: Request, res: Response) => {
       LEFT JOIN vaccination_reminders vr ON vr.vaccination_id = v.id
       WHERE v.clinic_id = ${clinicId}
     `);
-    res.json({ data: stats.rows[0] });
+    return res.json({ data: stats.rows[0] });
   } catch (err: any) {
     return res.status(500).json({ error: err.message });
   }
