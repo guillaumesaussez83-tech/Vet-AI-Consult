@@ -2,7 +2,7 @@
 // Phase 4 — Architecture multi-cliniques : DIRECTION_GROUPE
 
 import { Router, Request, Response } from "express";
-import { db } from "../../lib/db";
+import { db } from "@workspace/db";
 import {
   clinicsTable,
   clinicGroupsTable,
