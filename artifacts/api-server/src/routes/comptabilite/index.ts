@@ -319,7 +319,7 @@ router.post("/relances", requireAuth(), async (req: Request, res: Response) => {
     `);
     if (!check.rows.length) return res.status(404).json({ error: "Facture non trouvÃ©e" });
 
-    const [row] = await db.execute(sql`
+    const { rows: [row] } = await db.execute(sql`
       INSERT INTO relances (clinic_id, invoice_id, sent_by, channel, recipient_email, recipient_name, message, status)
       VALUES (${clinicId}, ${invoiceId}, ${userId}, ${channel || 'email'}, ${recipientEmail || null}, ${recipientName || null}, ${message || null}, 'sent')
       RETURNING *
