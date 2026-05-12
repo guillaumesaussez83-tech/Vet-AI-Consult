@@ -27,6 +27,7 @@ type Produit = {
   unite: string;
   expiryMonths: number;
   ref: number;
+  estStupefiant?: boolean;
 };
 
 const PRODUITS: Produit[] = [
