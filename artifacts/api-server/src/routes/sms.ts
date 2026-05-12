@@ -1,5 +1,5 @@
 import { Router } from "express";
-import requireClinicId from "../middleware/requireClinicId";
+import { requireClinicId } from "../middleware/requireClinicId";
 import { requireAuth } from "@clerk/express";
 import { db } from "@workspace/db";
 import { sql } from "drizzle-orm";
@@ -58,9 +58,9 @@ router.post("/send", async (req: any, res) => {
     `);
 
     if (result.error) return res.status(500).json({ success: false, error: result.error });
-    res.json({ success: true, sid: result.sid });
+    return res.json({ success: true, sid: result.sid });
   } catch (e: any) {
-    res.status(500).json({ success: false, error: e.message });
+    return res.status(500).json({ success: false, error: e.message });
   }
 });
 
