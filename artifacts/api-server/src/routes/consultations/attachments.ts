@@ -24,7 +24,8 @@ const MAX_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB
 // GET /api/consultations/:consultationId/attachments
 router.get("/", requireAuth(), requireClinicId, async (req: Request, res: Response) => {
   try {
-    const consultationId = req.params.consultationId;
+    const consultationId = parseInt(req.params.consultationId, 10);
+    if (isNaN(consultationId)) return res.status(400).json({ error: "Invalid consultationId" });
     const clinicId = getClinicId(req);
 
     const rows = await db
@@ -53,6 +54,8 @@ router.get("/", requireAuth(), requireClinicId, async (req: Request, res: Respon
 // GET /api/consultations/:consultationId/attachments/:id/download
 router.get("/:id/download", requireAuth(), requireClinicId, async (req: Request, res: Response) => {
   try {
+    const attachmentId = parseInt(req.params.id, 10);
+    if (isNaN(attachmentId)) return res.status(400).json({ error: "Invalid attachment id" });
     const clinicId = getClinicId(req);
 
     const [row] = await db
@@ -60,7 +63,7 @@ router.get("/:id/download", requireAuth(), requireClinicId, async (req: Request,
       .from(consultationAttachmentsTable)
       .where(
         and(
-          eq(consultationAttachmentsTable.id, req.params.id),
+          eq(consultationAttachmentsTable.id, attachmentId),
           eq(consultationAttachmentsTable.clinicId, clinicId)
         )
       );
@@ -72,7 +75,7 @@ router.get("/:id/download", requireAuth(), requireClinicId, async (req: Request,
       res.setHeader("Content-Type", row.mimeType || "application/octet-stream");
       res.setHeader(
         "Content-Disposition",
-        `attachment; filename="${row.fileName || row.nom || "file"}"`
+        `attachment; filename="${row.fileName || row.filename || "file"}"`
       );
       res.send(buffer);
     } else if (row.fileUrl) {
@@ -88,7 +91,8 @@ router.get("/:id/download", requireAuth(), requireClinicId, async (req: Request,
 // POST /api/consultations/:consultationId/attachments
 router.post("/", requireAuth(), requireClinicId, async (req: Request, res: Response) => {
   try {
-    const consultationId = req.params.consultationId;
+    const consultationId = parseInt(req.params.consultationId, 10);
+    if (isNaN(consultationId)) return res.status(400).json({ error: "Invalid consultationId" });
     const clinicId = getClinicId(req);
     const { fileName, mimeType, fileSize, dataBase64, fileUrl } = req.body;
 
@@ -112,7 +116,7 @@ router.post("/", requireAuth(), requireClinicId, async (req: Request, res: Respo
       return res.status(400).json({ error: "File exceeds 5 MB limit" });
     }
 
-    // Validate actual base64 payload size (independent of client claim)
+    // Validate actual base64 payload size (independent of client declaration)
     if (dataBase64) {
       const actualBytes = Math.ceil((dataBase64.length * 3) / 4);
       if (actualBytes > MAX_SIZE_BYTES) {
@@ -142,13 +146,15 @@ router.post("/", requireAuth(), requireClinicId, async (req: Request, res: Respo
 // DELETE /api/consultations/:consultationId/attachments/:id
 router.delete("/:id", requireAuth(), requireClinicId, async (req: Request, res: Response) => {
   try {
+    const attachmentId = parseInt(req.params.id, 10);
+    if (isNaN(attachmentId)) return res.status(400).json({ error: "Invalid attachment id" });
     const clinicId = getClinicId(req);
 
     await db
       .delete(consultationAttachmentsTable)
       .where(
         and(
-          eq(consultationAttachmentsTable.id, req.params.id),
+          eq(consultationAttachmentsTable.id, attachmentId),
           eq(consultationAttachmentsTable.clinicId, clinicId)
         )
       );
