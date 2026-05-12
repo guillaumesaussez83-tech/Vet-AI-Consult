@@ -32,7 +32,7 @@ router.get("/", async (req, res) => {
     .leftJoin(ownersTable, eq(ownersTable.id, patientsTable.ownerId))
     .where(and(
       eq(facturesTable.statut, "payee"),
-      eq(facturesTable.clinicId, req.clinicId),
+      eq(facturesTable.clinicId, req.clinicId!),
     ))
     .orderBy(desc(facturesTable.datePaiement));
 
