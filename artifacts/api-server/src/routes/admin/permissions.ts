@@ -20,7 +20,7 @@ router.get("/", async (req: Request, res: Response) => {
     } else {
       rows = await db.select().from(userPermissions);
     }
-    res.json({ data: rows });
+    return res.json({ data: rows });
   } catch (err: any) {
     return res.status(500).json({ error: err.message });
   }
@@ -58,7 +58,7 @@ router.patch("/:id", async (req: Request, res: Response) => {
       .where(eq(userPermissions.id, id))
       .returning();
     if (!row) return res.status(404).json({ error: "Permission not found" });
-    res.json({ data: row });
+    return res.json({ data: row });
   } catch (err: any) {
     return res.status(500).json({ error: err.message });
   }
@@ -69,7 +69,7 @@ router.delete("/:id", async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     await db.delete(userPermissions).where(eq(userPermissions.id, id));
-    res.json({ success: true });
+    return res.json({ success: true });
   } catch (err: any) {
     return res.status(500).json({ error: err.message });
   }
