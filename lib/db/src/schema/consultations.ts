@@ -5,7 +5,7 @@ import { patientsTable } from "./patients";
 
 export const consultationsTable = pgTable("consultations", {
     id: serial("id").primaryKey(),
-    clinicId: text("clinic_id").notNull().default("default"),
+    clinicId: text("clinic_id").notNull(), // HARDENING: no silent fallback — requireClinicId middleware must always supply this
     patientId: integer("patient_id").notNull().references(() => patientsTable.id),
     veterinaire: text("veterinaire").notNull(),
     veterinaireId: text("veterinaire_id"),
