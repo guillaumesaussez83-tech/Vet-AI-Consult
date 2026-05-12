@@ -2,13 +2,12 @@
 // Phase 4 — Rapports mensuels PDF : génération + téléchargement
 
 import { Router, Request, Response } from "express";
-import { db } from "../../lib/db";
 import {
+  db,
   groupReportsTable,
   facturesTable,
   consultationsTable,
   patientsTable,
-  encaissementsTable,
 } from "@workspace/db";
 import {
   eq,
@@ -18,14 +17,13 @@ import {
   count,
   gte,
   lte,
-  isNull,
   ne,
 } from "drizzle-orm";
 import { asyncHandler } from "../../middleware/errorHandler";
 import { requireClinicId } from "../../middleware/requireClinicId";
 import { z } from "zod";
 import PDFDocument from "pdfkit";
-import logger from "../../lib/logger";
+import { logger } from "../../lib/logger";
 
 const router = Router();
 
@@ -51,7 +49,7 @@ async function collectMonthKpis(
   periodStart: Date,
   periodEnd: Date
 ) {
-  const [[caRow], [consultRow], [newPatientsRow], [totalPatientsRow], [impayeesRow], [encs]] =
+  const [[caRow], [consultRow], [newPatientsRow], [totalPatientsRow], [impayeesRow], encs] =
     await Promise.all([
       db
         .select({ v: sql<string>`COALESCE(SUM(montant_ttc::numeric),0)` })
@@ -60,8 +58,7 @@ async function collectMonthKpis(
           and(
             eq(facturesTable.clinicId, clinicId),
             gte(facturesTable.createdAt, periodStart),
-            lte(facturesTable.createdAt, periodEnd),
-            isNull(facturesTable.deletedAt)
+            lte(facturesTable.createdAt, periodEnd)
           )
         ),
       db
@@ -71,8 +68,7 @@ async function collectMonthKpis(
           and(
             eq(consultationsTable.clinicId, clinicId),
             gte(consultationsTable.createdAt, periodStart),
-            lte(consultationsTable.createdAt, periodEnd),
-            isNull(consultationsTable.deletedAt)
+            lte(consultationsTable.createdAt, periodEnd)
           )
         ),
       db
@@ -82,8 +78,7 @@ async function collectMonthKpis(
           and(
             eq(patientsTable.clinicId, clinicId),
             gte(patientsTable.createdAt, periodStart),
-            lte(patientsTable.createdAt, periodEnd),
-            isNull(patientsTable.deletedAt)
+            lte(patientsTable.createdAt, periodEnd)
           )
         ),
       db
@@ -91,8 +86,7 @@ async function collectMonthKpis(
         .from(patientsTable)
         .where(
           and(
-            eq(patientsTable.clinicId, clinicId),
-            isNull(patientsTable.deletedAt)
+            eq(patientsTable.clinicId, clinicId)
           )
         ),
       db
@@ -104,20 +98,12 @@ async function collectMonthKpis(
         .where(
           and(
             eq(facturesTable.clinicId, clinicId),
-            ne(facturesTable.statut, "payee"),
-            isNull(facturesTable.deletedAt)
+            ne(facturesTable.statut, "payee")
           )
         ),
-      db
-        .select({ v: sql<string>`COALESCE(SUM(montant_paye::numeric),0)` })
-        .from(encaissementsTable)
-        .where(
-          and(
-            eq(encaissementsTable.clinicId, clinicId),
-            gte(encaissementsTable.createdAt, periodStart),
-            lte(encaissementsTable.createdAt, periodEnd)
-          )
-        )
+        db
+        .execute(sql`SELECT COALESCE(SUM(montant_paye::numeric), 0)::text AS v FROM encaissements WHERE clinic_id = ${clinicId} AND created_at >= ${periodStart} AND created_at <= ${periodEnd}`)
+        .then((r) => [{ v: String((r.rows[0] as any)?.v ?? "0") }])
         .catch(() => [{ v: "0" }]),
     ]);
 
@@ -354,7 +340,7 @@ router.post(
 
     const parsed = generateSchema.safeParse(req.body);
     if (!parsed.success) {
-      return res.status(400).json({ error: "Données invalides", details: parsed.error.issues });
+      res.status(400).json({ error: "Données invalides", details: parsed.error.issues }); return;
     }
 
     const { periodStart, periodEnd, periodLabel, reportType } = parsed.data;
@@ -452,7 +438,7 @@ router.get(
       .from(groupReportsTable)
       .where(eq(groupReportsTable.clinicId, clinicId));
 
-    res.json({
+    return res.json({
       reports: reports.map((r) => ({
         ...r,
         kpiSummary: r.kpiSummary ? JSON.parse(r.kpiSummary) : null,
@@ -488,7 +474,7 @@ router.get(
 
     if (!report) return res.status(404).json({ error: "Rapport introuvable" });
 
-    res.json({
+    return res.json({
       ...report,
       kpiSummary: report.kpiSummary ? JSON.parse(report.kpiSummary) : null,
       // Ne renvoie pas pdfData dans le listing (trop lourd)
@@ -531,7 +517,7 @@ router.get(
     const pdfBuffer = Buffer.from(report.pdfData, "base64");
     const filename = `VetoAI_Rapport_${report.periodLabel.replace(/\s/g, "_")}_${clinicId}.pdf`;
 
-    res
+    return res
       .set({
         "Content-Type": "application/pdf",
         "Content-Disposition": `attachment; filename="${filename}"`,
@@ -568,7 +554,7 @@ router.get(
       .limit(1);
 
     if (!report) return res.status(404).json({ error: "Rapport introuvable" });
-    res.json(report);
+    return res.json(report);
   })
 );
 
