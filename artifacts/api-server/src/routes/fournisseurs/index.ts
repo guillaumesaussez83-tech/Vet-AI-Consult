@@ -1,6 +1,6 @@
 import { Router, Request, Response } from "express";
 import { requireAuth } from "@clerk/express";
-import { db } from "../../../db";
+import { db } from "@workspace/db";
 import { sql } from "drizzle-orm";
 
 const router = Router();
@@ -21,7 +21,7 @@ router.get("/", requireAuth(), async (req: Request, res: Response) => {
     `);
     res.json({ data: rows.rows });
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: err.message });
   }
 });
 
@@ -36,9 +36,9 @@ router.post("/", requireAuth(), async (req: Request, res: Response) => {
       VALUES (${clinicId}, ${name}, ${contact||null}, ${email||null}, ${phone||null}, ${address||null}, ${siret||null}, ${paymentConditions||null})
       RETURNING *
     `);
-    res.status(201).json({ data: row });
+    return res.status(201).json({ data: row });
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: err.message });
   }
 });
 
@@ -62,7 +62,7 @@ router.put("/:id", requireAuth(), async (req: Request, res: Response) => {
     if (!row) return res.status(404).json({ error: "Fournisseur non trouvé" });
     res.json({ data: row });
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: err.message });
   }
 });
 
@@ -73,7 +73,7 @@ router.delete("/:id", requireAuth(), async (req: Request, res: Response) => {
     await db.execute(sql`UPDATE fournisseurs SET active = false WHERE id = ${Number(req.params.id)} AND clinic_id = ${clinicId}`);
     res.json({ success: true });
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: err.message });
   }
 });
 
@@ -95,7 +95,7 @@ router.get("/commandes", requireAuth(), async (req: Request, res: Response) => {
     `));
     res.json({ data: rows.rows });
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: err.message });
   }
 });
 
@@ -136,9 +136,9 @@ router.post("/commandes", requireAuth(), async (req: Request, res: Response) => 
       `);
     }
 
-    res.status(201).json({ data: { ...(cmd as any), orderNumber } });
+    return res.status(201).json({ data: { ...(cmd as any), orderNumber } });
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: err.message });
   }
 });
 
@@ -165,7 +165,7 @@ router.get("/commandes/:id", requireAuth(), async (req: Request, res: Response) 
 
     res.json({ data: { commande: cmd.rows[0], lignes: lignes.rows } });
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: err.message });
   }
 });
 
@@ -204,7 +204,7 @@ router.put("/commandes/:id/status", requireAuth(), async (req: Request, res: Res
 
     res.json({ success: true, status });
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: err.message });
   }
 });
 
