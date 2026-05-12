@@ -95,7 +95,7 @@ router.get("/", async (req, res) => {
     const totalsByCons = buildTotalsByConsultation(allActes);
 
     // 2) Toutes les consultations + patients + owners d'un coup (batch join).
-    const consultations = await db
+    const consultations = (await db
       .select({
         id: consultationsTable.id,
         patientId: consultationsTable.patientId,
@@ -146,7 +146,7 @@ router.get("/", async (req, res) => {
           eq(consultationsTable.clinicId, req.clinicId!),
           inArray(consultationsTable.id, consultationIds),
         ),
-      );
+      )) as any[];
 
     const consById = new Map(consultations.map((c) => [c.id, c]));
 
@@ -260,7 +260,7 @@ router.get("/:id", async (req, res) => {
       .where(and(eq(facturesTable.clinicId, req.clinicId!), eq(facturesTable.id, params.data.id)));
     if (!facture) return res.status(404).json(fail("NOT_FOUND", "Facture non trouvÃÂÃÂ©e"));
 
-    const [consultation] = await db
+    const [consultation] = (await db
       .select({
         id: consultationsTable.id,
         patientId: consultationsTable.patientId,
@@ -311,9 +311,9 @@ router.get("/:id", async (req, res) => {
           eq(consultationsTable.clinicId, req.clinicId!),
           eq(consultationsTable.id, facture.consultationId),
         ),
-      );
+      )) as any[];
 
-    const lignes = await db
+    const lignes = (await db
       .select({
         id: actesConsultationsTable.id,
         acteId: actesConsultationsTable.acteId,
@@ -334,7 +334,7 @@ router.get("/:id", async (req, res) => {
           eq(actesConsultationsTable.clinicId, req.clinicId!),
           eq(actesConsultationsTable.consultationId, facture.consultationId),
         ),
-      );
+      )) as any[];
 
     // P1-1 : calcul ligne par ligne avec le tvaRate rÃÂÃÂ©el de chaque acte.
     const lignesMapped = lignes.map((l) => {
