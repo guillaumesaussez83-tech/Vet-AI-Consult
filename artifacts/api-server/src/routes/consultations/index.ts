@@ -515,7 +515,7 @@ router.post("/:id/facture", async (req, res) => {
 
     // Transaction atomique : numÃÂÃÂÃÂÃÂ©ro + insert.
     const facture = await db.transaction(async (tx) => {
-      const numero = await nextInvoiceNumber(tx as typeof db, req.clinicId!);
+      const numero = await nextInvoiceNumber(tx as unknown as typeof db, req.clinicId!);
       const [inserted] = await tx
         .insert(facturesTable)
         .values({
