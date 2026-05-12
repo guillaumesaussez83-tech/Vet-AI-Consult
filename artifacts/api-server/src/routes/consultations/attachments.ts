@@ -80,7 +80,7 @@ router.get("/:id/download", requireAuth(), requireClinicId, async (req: Request,
     } else if (row.fileUrl) {
       res.redirect(row.fileUrl);
     } else {
-      res.status(404).json({ error: "No file data available" });
+      return res.status(404).json({ error: "No file data available" });
     }
   } catch (err: any) {
     return res.status(500).json({ error: err.message });
@@ -136,7 +136,7 @@ router.post("/", requireAuth(), requireClinicId, async (req: Request, res: Respo
       })
       .returning();
 
-    res.status(201).json({ data: row });
+    return res.status(201).json({ data: row });
   } catch (err: any) {
     return res.status(500).json({ error: err.message });
   }
