@@ -53,7 +53,7 @@ router.get("/", requireClinicId, async (req, res) => {
 router.get("/:id", requireClinicId, async (req, res) => {
   try {
     const clinicId = req.clinicId!;
-    const id = parseInt(req.params.id);
+    const id = parseInt(req.params.id as string);
     if (isNaN(id)) return res.status(400).json(fail("VALIDATION_ERROR", "ID invalide"));
     const [vente] = await db
       .select()
@@ -98,7 +98,7 @@ router.post("/", requireClinicId, async (req, res) => {
 router.put("/:id", requireClinicId, async (req, res) => {
   try {
     const clinicId = req.clinicId!;
-    const id = parseInt(req.params.id);
+    const id = parseInt(req.params.id as string);
     if (isNaN(id)) return res.status(400).json(fail("VALIDATION_ERROR", "ID invalide"));
     const { id: _id, clinicId: _cid, numero: _num, createdAt: _ca, updatedAt: _ua, lignes: lignesData, ...body } = req.body;
     const [updated] = await db
@@ -129,7 +129,7 @@ router.put("/:id", requireClinicId, async (req, res) => {
 router.delete("/:id", requireClinicId, async (req, res) => {
   try {
     const clinicId = req.clinicId!;
-    const id = parseInt(req.params.id);
+    const id = parseInt(req.params.id as string);
     if (isNaN(id)) return res.status(400).json(fail("VALIDATION_ERROR", "ID invalide"));
     await db.delete(ventesTable).where(and(eq(ventesTable.id, id), eq(ventesTable.clinicId, clinicId)));
     return res.json(ok({ message: "Vente supprimee" }));
