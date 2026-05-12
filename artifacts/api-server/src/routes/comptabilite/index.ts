@@ -1,7 +1,7 @@
 import { Router, Request, Response } from "express";
 import requireClinicId from "../../middleware/requireClinicId";
 import { requireAuth, getAuth } from "@clerk/express";
-import { db } from "../../../db";
+import { db } from "@workspace/db";
 import { sql } from "drizzle-orm";
 
 const router = Router();
@@ -73,7 +73,7 @@ router.get("/dashboard", requireAuth(), async (req: Request, res: Response) => {
       }
     });
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: err.message });
   }
 });
 
@@ -186,7 +186,7 @@ router.get("/export-fec", requireAuth(), async (req: Request, res: Response) => 
     res.send(lines.join("\r\n"));
 
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: err.message });
   }
 });
 
@@ -238,7 +238,7 @@ router.get("/journal-caisse", requireAuth(), async (req: Request, res: Response)
       }
     });
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: err.message });
   }
 });
 
@@ -296,7 +296,7 @@ router.get("/impayes", requireAuth(), async (req: Request, res: Response) => {
       }
     });
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: err.message });
   }
 });
 
@@ -325,9 +325,9 @@ router.post("/relances", requireAuth(), async (req: Request, res: Response) => {
       RETURNING *
     `);
 
-    res.status(201).json({ data: row });
+    return res.status(201).json({ data: row });
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: err.message });
   }
 });
 
