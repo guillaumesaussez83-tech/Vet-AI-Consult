@@ -23,7 +23,7 @@ const MAX_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB
 // GET /api/consultations/:consultationId/attachments
 router.get("/", requireAuth(), requireClinicId, async (req: Request, res: Response) => {
   try {
-    const consultationId = parseInt(req.params.consultationId, 10);
+    const consultationId = parseInt(req.params.consultationId as string, 10);
     if (isNaN(consultationId)) return res.status(400).json({ error: "Invalid consultationId" });
     const clinicId = getClinicId(req) as string;
 
@@ -53,7 +53,7 @@ router.get("/", requireAuth(), requireClinicId, async (req: Request, res: Respon
 // GET /api/consultations/:consultationId/attachments/:id/download
 router.get("/:id/download", requireAuth(), requireClinicId, async (req: Request, res: Response) => {
   try {
-    const attachmentId = parseInt(req.params.id, 10);
+    const attachmentId = parseInt(req.params.id as string, 10);
     if (isNaN(attachmentId)) return res.status(400).json({ error: "Invalid attachment id" });
     const clinicId = getClinicId(req) as string;
 
@@ -90,7 +90,7 @@ router.get("/:id/download", requireAuth(), requireClinicId, async (req: Request,
 // POST /api/consultations/:consultationId/attachments
 router.post("/", requireAuth(), requireClinicId, async (req: Request, res: Response) => {
   try {
-    const consultationId = parseInt(req.params.consultationId, 10);
+    const consultationId = parseInt(req.params.consultationId as string, 10);
     if (isNaN(consultationId)) return res.status(400).json({ error: "Invalid consultationId" });
     const clinicId = getClinicId(req) as string;
     const { fileName, mimeType, fileSize, dataBase64, fileUrl } = req.body;
@@ -145,7 +145,7 @@ router.post("/", requireAuth(), requireClinicId, async (req: Request, res: Respo
 // DELETE /api/consultations/:consultationId/attachments/:id
 router.delete("/:id", requireAuth(), requireClinicId, async (req: Request, res: Response) => {
   try {
-    const attachmentId = parseInt(req.params.id, 10);
+    const attachmentId = parseInt(req.params.id as string, 10);
     if (isNaN(attachmentId)) return res.status(400).json({ error: "Invalid attachment id" });
     const clinicId = getClinicId(req) as string;
 
