@@ -1,5 +1,5 @@
 import { Router, Request, Response } from "express";
-import requireClinicId from "../../middleware/requireClinicId";
+import { requireClinicId } from "../../middleware/requireClinicId";
 import { requireAuth, getAuth } from "@clerk/express";
 import { db } from "@workspace/db";
 import { sql } from "drizzle-orm";
@@ -64,7 +64,7 @@ router.get("/dashboard", requireAuth(), async (req: Request, res: Response) => {
       ORDER BY total DESC
     `);
 
-    res.json({
+    return res.json({
       data: {
         kpis: kpis.rows[0],
         monthly: monthly.rows,
@@ -183,7 +183,7 @@ router.get("/export-fec", requireAuth(), async (req: Request, res: Response) => 
     const filename = `FEC_VetoAI_${dateFrom}_${dateTo}.txt`;
     res.setHeader("Content-Type", "text/plain; charset=utf-8");
     res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
-    res.send(lines.join("\r\n"));
+    return res.send(lines.join("\r\n"));
 
   } catch (err: any) {
     return res.status(500).json({ error: err.message });
@@ -229,7 +229,7 @@ router.get("/journal-caisse", requireAuth(), async (req: Request, res: Response)
 
     const grandTotal = (totaux.rows as any[]).reduce((acc, r) => acc + Number(r.total), 0);
 
-    res.json({
+    return res.json({
       data: {
         date,
         encaissements: journal.rows,
@@ -287,7 +287,7 @@ router.get("/impayes", requireAuth(), async (req: Request, res: Response) => {
       totalImpayes += Number(row.reste_a_payer);
     }
 
-    res.json({
+    return res.json({
       data: {
         impayes: impayes.rows,
         buckets,
