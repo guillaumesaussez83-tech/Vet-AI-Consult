@@ -25,7 +25,7 @@ router.get("/", requireAuth(), requireClinicId, async (req: Request, res: Respon
   try {
     const consultationId = parseInt(req.params.consultationId, 10);
     if (isNaN(consultationId)) return res.status(400).json({ error: "Invalid consultationId" });
-    const clinicId = getClinicId(req);
+    const clinicId = getClinicId(req) as string;
 
     const rows = await db
       .select({
@@ -55,7 +55,7 @@ router.get("/:id/download", requireAuth(), requireClinicId, async (req: Request,
   try {
     const attachmentId = parseInt(req.params.id, 10);
     if (isNaN(attachmentId)) return res.status(400).json({ error: "Invalid attachment id" });
-    const clinicId = getClinicId(req);
+    const clinicId = getClinicId(req) as string;
 
     const [row] = await db
       .select()
@@ -76,9 +76,9 @@ router.get("/:id/download", requireAuth(), requireClinicId, async (req: Request,
         "Content-Disposition",
         `attachment; filename="${row.fileName || "file"}"`
       );
-      res.send(buffer);
+      return res.send(buffer);
     } else if (row.fileUrl) {
-      res.redirect(row.fileUrl);
+      return res.redirect(row.fileUrl);
     } else {
       return res.status(404).json({ error: "No file data available" });
     }
@@ -92,7 +92,7 @@ router.post("/", requireAuth(), requireClinicId, async (req: Request, res: Respo
   try {
     const consultationId = parseInt(req.params.consultationId, 10);
     if (isNaN(consultationId)) return res.status(400).json({ error: "Invalid consultationId" });
-    const clinicId = getClinicId(req);
+    const clinicId = getClinicId(req) as string;
     const { fileName, mimeType, fileSize, dataBase64, fileUrl } = req.body;
 
     if (!fileName || (!dataBase64 && !fileUrl)) {
@@ -147,7 +147,7 @@ router.delete("/:id", requireAuth(), requireClinicId, async (req: Request, res: 
   try {
     const attachmentId = parseInt(req.params.id, 10);
     if (isNaN(attachmentId)) return res.status(400).json({ error: "Invalid attachment id" });
-    const clinicId = getClinicId(req);
+    const clinicId = getClinicId(req) as string;
 
     await db
       .delete(consultationAttachmentsTable)
@@ -158,7 +158,7 @@ router.delete("/:id", requireAuth(), requireClinicId, async (req: Request, res: 
         )
       );
 
-    res.json({ success: true });
+    return res.json({ success: true });
   } catch (err: any) {
     return res.status(500).json({ error: err.message });
   }
