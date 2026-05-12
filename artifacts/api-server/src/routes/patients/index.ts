@@ -26,7 +26,7 @@ router.get("/", async (req, res) => {
     const limit = isNaN(rawLimit) ? PAGINATION_DEFAULT_LIMIT : Math.max(1, Math.min(rawLimit, PAGINATION_MAX_LIMIT));
     const offset = Math.max(0, isNaN(rawOffset) ? 0 : rawOffset);
 
-    const conditions = [eq(patientsTable.clinicId, req.clinicId)];
+    const conditions = [eq(patientsTable.clinicId, req.clinicId!)];
     if (ownerId) conditions.push(eq(patientsTable.ownerId, ownerId));
     if (espece) conditions.push(eq(patientsTable.espece, espece));
 
@@ -70,7 +70,7 @@ router.get("/", async (req, res) => {
     if (search) {
       patients = await baseQuery
         .where(and(
-          eq(patientsTable.clinicId, req.clinicId),
+          eq(patientsTable.clinicId, req.clinicId!),
           or(
             ilike(patientsTable.nom, `%${search}%`),
             ilike(patientsTable.espece, `%${search}%`),
@@ -106,7 +106,7 @@ router.post("/", validate(CreatePatientSchema), async (req, res) => {
     const body = CreatePatientBody.safeParse(req.body);
     if (!body.success) return res.status(400).json({ error: "DonnÃÂÃÂ©es invalides" });
     const [own] = await db.select({ id: ownersTable.id }).from(ownersTable)
-      .where(and(eq(ownersTable.clinicId, req.clinicId), eq(ownersTable.id, body.data.ownerId)));
+      .where(and(eq(ownersTable.clinicId, req.clinicId!), eq(ownersTable.id, body.data.ownerId)));
     if (!own) return res.status(400).json({ error: "PropriÃÂÃÂ©taire introuvable" });
     const [patient] = await db.insert(patientsTable).values({ ...body.data, clinicId: req.clinicId }).returning();
     return res.status(201).json({ ...patient, createdAt: patient.createdAt.toISOString() });
@@ -155,7 +155,7 @@ router.get("/:id", async (req, res) => {
       })
       .from(patientsTable)
       .leftJoin(ownersTable, eq(patientsTable.ownerId, ownersTable.id))
-      .where(and(eq(patientsTable.clinicId, req.clinicId), eq(patientsTable.id, params.data.id)));
+      .where(and(eq(patientsTable.clinicId, req.clinicId!), eq(patientsTable.id, params.data.id)));
     if (!patient) return res.status(404).json({ error: "Patient non trouvÃÂÃÂ©" });
     return res.json({
       ...patient,
@@ -174,7 +174,7 @@ router.patch("/:id", async (req, res) => {
     if (!params.success) return res.status(400).json({ error: "ID invalide" });
     const body = UpdatePatientBody.safeParse(req.body);
     if (!body.success) return res.status(400).json({ error: "DonnÃÂÃÂ©es invalides" });
-    const [patient] = await db.update(patientsTable).set(body.data).where(and(eq(patientsTable.clinicId, req.clinicId), eq(patientsTable.id, params.data.id))).returning();
+    const [patient] = await db.update(patientsTable).set(body.data).where(and(eq(patientsTable.clinicId, req.clinicId!), eq(patientsTable.id, params.data.id))).returning();
     if (!patient) return res.status(404).json({ error: "Patient non trouvÃÂÃÂ©" });
     return res.json({ ...patient, createdAt: patient.createdAt.toISOString() });
   } catch (err) {
@@ -194,7 +194,7 @@ router.delete("/:id", async (req, res) => {
       .select({ id: consultationsTable.id })
       .from(consultationsTable)
       .where(and(
-        eq(consultationsTable.clinicId, req.clinicId),
+        eq(consultationsTable.clinicId, req.clinicId!),
         eq(consultationsTable.patientId, params.data.id),
       ))
       .limit(1);
@@ -205,7 +205,7 @@ router.delete("/:id", async (req, res) => {
       });
     }
 
-    await db.delete(patientsTable).where(and(eq(patientsTable.clinicId, req.clinicId), eq(patientsTable.id, params.data.id)));
+    await db.delete(patientsTable).where(and(eq(patientsTable.clinicId, req.clinicId!), eq(patientsTable.id, params.data.id)));
     return res.status(204).send();
   } catch (err) {
     req.log.error(err);
@@ -217,7 +217,7 @@ router.get("/:id/consultations", async (req, res) => {
   try {
     const params = ListPatientConsultationsParams.safeParse({ id: Number(req.params.id) });
     if (!params.success) return res.status(400).json({ error: "ID invalide" });
-    const consultations = await db.select().from(consultationsTable).where(and(eq(consultationsTable.clinicId, req.clinicId), eq(consultationsTable.patientId, params.data.id)));
+    const consultations = await db.select().from(consultationsTable).where(and(eq(consultationsTable.clinicId, req.clinicId!), eq(consultationsTable.patientId, params.data.id)));
     return res.json(consultations.map(c => ({
       ...c,
       createdAt: c.createdAt.toISOString(),
