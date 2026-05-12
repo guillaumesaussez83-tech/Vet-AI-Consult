@@ -68,7 +68,7 @@ router.get("/", async (req, res) => {
         .from(ownersTable)
         .where(
           and(
-            eq(ownersTable.clinicId, req.clinicId),
+            eq(ownersTable.clinicId, req.clinicId!),
             or(
               ilike(ownersTable.nom, `%${search}%`),
               ilike(ownersTable.prenom, `%${search}%`),
@@ -84,7 +84,7 @@ router.get("/", async (req, res) => {
       owners = await db
         .select()
         .from(ownersTable)
-        .where(eq(ownersTable.clinicId, req.clinicId))
+        .where(eq(ownersTable.clinicId, req.clinicId!))
         .orderBy(desc(ownersTable.createdAt))
         .limit(pageSize)
         .offset(pageOffset);
@@ -114,7 +114,7 @@ router.post("/", async (req, res) => {
       .values({
         ...body.data,
         ...einvoicingData,
-        clinicId: req.clinicId,
+        clinicId: req.clinicId!,
       })
       .returning();
 
@@ -133,7 +133,7 @@ router.get("/:id", async (req, res) => {
     const [owner] = await db
       .select()
       .from(ownersTable)
-      .where(and(eq(ownersTable.clinicId, req.clinicId), eq(ownersTable.id, params.data.id)));
+      .where(and(eq(ownersTable.clinicId, req.clinicId!), eq(ownersTable.id, params.data.id)));
     if (!owner) return res.status(404).json({ error: "Propriétaire non trouvé" });
 
     return res.json(serialize(owner));
@@ -161,7 +161,7 @@ router.patch("/:id", async (req, res) => {
     const [owner] = await db
       .update(ownersTable)
       .set({ ...body.data, ...einvoicingData })
-      .where(and(eq(ownersTable.clinicId, req.clinicId), eq(ownersTable.id, params.data.id)))
+      .where(and(eq(ownersTable.clinicId, req.clinicId!), eq(ownersTable.id, params.data.id)))
       .returning();
     if (!owner) return res.status(404).json({ error: "Propriétaire non trouvé" });
 
@@ -179,7 +179,7 @@ router.delete("/:id", async (req, res) => {
 
     await db
       .delete(ownersTable)
-      .where(and(eq(ownersTable.clinicId, req.clinicId), eq(ownersTable.id, params.data.id)));
+      .where(and(eq(ownersTable.clinicId, req.clinicId!), eq(ownersTable.id, params.data.id)));
     return res.status(204).send();
   } catch (err) {
     req.log.error(err);
@@ -254,7 +254,7 @@ router.post("/:id/rgpd/generate", async (req, res) => {
     const [owner] = await db
       .select()
       .from(ownersTable)
-      .where(and(eq(ownersTable.clinicId, req.clinicId), eq(ownersTable.id, id)));
+      .where(and(eq(ownersTable.clinicId, req.clinicId!), eq(ownersTable.id, id)));
     if (!owner) return res.status(404).json({ error: "Propriétaire non trouvé" });
 
     const pdfBuffer = await buildRgpdPdf(owner);
@@ -273,7 +273,7 @@ router.post("/:id/rgpd/generate", async (req, res) => {
         await db
           .update(ownersTable)
           .set({ rgpdDocumentUrl: storedUrl })
-          .where(and(eq(ownersTable.clinicId, req.clinicId), eq(ownersTable.id, id)));
+          .where(and(eq(ownersTable.clinicId, req.clinicId!), eq(ownersTable.id, id)));
       }
     } catch (uploadErr) {
       req.log.warn({ err: uploadErr }, "RGPD PDF storage skipped");
@@ -301,7 +301,7 @@ router.post("/:id/rgpd/confirm", async (req, res) => {
     const [owner] = await db
       .update(ownersTable)
       .set({ rgpdAccepted: true, rgpdAcceptedAt: new Date() })
-      .where(and(eq(ownersTable.clinicId, req.clinicId), eq(ownersTable.id, id)))
+      .where(and(eq(ownersTable.clinicId, req.clinicId!), eq(ownersTable.id, id)))
       .returning();
     if (!owner) return res.status(404).json({ error: "Propriétaire non trouvé" });
 
@@ -320,7 +320,7 @@ router.post("/:id/rgpd/revoke", async (req, res) => {
     const [owner] = await db
       .update(ownersTable)
       .set({ rgpdAccepted: false, rgpdAcceptedAt: null })
-      .where(and(eq(ownersTable.clinicId, req.clinicId), eq(ownersTable.id, id)))
+      .where(and(eq(ownersTable.clinicId, req.clinicId!), eq(ownersTable.id, id)))
       .returning();
     if (!owner) return res.status(404).json({ error: "Propriétaire non trouvé" });
 
