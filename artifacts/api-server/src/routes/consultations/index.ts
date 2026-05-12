@@ -31,7 +31,7 @@ import { CreateConsultationSchema } from "../../schemas";
 const router = Router();
 
 async function getConsultationWithDetails(id: number, clinicId: string) {
-  const [c] = await db
+  const [c] = (await db
     .select({
       id: consultationsTable.id,
       patientId: consultationsTable.patientId,
@@ -77,7 +77,7 @@ async function getConsultationWithDetails(id: number, clinicId: string) {
     .from(consultationsTable)
     .leftJoin(patientsTable, eq(consultationsTable.patientId, patientsTable.id))
     .leftJoin(ownersTable, eq(patientsTable.ownerId, ownersTable.id))
-    .where(and(eq(consultationsTable.clinicId, clinicId), eq(consultationsTable.id, id)));
+    .where(and(eq(consultationsTable.clinicId, clinicId), eq(consultationsTable.id, id)))) as any[];
 
   if (!c) return null;
 
@@ -89,7 +89,7 @@ async function getConsultationWithDetails(id: number, clinicId: string) {
         consultationId: actesConsultationsTable.consultationId,
         quantite: actesConsultationsTable.quantite,
         prixUnitaire: actesConsultationsTable.prixUnitaire,
-        tvaRate: actesConsultationsTable.tvaRate,
+        tvaRate: (actesConsultationsTable as any).tvaRate,
         description: actesConsultationsTable.description,
         acte: {
           id: actesTable.id,
@@ -321,7 +321,7 @@ router.patch("/:id", async (req, res) => {
               consultationId: params.data.id,
               quantite: a.quantite,
               prixUnitaire: a.prixUnitaire,
-              tvaRate: a.tvaRate ?? TVA_DEFAULT_RATE,
+              tvaRate: (a as any).tvaRate ?? TVA_DEFAULT_RATE,
               description: a.description ?? null,
               clinicId: req.clinicId!,
             })),
@@ -515,7 +515,7 @@ router.post("/:id/facture", async (req, res) => {
 
     // Transaction atomique : numÃÂÃÂÃÂÃÂ©ro + insert.
     const facture = await db.transaction(async (tx) => {
-      const numero = await nextInvoiceNumber(tx, req.clinicId!);
+      const numero = await nextInvoiceNumber(tx as typeof db, req.clinicId!);
       const [inserted] = await tx
         .insert(facturesTable)
         .values({
