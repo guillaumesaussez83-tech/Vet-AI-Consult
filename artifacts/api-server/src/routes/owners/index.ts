@@ -214,7 +214,7 @@ async function buildRgpdPdf(owner: typeof ownersTable.$inferSelect): Promise<Buf
     doc.fontSize(16).font("Helvetica-Bold").text(nomClinique, { align: "left" });
     doc.moveDown(0.3);
     doc.fontSize(9).font("Helvetica").fillColor("#555");
-    adresseLignes.forEach((l) => doc.text(l));
+    adresseLignes.forEach((l) => doc.text((l) ?? ''));
     if (c.telephone) doc.text(`Tél : ${c.telephone}`);
     if (c.email) doc.text(`Email : ${c.email}`);
     if (c.numeroOrdre) doc.text(`N° Ordre : ${c.numeroOrdre}`);
