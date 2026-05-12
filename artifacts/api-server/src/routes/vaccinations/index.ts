@@ -34,7 +34,7 @@ router.get("/", requireAuth(), async (req: Request, res: Response) => {
     `));
     res.json({ data: rows.rows });
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: err.message });
   }
 });
 
@@ -105,7 +105,7 @@ router.post("/", requireAuth(), async (req: Request, res: Response) => {
 
     return res.status(201).json({ data: row });
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: err.message });
   }
 });
 
@@ -133,7 +133,7 @@ router.get("/rappels", requireAuth(), async (req: Request, res: Response) => {
 
     res.json({ data: rappels.rows });
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: err.message });
   }
 });
 
@@ -169,7 +169,7 @@ router.post("/rappels/:id/send", requireAuth(), async (req: Request, res: Respon
 
     res.json({ success: true });
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: err.message });
   }
 });
 
@@ -189,7 +189,7 @@ router.get("/stats", requireAuth(), async (req: Request, res: Response) => {
     `);
     res.json({ data: stats.rows[0] });
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: err.message });
   }
 });
 
