@@ -312,7 +312,7 @@ export default function GroupeDashboard() {
                           </tr>
                         );
                       })}
-                    </Tbody>
+                    </tbody>
                   </table>
                 </div>
               )}
