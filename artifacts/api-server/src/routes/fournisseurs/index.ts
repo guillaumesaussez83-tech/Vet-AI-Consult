@@ -19,7 +19,7 @@ router.get("/", requireAuth(), async (req: Request, res: Response) => {
       GROUP BY f.id
       ORDER BY f.name
     `);
-    res.json({ data: rows.rows });
+    return res.json({ data: rows.rows });
   } catch (err: any) {
     return res.status(500).json({ error: err.message });
   }
@@ -31,7 +31,7 @@ router.post("/", requireAuth(), async (req: Request, res: Response) => {
     const clinicId = (req as any).clinicId;
     const { name, contact, email, phone, address, siret, paymentConditions } = req.body;
     if (!name) return res.status(400).json({ error: "name requis" });
-    const [row] = await db.execute(sql`
+    const { rows: [row] } = await db.execute(sql`
       INSERT INTO fournisseurs (clinic_id, name, contact, email, phone, address, siret, payment_conditions)
       VALUES (${clinicId}, ${name}, ${contact||null}, ${email||null}, ${phone||null}, ${address||null}, ${siret||null}, ${paymentConditions||null})
       RETURNING *
@@ -47,7 +47,7 @@ router.put("/:id", requireAuth(), async (req: Request, res: Response) => {
   try {
     const clinicId = (req as any).clinicId;
     const { name, contact, email, phone, address, siret, paymentConditions } = req.body;
-    const [row] = await db.execute(sql`
+    const { rows: [row] } = await db.execute(sql`
       UPDATE fournisseurs SET
         name = COALESCE(${name}, name),
         contact = COALESCE(${contact||null}, contact),
@@ -60,7 +60,7 @@ router.put("/:id", requireAuth(), async (req: Request, res: Response) => {
       RETURNING *
     `);
     if (!row) return res.status(404).json({ error: "Fournisseur non trouvé" });
-    res.json({ data: row });
+    return res.json({ data: row });
   } catch (err: any) {
     return res.status(500).json({ error: err.message });
   }
@@ -71,7 +71,7 @@ router.delete("/:id", requireAuth(), async (req: Request, res: Response) => {
   try {
     const clinicId = (req as any).clinicId;
     await db.execute(sql`UPDATE fournisseurs SET active = false WHERE id = ${Number(req.params.id)} AND clinic_id = ${clinicId}`);
-    res.json({ success: true });
+    return res.json({ success: true });
   } catch (err: any) {
     return res.status(500).json({ error: err.message });
   }
@@ -93,7 +93,7 @@ router.get("/commandes", requireAuth(), async (req: Request, res: Response) => {
       GROUP BY c.id, f.name, f.email
       ORDER BY c.order_date DESC
     `));
-    res.json({ data: rows.rows });
+    return res.json({ data: rows.rows });
   } catch (err: any) {
     return res.status(500).json({ error: err.message });
   }
@@ -120,7 +120,7 @@ router.post("/commandes", requireAuth(), async (req: Request, res: Response) => 
     const count = await db.execute(sql`SELECT COUNT(*)::int AS n FROM commandes_fournisseurs WHERE clinic_id = ${clinicId}`);
     const orderNumber = `CMD-${today}-${String((count.rows[0] as any).n + 1).padStart(4, "0")}`;
 
-    const [cmd] = await db.execute(sql`
+    const { rows: [cmd] } = await db.execute(sql`
       INSERT INTO commandes_fournisseurs (clinic_id, fournisseur_id, order_number, order_date, expected_date, total_ht, total_tva, total_ttc, notes, created_by)
       VALUES (${clinicId}, ${Number(fournisseurId)}, ${orderNumber}, CURRENT_DATE, ${expectedDate||null}, ${totalHt}, ${totalTva}, ${totalTtc}, ${notes||null}, ${userId||null})
       RETURNING *
@@ -163,7 +163,7 @@ router.get("/commandes/:id", requireAuth(), async (req: Request, res: Response) 
       ORDER BY l.id
     `);
 
-    res.json({ data: { commande: cmd.rows[0], lignes: lignes.rows } });
+    return res.json({ data: { commande: cmd.rows[0], lignes: lignes.rows } });
   } catch (err: any) {
     return res.status(500).json({ error: err.message });
   }
@@ -202,7 +202,7 @@ router.put("/commandes/:id/status", requireAuth(), async (req: Request, res: Res
       }
     }
 
-    res.json({ success: true, status });
+    return res.json({ success: true, status });
   } catch (err: any) {
     return res.status(500).json({ error: err.message });
   }
