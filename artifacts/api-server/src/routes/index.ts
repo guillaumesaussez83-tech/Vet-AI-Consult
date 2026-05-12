@@ -2,6 +2,7 @@
 // MODIFIE -- fix imports + ajout routes manquantes (audit Phase 0)
 
 import { Router } from "express";
+import { requireClinicId } from "../middleware/requireClinicId";
 import rendezVousRouter from "./rendez-vous";
 import agendaRouter from "./agenda";
 import patientsRouter from "./patients";
