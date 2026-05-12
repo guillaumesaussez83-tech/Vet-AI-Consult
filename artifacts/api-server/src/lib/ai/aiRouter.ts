@@ -70,7 +70,7 @@ export async function runAITask(
     inputTokens: result.usage.inputTokens,
     outputTokens: result.usage.outputTokens,
     durationMs: Date.now() - start,
-  }).catch((err) => logger.warn({ err }, "AI usage log failed"));
+  }).catch((err) => console.warn({ err }, "AI usage log failed"));
 
   return result.text;
 }
