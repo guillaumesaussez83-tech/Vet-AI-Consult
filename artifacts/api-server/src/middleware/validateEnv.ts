@@ -1,3 +1,5 @@
+import { logger } from "../lib/logger";
+
 /**
  * Phase 0F — Environment variables validation
  *
@@ -64,23 +66,25 @@ const ENV_SPECS: EnvSpec[] = [
   {
     key: "TWILIO_AUTH_TOKEN",
     required: false,
+    description: "Twilio authentication token",
     validate: (v: string) => v.length >= 32,
     hint: "TWILIO_AUTH_TOKEN must be at least 32 characters",
   },
   {
     key: "TWILIO_FROM",
     required: false,
+    description: "Twilio sender phone number (E.164)",
     validate: (v: string) => v.startsWith("+"),
     hint: "TWILIO_FROM must be an E.164 phone number starting with +",
   },
   {
     key: "AI_TIMEOUT_MS",
     required: false,
+    description: "AI request timeout in milliseconds",
     validate: (v: string) => !isNaN(parseInt(v, 10)) && parseInt(v, 10) > 0,
     hint: "AI_TIMEOUT_MS must be a positive integer (milliseconds)",
   },
 ];
-
 
 // Cross-validation: if any Twilio var is set, all three must be set
 const twilioSid = process.env["TWILIO_ACCOUNT_SID"];
@@ -133,7 +137,7 @@ export function validateEnv(): void {
     logger.error("\n[env] FATAL — Required environment variables are missing or invalid:"),
     errors.forEach((e) => logger.error(e));
     logger.error(
-      "\n  → Copy .env.example to .env and fill in all required values.\n"
+      "\n → Copy .env.example to .env and fill in all required values.\n"
     );
     process.exit(1);
   }
