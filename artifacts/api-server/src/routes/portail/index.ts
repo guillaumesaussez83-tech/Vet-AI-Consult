@@ -123,7 +123,7 @@ router.post(
       const [owner] = await db
         .select({ id: ownersTable.id })
         .from(ownersTable)
-        .where(and(eq(ownersTable.clinicId, req.clinicId), eq(ownersTable.id, ownerId)));
+        .where(and(eq(ownersTable.clinicId, req.clinicId!), eq(ownersTable.id, ownerId)));
       if (!owner) {
         return res.status(404).json(fail("OWNER_NOT_FOUND", "Proprietaire introuvable."));
       }
@@ -133,7 +133,7 @@ router.post(
         .from(portailTokensTable)
         .where(
           and(
-            eq(portailTokensTable.clinicId, req.clinicId),
+            eq(portailTokensTable.clinicId, req.clinicId!),
             eq(portailTokensTable.ownerId, ownerId),
             gt(portailTokensTable.expiresAt, now),
           ),
