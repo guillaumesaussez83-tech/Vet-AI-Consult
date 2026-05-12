@@ -7,7 +7,7 @@ const router = Router();
 
 router.get("/stats", async (req, res) => {
   try {
-    const cid = req.clinicId;
+    const cid = req.clinicId!;
     const today = new Date().toISOString().split("T")[0];
     const firstOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split("T")[0];
 
@@ -95,7 +95,7 @@ router.get("/consultations-recentes", async (req, res) => {
       .from(consultationsTable)
       .leftJoin(patientsTable, eq(consultationsTable.patientId, patientsTable.id))
       .leftJoin(ownersTable, eq(patientsTable.ownerId, ownersTable.id))
-      .where(eq(consultationsTable.clinicId, req.clinicId))
+      .where(eq(consultationsTable.clinicId, req.clinicId!))
       .orderBy(sql`${consultationsTable.createdAt} DESC`)
       .limit(10);
 
@@ -146,7 +146,7 @@ router.get("/rappels-vaccins", async (req, res) => {
       .leftJoin(ownersTable, eq(patientsTable.ownerId, ownersTable.id))
       .where(
         and(
-          eq(vaccinationsTable.clinicId, req.clinicId),
+          eq(vaccinationsTable.clinicId, req.clinicId!),
           isNotNull(vaccinationsTable.dateRappel),
           gte(vaccinationsTable.dateRappel, ago),
           lte(vaccinationsTable.dateRappel, ahead)
