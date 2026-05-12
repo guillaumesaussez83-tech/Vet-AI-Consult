@@ -1,6 +1,6 @@
 import { Router, Request, Response } from "express";
 import { requireAuth } from "@clerk/express";
-import { db } from "../../../db";
+import { db } from "@workspace/db";
 import { sql } from "drizzle-orm";
 
 const router = Router();
@@ -31,9 +31,9 @@ router.get("/", requireAuth(), async (req: Request, res: Response) => {
       FROM communications WHERE clinic_id = ${clinicId}
     `);
 
-    res.json({ data: { communications: rows.rows, stats: stats.rows[0] } });
+    return res.json({ data: { communications: rows.rows, stats: stats.rows[0] } });
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: err.message });
   }
 });
 
@@ -90,9 +90,9 @@ L'équipe vétérinaire`;
       RETURNING *
     `);
 
-    res.status(201).json({ data: { communication: comm, subject, body, recipientEmail: c.owner_email } });
+    return res.status(201).json({ data: { communication: comm, subject, body, recipientEmail: c.owner_email } });
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: err.message });
   }
 });
 
@@ -160,9 +160,9 @@ router.post("/relance-impaye", requireAuth(), async (req: Request, res: Response
       results.push({ invoiceId: inv.id, invoiceNumber: inv.invoice_number, step, tone, recipientEmail: inv.owner_email });
     }
 
-    res.json({ data: { relancesEnvoyees: results.length, details: results } });
+    return res.json({ data: { relancesEnvoyees: results.length, details: results } });
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: err.message });
   }
 });
 
@@ -179,9 +179,9 @@ router.post("/custom", requireAuth(), async (req: Request, res: Response) => {
       VALUES (${clinicId}, 'CUSTOM', ${channel}, ${recipientEmail}, ${recipientName||null}, ${subject}, ${body}, 'SENT', ${refId||null}, ${refType||null}, NOW(), ${userId||null})
       RETURNING *
     `);
-    res.status(201).json({ data: comm });
+    return res.status(201).json({ data: comm });
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: err.message });
   }
 });
 
