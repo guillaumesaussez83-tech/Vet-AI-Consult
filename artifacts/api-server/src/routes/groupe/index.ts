@@ -488,7 +488,7 @@ router.post(
       .returning();
 
     logger.info({ clinicId: clinic.id }, "New clinic created");
-    res.status(201).json(clinic);
+    return res.status(201).json(clinic);
   })
 );
 
