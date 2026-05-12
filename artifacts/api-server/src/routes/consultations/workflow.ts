@@ -13,7 +13,7 @@ const router = Router();
 router.post("/:id/anamnese", async (req, res) => {
   const consultationId = parseInt(req.params.id);
   const { transcription } = req.body;
-  const clinicId = req.clinicId;
+  const clinicId = req.clinicId!;
 
   if (!transcription?.trim())
     return res.status(400).json({ error: "Transcription manquante" });
@@ -91,7 +91,7 @@ router.post("/:id/anamnese", async (req, res) => {
 router.post("/:id/examen", async (req, res) => {
   const consultationId = parseInt(req.params.id);
   const { transcription } = req.body;
-  const clinicId = req.clinicId;
+  const clinicId = req.clinicId!;
 
   if (!transcription?.trim())
     return res.status(400).json({ error: "Transcription manquante" });
@@ -176,7 +176,7 @@ router.post("/:id/examen", async (req, res) => {
 router.post("/:id/valider-examens", async (req, res) => {
   const consultationId = parseInt(req.params.id);
   const { examensValides } = req.body;
-  const clinicId = req.clinicId;
+  const clinicId = req.clinicId!;
 
   try {
     const [consult] = await db
@@ -451,7 +451,7 @@ router.post("/:id/terminer", async (req, res) => {
   const consultationId = parseInt(req.params.id);
   const { validation_changes } = req.body;
   // SECURITY: ignore any validated_by from body — use Clerk userId only
-  const clinicId = req.clinicId;
+  const clinicId = req.clinicId!;
 
   // Get Clerk auth
   const authData = getAuth(req as any);
@@ -564,7 +564,7 @@ router.post("/:id/terminer", async (req, res) => {
 // --- GET /:id/workflow-state ---
 router.get("/:id/workflow-state", async (req, res) => {
   const consultationId = parseInt(req.params.id);
-  const clinicId = req.clinicId;
+  const clinicId = req.clinicId!;
 
   try {
     const [consult] = await db
