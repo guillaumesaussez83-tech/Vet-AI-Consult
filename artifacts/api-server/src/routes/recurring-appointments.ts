@@ -1,5 +1,5 @@
 import { Router } from "express";
-import requireClinicId from "../middleware/requireClinicId";
+import { requireClinicId } from "../middleware/requireClinicId";
 import { requireAuth } from "@clerk/express";
 import { db } from "@workspace/db";
 import { sql } from "drizzle-orm";
