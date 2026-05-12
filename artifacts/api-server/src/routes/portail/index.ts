@@ -35,7 +35,7 @@ const generateLimiter = rateLimit({
 // GET /:token — ROUTE PUBLIQUE (lecture portail client par le proprietaire)
 router.get("/:token", async (req: Request, res: Response) => {
   try {
-    const { token } = req.params;
+    const token = req.params["token"] as string;
     if (!token || !/^[a-f0-9]{64}$/.test(token)) {
       return res.status(400).json(fail("INVALID_TOKEN_FORMAT", "Token invalide."));
     }
@@ -89,7 +89,7 @@ router.get("/:token", async (req: Request, res: Response) => {
               eq(vaccinationsTable.patientId, patient.id),
             ),
           )
-          .orderBy(desc(vaccinationsTable.dateInjection));
+          .orderBy(desc(vaccinationsTable.vaccineDate));
         return { ...patient, lastConsultation: lastConsultation ?? null, vaccinations };
       }),
     );
@@ -116,7 +116,7 @@ router.post(
   generateLimiter,
   async (req: Request, res: Response) => {
     try {
-      const ownerId = Number.parseInt(req.params.ownerId ?? "", 10);
+      const ownerId = Number.parseInt((req.params.ownerId as string) ?? "", 10);
       if (!Number.isInteger(ownerId) || ownerId <= 0) {
         return res.status(400).json(fail("INVALID_ID", "ID proprietaire invalide."));
       }
