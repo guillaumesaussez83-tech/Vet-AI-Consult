@@ -1,7 +1,6 @@
 import { Router, Request, Response } from "express";
 import { requireAuth } from "@clerk/express";
-import { db } from "../../../db";
-import { consultationAttachmentsTable } from "../../../../lib/db/src/schema";
+import { db, consultationAttachmentsTable } from "@workspace/db";
 import { and, eq } from "drizzle-orm";
 import { requireClinicId, getClinicId } from "../../middleware/requireClinicId";
 
@@ -45,9 +44,9 @@ router.get("/", requireAuth(), requireClinicId, async (req: Request, res: Respon
         )
       );
 
-    res.json({ data: rows });
+    return res.json({ data: rows });
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: err.message });
   }
 });
 
@@ -75,7 +74,7 @@ router.get("/:id/download", requireAuth(), requireClinicId, async (req: Request,
       res.setHeader("Content-Type", row.mimeType || "application/octet-stream");
       res.setHeader(
         "Content-Disposition",
-        `attachment; filename="${row.fileName || row.filename || "file"}"`
+        `attachment; filename="${row.fileName || "file"}"`
       );
       res.send(buffer);
     } else if (row.fileUrl) {
@@ -84,7 +83,7 @@ router.get("/:id/download", requireAuth(), requireClinicId, async (req: Request,
       res.status(404).json({ error: "No file data available" });
     }
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: err.message });
   }
 });
 
@@ -139,7 +138,7 @@ router.post("/", requireAuth(), requireClinicId, async (req: Request, res: Respo
 
     res.status(201).json({ data: row });
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: err.message });
   }
 });
 
@@ -161,7 +160,7 @@ router.delete("/:id", requireAuth(), requireClinicId, async (req: Request, res: 
 
     res.json({ success: true });
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: err.message });
   }
 });
 
