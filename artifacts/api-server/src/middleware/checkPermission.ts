@@ -47,7 +47,7 @@ export async function getUserPermission(
 }
 
 export function checkPermission(module: PermModule, action: PermAction) {
-  return async (req: Request, res: Response, next: NextFunction) => {
+  return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const userId = (req as any).auth?.userId;
       const role = (req as any).auth?.sessionClaims?.metadata?.role || "ASSISTANT";
