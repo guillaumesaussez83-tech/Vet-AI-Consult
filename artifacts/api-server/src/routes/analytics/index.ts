@@ -519,7 +519,7 @@ router.get(
     `);
 
     // Total patients inactifs et actifs
-    const [[totInactifs], [totActifs]] = await Promise.all([
+    const [totInactifsArr, totActifs] = await Promise.all([
       db.select({ nb: count() }).from(patientsTable).where(
         and(eq(patientsTable.clinicId, clinicId))
       ),
@@ -539,13 +539,13 @@ router.get(
       repartitionEspece: repartitionEspece.rows,
       attritionRisk: attritionRisk.rows,
       stats: {
-        totalPatients: totInactifs.nb,
+        totalPatients: totInactifsArr[0]?.nb ?? 0,
         patientsActifsSixMois: Number(totActifs.rows[0]?.nb || 0),
         patientsInactifsNb: inactifs.rows.length,
         tauxRetentionPct:
-          totInactifs.nb > 0
+          (totInactifsArr[0]?.nb ?? 0) > 0
             ? (
-                (Number(totActifs.rows[0]?.nb || 0) / totInactifs.nb) *
+                (Number(totActifs.rows[0]?.nb || 0) / (totInactifsArr[0]?.nb || 1)) *
                 100
               ).toFixed(1)
             : "0",
@@ -577,10 +577,10 @@ router.post(
       [consultTermineesRow],
       [consultIARow],
       [newPatientsRow],
-      [patientsActifsRow],
+      patientsActifsRow,
       [facturesRow],
       [impayeesRow],
-      [alertesRow],
+      alertesRow,
     ] = await Promise.all([
       db.select({ v: sql<string>`COALESCE(SUM(montant_ttc::numeric),0)` }).from(facturesTable)
         .where(and(eq(facturesTable.clinicId, clinicId), gte(facturesTable.createdAt, startOfDay(now)))),
@@ -605,7 +605,7 @@ router.post(
         .where(and(eq(facturesTable.clinicId, clinicId))),
       db.select({ nb: count(), mt: sql<string>`COALESCE(SUM(montant_ttc::numeric),0)` }).from(facturesTable)
         .where(and(eq(facturesTable.clinicId, clinicId), ne(facturesTable.statut, "payee"))),
-      db.execute(sql`SELECT COUNT(*) AS nb FROM stock_alertes WHERE clinic_id = ${clinicId}`).catch(() => [{ rows: [{ nb: 0 }] }]),
+      db.execute(sql`SELECT COUNT(*) AS nb FROM stock_alertes WHERE clinic_id = ${clinicId}`).catch(() => ({ rows: [{ nb: 0 }] } as any)),
     ]);
 
     const snapshot = {
@@ -624,7 +624,7 @@ router.post(
       nbFacturesPayees: Number(facturesRow.pays || 0),
       nbFacturesImpayees: impayeesRow.nb,
       montantImpoayeTtc: impayeesRow.mt,
-      nbAlerteStock: Number((alertesRow as { rows: { nb: number }[] }[])[0]?.rows[0]?.nb || 0),
+      nbAlerteStock: Number((alertesRow as any)?.rows?.[0]?.nb ?? 0),
     };
 
     await db
