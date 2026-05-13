@@ -31,7 +31,7 @@ import { CreateConsultationSchema } from "../../schemas";
 const router = Router();
 
 async function getConsultationWithDetails(id: number, clinicId: string) {
-  const [c] = (await db
+  const [c] = (await (db as any)
     .select({
       id: consultationsTable.id,
       patientId: consultationsTable.patientId,
@@ -515,7 +515,7 @@ router.post("/:id/facture", async (req, res) => {
 
     // Transaction atomique : numÃÂÃÂÃÂÃÂ©ro + insert.
     const facture = await db.transaction(async (tx) => {
-      const numero = await nextInvoiceNumber(tx as unknown as typeof db, req.clinicId!);
+      const numero = await nextInvoiceNumber(tx as any, req.clinicId!);
       const [inserted] = await tx
         .insert(facturesTable)
         .values({
