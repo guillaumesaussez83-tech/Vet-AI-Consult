@@ -398,7 +398,7 @@ VÃÂÃÂÃÂÃÂTÃÂÃÂÃÂÃÂRINAIRE : Dr. 
 DIAGNOSTIC : ${consultation.diagnostic ?? consultation.diagnosticIA ?? "ÃÂÃÂÃÂÃÂ prÃÂÃÂÃÂÃÂ©ciser"}
 ANAMNÃÂÃÂÃÂÃÂSE : ${consultation.anamnese ?? ""}
 EXAMEN CLINIQUE : ${consultation.examenClinique ?? ""}
-${actes.length > 0 ? `ACTES RÃÂÃÂÃÂÃÂALISÃÂÃÂÃÂÃÂS : ${actes.map((a) => a.acte?.nom).filter(Boolean).join(", ")}` : ""}
+${actes.length > 0 ? `ACTES RÃÂÃÂÃÂÃÂALISÃÂÃÂÃÂÃÂS : ${actes.map((a: any) => a.acte?.nom).filter(Boolean).join(", ")}` : ""}
 
 GÃÂÃÂÃÂÃÂ©nÃÂÃÂÃÂÃÂ¨re une ordonnance mÃÂÃÂÃÂÃÂ©dicale vÃÂÃÂÃÂÃÂ©tÃÂÃÂÃÂÃÂ©rinaire complÃÂÃÂÃÂÃÂ¨te avec :
 - En-tÃÂÃÂÃÂÃÂªte professionnel
