@@ -32,7 +32,7 @@ import { logger } from "../../lib/logger";
 const router = Router();
 
 // ─── Middleware vérification role DIRECTION_GROUPE ──────────────────────────
-async function requireGroupRole(req: Request, res: Response, next: Function) {
+async function requireGroupRole(req: Request, res: Response, next: Function): Promise<void> {
   // Vérifie que l'utilisateur a DIRECTION_GROUPE ou ADMIN sur au moins une clinique
   const userId = req.auth?.userId;
   if (!userId) return res.status(401).json({ error: "Non authentifié" });
@@ -56,7 +56,7 @@ async function requireGroupRole(req: Request, res: Response, next: Function) {
   }
 
   (req as Request & { groupAccess: typeof userRole }).groupAccess = userRole;
-  next();
+  return next();
 }
 
 // ─── GET /api/groupe/cliniques ────────────────────────────────────────────────
