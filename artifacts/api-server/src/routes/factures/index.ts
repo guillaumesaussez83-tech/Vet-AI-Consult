@@ -337,7 +337,7 @@ router.get("/:id", async (req, res) => {
       )) as any[];
 
     // P1-1 : calcul ligne par ligne avec le tvaRate rÃÂÃÂ©el de chaque acte.
-    const lignesMapped = lignes.map((l) => {
+    const lignesMapped = lignes.map((l: any) => {
       const rate = l.tvaRate ?? TVA_DEFAULT_RATE;
       const ht = Math.round(l.prixUnitaire * l.quantite * 100) / 100;
       const tva = Math.round((ht * rate) / 100 * 100) / 100;
@@ -571,7 +571,7 @@ router.patch("/:id", async (req, res) => {
                 l.code?.startsWith("MED") ||
                 l.code?.startsWith("VACCI")),
           )
-          .map((l) => ({ nom: l.nom!, quantite: l.quantite ?? 1 }));
+          .map((l: any) => ({ nom: l.nom!, quantite: l.quantite ?? 1 }));
 
         if (medicamentLignes.length > 0) {
           await decrementerConsultationFEFO(req.clinicId!, facture.consultationId, medicamentLignes);
