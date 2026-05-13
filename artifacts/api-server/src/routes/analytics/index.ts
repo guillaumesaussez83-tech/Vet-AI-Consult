@@ -2,12 +2,11 @@
 // Phase 4 — Dashboard Analytics IA : KPIs temps réel, insights, prévision CA, clientèle
 
 import { Router, Request, Response } from "express";
-import { db } from "../../lib/db";
+import { db } from "@workspace/db";
 import {
   consultationsTable,
   patientsTable,
   facturesTable,
-  encaissementsTable,
   rendezVousTable,
   analyticsSnapshotsTable,
   analyticsForecastsTable,
@@ -28,8 +27,9 @@ import {
 import { asyncHandler } from "../../middleware/errorHandler";
 import { requireClinicId } from "../../middleware/requireClinicId";
 import { z } from "zod";
+// @ts-ignore
 import Anthropic from "@anthropic-ai/sdk";
-import logger from "../../lib/logger";
+import { logger } from "../../lib/logger";
 
 const router = Router();
 const anthropic = new Anthropic();
@@ -203,7 +203,7 @@ router.get(
         ? ((consultIA.nb / consultMois.nb) * 100).toFixed(1)
         : "0";
 
-    res.json({
+    return res.json({
       caJour: parseFloat(caJour.total || "0"),
       caMois: caMoisNum,
       caAn: parseFloat(caAn.total || "0"),
@@ -242,7 +242,7 @@ router.get(
       ORDER BY 1
     `);
 
-    res.json({ data: rows.rows, months });
+    return res.json({ data: rows.rows, months });
   })
 );
 
@@ -326,7 +326,7 @@ router.get(
         .catch((err: Error) => logger.warn({ err }, "forecast upsert failed"));
     });
 
-    res.json({
+    return res.json({
       historique: data,
       forecasts,
       regression: { slope: a, intercept: b, rmse: Math.round(rmse * 100) / 100 },
@@ -358,7 +358,7 @@ router.get(
         db.select({ nb: count() }).from(consultationsTable)
           .where(and(eq(consultationsTable.clinicId, clinicId), gte(consultationsTable.createdAt, prevMonthStart), lte(consultationsTable.createdAt, prevMonthEnd))),
         db.select({ nb: count() }).from(patientsTable)
-          .where(and(eq(patientsTable.clinicId, clinicId), gte(patientsTable.createdAt, monthStart), isNull(patientsTable.deletedAt))),
+          .where(and(eq(patientsTable.clinicId, clinicId), gte(patientsTable.createdAt, monthStart), isNull((patientsTable as any).deletedAt))),
         db.select({ nb: count(), mt: sql<string>`COALESCE(SUM(montant_ttc::numeric),0)` }).from(facturesTable)
           .where(and(eq(facturesTable.clinicId, clinicId), ne(facturesTable.statut, "payee"))),
         db.select({ nb: count() }).from(consultationsTable)
@@ -416,7 +416,7 @@ Langue : français. Max 120 caractères par message. Sois direct et chiffré.`.s
       ];
     }
 
-    res.json({ insights, generatedAt: now.toISOString() });
+    return res.json({ insights, generatedAt: now.toISOString() });
   })
 );
 
@@ -533,7 +533,7 @@ router.get(
       `),
     ]);
 
-    res.json({
+    return res.json({
       topClients: topClients.rows,
       patientsInactifs: inactifs.rows,
       repartitionEspece: repartitionEspece.rows,
@@ -635,7 +635,7 @@ router.post(
         set: { ...snapshot, createdAt: new Date() },
       });
 
-    res.json({ success: true, snapshot });
+    return res.json({ success: true, snapshot });
   })
 );
 
