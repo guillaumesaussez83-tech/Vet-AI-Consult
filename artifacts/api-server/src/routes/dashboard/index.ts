@@ -49,7 +49,7 @@ router.get("/stats", async (req, res) => {
 
 router.get("/consultations-recentes", async (req, res) => {
   try {
-    const recentConsultations = (await db
+    const recentConsultations = (await (db as any)
       .select({
         id: consultationsTable.id,
         patientId: consultationsTable.patientId,
