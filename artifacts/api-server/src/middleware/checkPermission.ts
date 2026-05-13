@@ -51,10 +51,10 @@ export function checkPermission(module: PermModule, action: PermAction) {
     try {
       const userId = (req as any).auth?.userId;
       const role = (req as any).auth?.sessionClaims?.metadata?.role || "ASSISTANT";
-      if (!userId) return res.status(401).json({ error: "Unauthorized" });
+      if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
 
       const allowed = await getUserPermission(userId, role, module, action);
-      if (!allowed) return res.status(403).json({ error: "Permission denied" });
+      if (!allowed) { res.status(403).json({ error: "Permission denied" }); return; }
 
       next();
     } catch (err) {
