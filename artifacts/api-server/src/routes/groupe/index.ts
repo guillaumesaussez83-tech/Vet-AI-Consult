@@ -27,7 +27,7 @@ import {
 import { asyncHandler } from "../../middleware/errorHandler";
 import { requireClinicId } from "../../middleware/requireClinicId";
 import { z } from "zod";
-import logger from "../../lib/logger";
+import { logger } from "../../lib/logger";
 
 const router = Router();
 
@@ -170,7 +170,7 @@ router.get(
         )
       );
 
-    res.json({
+    return res.json({
       cliniques: cliniquesWithKpis,
       total,
       page,
@@ -430,7 +430,7 @@ router.get(
       comparatif.reduce((s, c) => s + c.nbConsultations, 0) /
       comparatif.length;
 
-    res.json({
+    return res.json({
       comparatif: comparatif.map((c: any, i: number) => ({
         ...c,
         rang: i + 1,
