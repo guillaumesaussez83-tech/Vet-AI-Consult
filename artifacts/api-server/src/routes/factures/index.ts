@@ -564,7 +564,7 @@ router.patch("/:id", async (req, res) => {
 
         const medicamentLignes = lignes
           .filter(
-            (l) =>
+            (l: any) =>
               l.nom &&
               (l.categorie?.toLowerCase().includes("mÃÂÃÂ©dic") ||
                 l.categorie?.toLowerCase().includes("medic") ||
