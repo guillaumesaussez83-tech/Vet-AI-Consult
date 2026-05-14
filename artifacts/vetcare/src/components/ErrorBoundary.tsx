@@ -15,7 +15,7 @@ interface Props {
 export function ErrorBoundary({ children, boundaryKey }: Props) {
   return (
     <Sentry.ErrorBoundary
-      fallback={(props) => (h
+      fallback={(props) => (
         <ErrorFallback
           error={props.error as Error}
           resetErrorBoundary={props.resetError}
