@@ -14,7 +14,7 @@ export function VoiceInput({ onTranscript, className }: VoiceInputProps) {
     typeof window !== "undefined" &&
       ("SpeechRecognition" in window || "webkitSpeechRecognition" in window)
   );
-  const recRef = useRef<SpeechRecognition | null>(null);
+  const recRef = useRef<any>(null);
 
   if (!supported) return null;
 
