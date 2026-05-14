@@ -2,7 +2,7 @@
 // Phase 4 — Tableau de bord groupe multi-cliniques (DIRECTION_GROUPE)
 
 import React, { useState, useEffect } from "react";
-import { useAuth } from "@clerk/clerk-react";
+import { useAuth } from "@clerk/react";
 
 interface GroupeKpis {
   caTtcMois: number;
