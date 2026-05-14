@@ -97,7 +97,7 @@ export default function DicteeOrdonnanceDialog({ open, onClose, onConfirmed }: P
         body: JSON.stringify({ transcription: transcript }),
       });
       if (!res.ok) throw new Error(await res.text());
-      const data = await __unwrapResponse(res);
+      const data: any = await __unwrapResponse(res);
       setPrescriptions(data.prescriptions ?? []);
       setPhase("recap");
     } catch (e) {
