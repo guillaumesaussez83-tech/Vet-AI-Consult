@@ -161,7 +161,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
             </Link>
           ))}
           <div className="px-3 py-2.5 flex items-center gap-3">
-            <UserButton afterSignOutUrl="/sign-in" />
+            <UserButton {...({afterSignOutUrl: "/sign-in"} as any)} />
             <span className="text-xs text-gray-500">Mon compte</span>
           </div>
         </div>
