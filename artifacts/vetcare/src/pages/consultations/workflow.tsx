@@ -319,7 +319,7 @@ export default function WorkflowPage() {
     }
   };
 
-  const handleExamen = async () => {
+  const handleExamen = async (): Promise<void> => {
     if (!examenTranscript.trim()) return toast.error("Dictez d'abord l'examen clinique");
     setProcessing(true);
     try {
@@ -364,7 +364,7 @@ export default function WorkflowPage() {
     }
   };
 
-  const handleTerminer = async () => {
+  const handleTerminer = async (): Promise<void> => {
     if (!userId) return toast.error("Identifiant vétérinaire introuvable (Clerk non connecté)");
     setProcessing(true);
     try {
