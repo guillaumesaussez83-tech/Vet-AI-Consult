@@ -3,7 +3,7 @@
 
 import { ReactNode } from "react";
 import { Link, useLocation } from "wouter";
-import { useAuth, UserButton } from "@clerk/clerk-react";
+import { useAuth, UserButton } from "@clerk/react";
 
 const NAV_ITEMS = [
   { href: "/dashboard", label: "Dashboard", icon: (
