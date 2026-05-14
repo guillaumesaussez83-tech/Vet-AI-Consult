@@ -170,7 +170,7 @@ function VenteTab({ type }: { type: "comptoir" | "prescription" }) {
   const patientsFiltered = useMemo(() => {
     if (!form.proprietaireId) return [];
     return patients.filter(
-      (p) => String(p.ownerId) === form.proprietaireId
+      (p) => String(p.owner) === form.proprietaireId
     );
   }, [patients, form.proprietaireId]);
 
@@ -307,7 +307,7 @@ function VenteTab({ type }: { type: "comptoir" | "prescription" }) {
             )}
             {ventes.map((v) => {
               const patient = patients.find((p) => p.id === v.patientId);
-              const owner   = proprietaires.find((o) => o.id === (patient ? patient.ownerId : undefined))
+              const owner   = proprietaires.find((o) => o.id === (patient ? patient.owner : undefined))
               return (
                 <tr key={v.id} className="border-t hover:bg-muted/20 transition-colors">
                   <td className="px-4 py-2 font-mono text-xs">{v.numero}</td>
