@@ -35,7 +35,7 @@ const router = Router();
 async function requireGroupRole(req: Request, res: Response, next: Function): Promise<void> {
   // Vérifie que l'utilisateur a DIRECTION_GROUPE ou ADMIN sur au moins une clinique
   const userId = req.auth?.userId;
-  if (!userId) return res.status(401).json({ error: "Non authentifié" });
+  if (!userId) { res.status(401).json({ error: "Non authentifié" }); return; }
 
   const [userRole] = await db
     .select()
@@ -50,9 +50,8 @@ async function requireGroupRole(req: Request, res: Response, next: Function): Pr
     .limit(1);
 
   if (!userRole) {
-    return res
-      .status(403)
-      .json({ error: "Accès réservé à la Direction Groupe" });
+    res.status(403).json({ error: "Accès réservé à la Direction Groupe" });
+      return;
   }
 
   (req as Request & { groupAccess: typeof userRole }).groupAccess = userRole;
