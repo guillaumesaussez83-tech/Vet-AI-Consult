@@ -1,1 +1,15 @@
-aW1wb3J0IHsgcGdUYWJsZSwgc2VyaWFsLCBpbnRlZ2VyLCB0ZXh0LCB0aW1lc3RhbXAgfSBmcm9tICJkcml6emxlLW9ybS9wZy1jb3JlIjsKCmV4cG9ydCBjb25zdCByZWxhbmNlc1RhYmxlID0gcGdUYWJsZSgicmVsYW5jZXMiLCB7CiAgaWQ6IHNlcmlhbCgiaWQiKS5wcmltYXJ5S2V5KCksCiAgY2xpbmljSWQ6IHRleHQoImNsaW5pY19pZCIpLm5vdE51bGwoKSwKICBpbnZvaWNlSWQ6IGludGVnZXIoImludm9pY2VfaWQiKS5ub3ROdWxsKCksCiAgc2VudEF0OiB0aW1lc3RhbXAoInNlbnRfYXQiLCB7IHdpdGhUaW1lem9uZTogdHJ1ZSB9KS5ub3ROdWxsKCkuZGVmYXVsdE5vdygpLAogIHNlbnRCeTogdGV4dCgic2VudF9ieSIpLm5vdE51bGwoKSwKICBjaGFubmVsOiB0ZXh0KCJjaGFubmVsIikubm90TnVsbCgpLmRlZmF1bHQoImVtYWlsIiksCiAgcmVjaXBpZW50RW1haWw6IHRleHQoInJlY2lwaWVudF9lbWFpbCIpLAogIHJlY2lwaWVudE5hbWU6IHRleHQoInJlY2lwaWVudF9uYW1lIiksCiAgbWVzc2FnZTogdGV4dCgibWVzc2FnZSIpLAogIHN0YXR1czogdGV4dCgic3RhdHVzIikubm90TnVsbCgpLmRlZmF1bHQoInNlbnQiKSwKICBjcmVhdGVkQXQ6IHRpbWVzdGFtcCgiY3JlYXRlZF9hdCIsIHsgd2l0aFRpbWV6b25lOiB0cnVlIH0pLm5vdE51bGwoKS5kZWZhdWx0Tm93KCksCn0pOwo=
+import { pgTable, serial, integer, text, timestamp } from "drizzle-orm/pg-core";
+
+export const relancesTable = pgTable("relances", {
+  id: serial("id").primaryKey(),
+  clinicId: text("clinic_id").notNull(),
+  invoiceId: integer("invoice_id").notNull(),
+  sentAt: timestamp("sent_at", { withTimezone: true }).notNull().defaultNow(),
+  sentBy: text("sent_by").notNull(),
+  channel: text("channel").notNull().default("email"),
+  recipientEmail: text("recipient_email"),
+  recipientName: text("recipient_name"),
+  message: text("message"),
+  status: text("status").notNull().default("sent"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});

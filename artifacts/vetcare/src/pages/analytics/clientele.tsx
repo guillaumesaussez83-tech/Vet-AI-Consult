@@ -2,7 +2,7 @@
 // Phase 4 — Statistiques clientèle : top clients, attrition, inactifs
 
 import React, { useState, useEffect } from "react";
-import { useAuth } from "@clerk/clerk-react";
+import { useAuth } from "@clerk/react";
 
 interface TopClient {
   owner_name: string;

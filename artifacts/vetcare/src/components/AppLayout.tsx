@@ -3,7 +3,7 @@
 
 import { ReactNode } from "react";
 import { Link, useLocation } from "wouter";
-import { useAuth, UserButton } from "@clerk/clerk-react";
+import { useAuth, UserButton } from "@clerk/react";
 
 const NAV_ITEMS = [
   { href: "/dashboard", label: "Dashboard", icon: (
@@ -161,7 +161,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
             </Link>
           ))}
           <div className="px-3 py-2.5 flex items-center gap-3">
-            <UserButton afterSignOutUrl="/sign-in" />
+            <UserButton {...({afterSignOutUrl: "/sign-in"} as any)} />
             <span className="text-xs text-gray-500">Mon compte</span>
           </div>
         </div>

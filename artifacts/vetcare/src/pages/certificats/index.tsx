@@ -45,7 +45,7 @@ export default function CertificatsPage() {
 
   const { data: patients = [], isLoading: patientsLoading } = useListPatients();
 
-  const { data: parametresClinique } = useQuery({
+  const { data: parametresClinique } = useQuery<any>({
     queryKey: ["parametres-clinique"],
     queryFn: () => fetch(`${API_BASE}/parametres-clinique`).then(__unwrapEnvelope),
     staleTime: 5 * 60 * 1000,
@@ -66,13 +66,13 @@ export default function CertificatsPage() {
 
   const selectedPatient = patients.find(p => p.id.toString() === patientId);
 
-  const { data: vaccinations = [] } = useQuery({
+  const { data: vaccinations = [] } = useQuery<any>({
     queryKey: ["vaccinations", patientId],
     queryFn: () => fetch(`${API_BASE}/vaccinations/patient/${patientId}`).then(__unwrapEnvelope),
     enabled: !!patientId,
   });
 
-  const { data: consultations = [] } = useQuery({
+  const { data: consultations = [] } = useQuery<any>({
     queryKey: ["consultations-patient", patientId],
     queryFn: () => fetch(`${API_BASE}/consultations?patientId=${patientId}`).then(__unwrapEnvelope),
     enabled: !!patientId,

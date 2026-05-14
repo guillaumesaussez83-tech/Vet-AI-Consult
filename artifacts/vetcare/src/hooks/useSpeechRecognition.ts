@@ -9,6 +9,8 @@ interface UseSpeechRecognitionReturn {
   startListening: () => void;
   stopListening: () => void;
   resetTranscript: () => void;
+  
+  setTranscript: (text: string) => void;
 }
 
 export function useSpeechRecognition(lang = "fr-FR"): UseSpeechRecognitionReturn {
@@ -95,5 +97,7 @@ export function useSpeechRecognition(lang = "fr-FR"): UseSpeechRecognitionReturn
     startListening,
     stopListening,
     resetTranscript,
+    
+    setTranscript,
   };
 }

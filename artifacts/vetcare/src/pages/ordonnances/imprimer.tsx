@@ -77,18 +77,18 @@ export default function OrdonnanceImprimerPage() {
     }
   };
 
-  const { data: ordonnance, isLoading: loadingOrd } = useQuery({
+  const { data: ordonnance, isLoading: loadingOrd } = useQuery<any>({
     queryKey: ["ordonnance", id],
     queryFn: () => fetchOrdonnance(id),
     enabled: !!id,
   });
 
-  const { data: clinique } = useQuery({
+  const { data: clinique } = useQuery<any>({
     queryKey: ["parametres-clinique"],
     queryFn: fetchClinique,
   });
 
-  const { data: patient } = useQuery({
+  const { data: patient } = useQuery<any>({
     queryKey: ["patient", ordonnance?.patientId],
     queryFn: () => fetchPatient(ordonnance!.patientId!),
     enabled: !!ordonnance?.patientId,

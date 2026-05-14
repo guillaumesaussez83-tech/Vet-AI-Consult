@@ -8,7 +8,7 @@ const router = Router();
 router.get("/modeles", async (req, res) => {
   try {
     const modeles = await db.select().from(rappelsModelesTable)
-      .where(eq(rappelsModelesTable.clinicId, req.clinicId))
+      .where(eq(rappelsModelesTable.clinicId, req.clinicId!))
       .orderBy(rappelsModelesTable.nom);
     return res.json(modeles.map(m => ({ ...m, createdAt: m.createdAt.toISOString() })));
   } catch (err) {
@@ -40,7 +40,7 @@ router.delete("/modeles/:id", async (req, res) => {
     if (isNaN(id)) return res.status(400).json({ error: "ID invalide" });
     const [deleted] = await db.delete(rappelsModelesTable).where(and(
       eq(rappelsModelesTable.id, id),
-      eq(rappelsModelesTable.clinicId, req.clinicId),
+      eq(rappelsModelesTable.clinicId, req.clinicId!),
     )).returning();
     if (!deleted) return res.status(404).json({ error: "Modèle non trouvé" });
     return res.json({ success: true });
@@ -52,7 +52,7 @@ router.delete("/modeles/:id", async (req, res) => {
 
 router.get("/dus", async (req, res) => {
   try {
-    const cid = req.clinicId;
+    const cid = req.clinicId!;
     const modeles = await db.select().from(rappelsModelesTable).where(and(
       eq(rappelsModelesTable.clinicId, cid),
       eq(rappelsModelesTable.actif, true),
@@ -138,7 +138,7 @@ router.get("/dus", async (req, res) => {
 
 router.get("/", async (req, res) => {
   try {
-    const cid = req.clinicId;
+    const cid = req.clinicId!;
     const { consultationId, patientId, statut } = req.query as Record<string, string>;
     let rows;
     if (consultationId) {
@@ -208,7 +208,7 @@ router.patch("/:id", async (req, res) => {
     if (notes !== undefined) update.notes = notes;
     const [rappel] = await db.update(rappelsTable).set(update).where(and(
       eq(rappelsTable.id, id),
-      eq(rappelsTable.clinicId, req.clinicId),
+      eq(rappelsTable.clinicId, req.clinicId!),
     )).returning();
     if (!rappel) return res.status(404).json({ error: "Rappel non trouvé" });
     return res.json({ ...rappel, createdAt: rappel.createdAt.toISOString() });
@@ -224,7 +224,7 @@ router.delete("/:id", async (req, res) => {
     if (isNaN(id)) return res.status(400).json({ error: "ID invalide" });
     const [deleted] = await db.delete(rappelsTable).where(and(
       eq(rappelsTable.id, id),
-      eq(rappelsTable.clinicId, req.clinicId),
+      eq(rappelsTable.clinicId, req.clinicId!),
     )).returning();
     if (!deleted) return res.status(404).json({ error: "Rappel non trouvé" });
     return res.json({ success: true });

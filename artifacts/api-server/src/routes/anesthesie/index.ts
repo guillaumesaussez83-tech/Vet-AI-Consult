@@ -14,7 +14,7 @@ router.get("/consultation/:consultationId", async (req, res) => {
     const [protocole] = await db.select().from(anesthesieProtocolesTable)
       .where(and(
         eq(anesthesieProtocolesTable.consultationId, consultationId),
-        eq(anesthesieProtocolesTable.clinicId, req.clinicId),
+        eq(anesthesieProtocolesTable.clinicId, req.clinicId!),
       ));
     return res.json(protocole ?? null);
   } catch (err) {
@@ -33,13 +33,13 @@ router.post("/", async (req, res) => {
     const consId = parseInt(consultationId);
     // Vérifier que la consultation appartient à la clinique
     const [cons] = await db.select({ id: consultationsTable.id }).from(consultationsTable)
-      .where(and(eq(consultationsTable.id, consId), eq(consultationsTable.clinicId, req.clinicId)));
+      .where(and(eq(consultationsTable.id, consId), eq(consultationsTable.clinicId, req.clinicId!)));
     if (!cons) return res.status(404).json({ error: "Consultation introuvable" });
 
     const existing = await db.select().from(anesthesieProtocolesTable)
       .where(and(
         eq(anesthesieProtocolesTable.consultationId, consId),
-        eq(anesthesieProtocolesTable.clinicId, req.clinicId),
+        eq(anesthesieProtocolesTable.clinicId, req.clinicId!),
       ));
 
     let result;
@@ -49,12 +49,12 @@ router.post("/", async (req, res) => {
           maintenance, maintenancePourcentage, monitoring, heureReveil, scoreReveil, complications, notes })
         .where(and(
           eq(anesthesieProtocolesTable.consultationId, consId),
-          eq(anesthesieProtocolesTable.clinicId, req.clinicId),
+          eq(anesthesieProtocolesTable.clinicId, req.clinicId!),
         ))
         .returning();
     } else {
       [result] = await db.insert(anesthesieProtocolesTable).values({
-        consultationId: consId, clinicId: req.clinicId,
+        consultationId: consId, clinicId: req.clinicId!,
         poids, premedication, premedicationDose, premedicationVoie,
         induction, inductionDose, maintenance, maintenancePourcentage, monitoring,
         heureReveil, scoreReveil, complications, notes,

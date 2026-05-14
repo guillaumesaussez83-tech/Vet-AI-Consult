@@ -1,7 +1,7 @@
 import { Router, Request, Response } from "express";
 import { requireAuth } from "@clerk/express";
-import { db } from "../../../db";
-import { userPermissions } from "../../../../lib/db/src/schema/user-permissions";
+import { db } from "@workspace/db";
+import { userPermissions } from "@workspace/db/schema";
 import { eq, and } from "drizzle-orm";
 import { isAdmin } from "../../middleware/isAdmin";
 
@@ -20,9 +20,9 @@ router.get("/", async (req: Request, res: Response) => {
     } else {
       rows = await db.select().from(userPermissions);
     }
-    res.json({ data: rows });
+    return res.json({ data: rows });
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: err.message });
   }
 });
 
@@ -35,15 +35,15 @@ router.post("/", async (req: Request, res: Response) => {
     }
     const [row] = await db
       .insert(userPermissions)
-      .values({ userId, module, canRead: !!canRead, canWrite: !!canWrite, canDelete: !!canDelete })
+      .values({ userId, clinicId: req.clinicId!, module, canRead: !!canRead, canWrite: !!canWrite, canDelete: !!canDelete })
       .onConflictDoUpdate({
         target: [userPermissions.userId, userPermissions.module],
         set: { canRead: !!canRead, canWrite: !!canWrite, canDelete: !!canDelete, updatedAt: new Date() },
       })
       .returning();
-    res.status(201).json({ data: row });
+    return res.status(201).json({ data: row });
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: err.message });
   }
 });
 
@@ -55,12 +55,12 @@ router.patch("/:id", async (req: Request, res: Response) => {
     const [row] = await db
       .update(userPermissions)
       .set({ canRead: !!canRead, canWrite: !!canWrite, canDelete: !!canDelete, updatedAt: new Date() })
-      .where(eq(userPermissions.id, id))
+      .where(eq(userPermissions.id, String(id)))
       .returning();
     if (!row) return res.status(404).json({ error: "Permission not found" });
-    res.json({ data: row });
+    return res.json({ data: row });
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: err.message });
   }
 });
 
@@ -68,10 +68,10 @@ router.patch("/:id", async (req: Request, res: Response) => {
 router.delete("/:id", async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    await db.delete(userPermissions).where(eq(userPermissions.id, id));
-    res.json({ success: true });
+    await db.delete(userPermissions).where(eq(userPermissions.id, String(id)));
+    return res.json({ success: true });
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: err.message });
   }
 });
 

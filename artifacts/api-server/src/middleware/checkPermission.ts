@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from "express";
-import { db } from "@vetoai/db";
-import { userPermissions } from "@vetoai/db/schema";
+import { db } from "@workspace/db";
+import { userPermissions } from "@workspace/db/schema";
 import { eq, and } from "drizzle-orm";
 
 export type PermAction = "read" | "write" | "delete";
@@ -8,9 +8,9 @@ export type PermModule = "agenda" | "ordonnances" | "finances" | "patients" | "i
 
 // Default role permissions (when no row in user_permissions)
 const ROLE_DEFAULTS: Record<string, Record<PermAction, boolean>> = {
-  ADMIN:       { read: true,  write: true,  delete: true  },
-  VETERINAIRE: { read: true,  write: true,  delete: false },
-  ASSISTANT:   { read: true,  write: false, delete: false },
+  ADMIN: { read: true, write: true, delete: true },
+  VETERINAIRE: { read: true, write: true, delete: false },
+  ASSISTANT: { read: true, write: false, delete: false },
 };
 
 // Modules restricted by default for ASSISTANT
@@ -31,8 +31,8 @@ export async function getUserPermission(
 
   if (rows.length > 0) {
     const row = rows[0];
-    if (action === "read")   return row.canRead;
-    if (action === "write")  return row.canWrite;
+    if (action === "read") return row.canRead;
+    if (action === "write") return row.canWrite;
     if (action === "delete") return row.canDelete;
   }
 
@@ -47,14 +47,14 @@ export async function getUserPermission(
 }
 
 export function checkPermission(module: PermModule, action: PermAction) {
-  return async (req: Request, res: Response, next: NextFunction) => {
+  return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const userId = (req as any).auth?.userId;
-      const role   = (req as any).auth?.sessionClaims?.metadata?.role || "ASSISTANT";
-      if (!userId) return res.status(401).json({ error: "Unauthorized" });
+      const role = (req as any).auth?.sessionClaims?.metadata?.role || "ASSISTANT";
+      if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
 
       const allowed = await getUserPermission(userId, role, module, action);
-      if (!allowed) return res.status(403).json({ error: "Permission denied" });
+      if (!allowed) { res.status(403).json({ error: "Permission denied" }); return; }
 
       next();
     } catch (err) {

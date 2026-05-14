@@ -7,7 +7,7 @@ const router = Router();
 
 router.get("/", async (req, res) => {
   try {
-    const cid = req.clinicId;
+    const cid = req.clinicId!;
     const today = new Date();
     const todayStr = today.toISOString().split("T")[0];
     const year = today.getFullYear();

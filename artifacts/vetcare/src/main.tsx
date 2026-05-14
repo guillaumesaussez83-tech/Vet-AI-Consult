@@ -1,6 +1,6 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
-import { ClerkProvider } from "@clerk/clerk-react";
+import { ClerkProvider } from "@clerk/react";
 import App from "./App";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import "./index.css";
@@ -19,7 +19,6 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
       <ClerkProvider
         publishableKey={PUBLISHABLE_KEY}
         proxyUrl={PROXY_URL}
-        clerkJSUrl={CLERK_JS_URL}
       >
         <App />
       </ClerkProvider>

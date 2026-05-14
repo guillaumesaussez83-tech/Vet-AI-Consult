@@ -2,6 +2,7 @@
 // MODIFIE -- fix imports + ajout routes manquantes (audit Phase 0)
 
 import { Router } from "express";
+import { requireClinicId } from "../middleware/requireClinicId";
 import rendezVousRouter from "./rendez-vous";
 import agendaRouter from "./agenda";
 import patientsRouter from "./patients";
@@ -31,7 +32,6 @@ import fournisseursRouter from "./fournisseurs";
 
 // Routes orphelines branchees -- audit Phase 0
 import actesRouter from "./actes";
-import adminRouter from "./admin";
 import aiRouter from "./ai";
 import anesthesieRouter from "./anesthesie";
 import communicationsRouter from "./communications";
@@ -78,7 +78,6 @@ router.use("/fournisseurs", fournisseursRouter);
 
 // Routes orphelines -- audit Phase 0
 router.use("/actes", actesRouter);
-router.use("/admin", adminRouter);
 router.use("/ai", aiRouter);
 router.use("/anesthesie", anesthesieRouter);
 router.use("/communications", communicationsRouter);

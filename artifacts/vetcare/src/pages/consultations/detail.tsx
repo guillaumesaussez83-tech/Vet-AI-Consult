@@ -56,7 +56,7 @@ export default function ConsultationDetailPage() {
   });
   const { data: actesList } = useListActes();
 
-  const { data: factureExistante } = useQuery({
+  const { data: factureExistante } = useQuery<any>({
     queryKey: ["facture-by-consultation", id],
     queryFn: async () => {
       const res = await fetch(`/api/factures/by-consultation/${id}`);
@@ -78,7 +78,7 @@ export default function ConsultationDetailPage() {
 
   useEffect(() => {
     if (!consultation?.actes) return;
-    setActes(prev => {
+    setActes((prev: any) => {
       if (!actesInit || (prev.length === 0 && consultation.actes!.length > 0)) {
         return consultation.actes!.map(a => ({
           acteId: a.acteId,
@@ -216,7 +216,7 @@ export default function ConsultationDetailPage() {
 
   const addActe = () => {
     const firstActe = actesList?.[0];
-    setActes(prev => [...prev, {
+    setActes((prev: any) => [...prev, {
       acteId: firstActe?.id ?? 0,
       quantite: 1,
       prixUnitaire: firstActe?.prixDefaut ?? 0,
@@ -224,7 +224,7 @@ export default function ConsultationDetailPage() {
     }]);
   };
 
-  const removeActe = (idx: number) => setActes(prev => prev.filter((_, i) => i !== idx));
+  const removeActe = (idx: number) => setActes((prev: any) => prev.filter((_, i) => i !== idx));
 
   const totalHT = actes.reduce((sum, a) => sum + a.quantite * a.prixUnitaire, 0);
   const totalTTC = totalHT * 1.20;
@@ -398,7 +398,7 @@ function EtapeAnamnese({ consultation, onAutoSave }: any) {
   const [anamnese, setAnamnese] = useState(consultation.anamnese ?? "");
   const [motif, setMotif] = useState(consultation.motif ?? "");
   const [saveState, setSaveState] = useState<"idle" | "pending" | "saved">("idle");
-  const timerRef = useRef<ReturnType<typeof setTimeout>>();
+  const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const isFirst = useRef(true);
 
   useEffect(() => {
@@ -429,7 +429,7 @@ function EtapeAnamnese({ consultation, onAutoSave }: any) {
         <div>
           <div className="flex items-center justify-between mb-1">
             <Label>Anamnèse (dictée ou saisie)</Label>
-            <VoiceInput onTranscript={(t) => setAnamnese(prev => prev ? prev + " " + t : t)} />
+            <VoiceInput onTranscript={(t) => setAnamnese((prev: any) => prev ? prev + " " + t : t)} />
           </div>
           <Textarea rows={8} value={anamnese} onChange={e => setAnamnese(e.target.value)}
             placeholder="Décrivez l'histoire clinique du patient : début des symptômes, évolution, contexte, traitements en cours, comportement alimentaire, hydratation, etc." />
@@ -444,7 +444,7 @@ function EtapeExamenClinique({ consultation, onAutoSave }: any) {
   const [poids, setPoids] = useState(consultation.poids?.toString() ?? "");
   const [temperature, setTemperature] = useState(consultation.temperature?.toString() ?? "");
   const [saveState, setSaveState] = useState<"idle" | "pending" | "saved">("idle");
-  const timerRef = useRef<ReturnType<typeof setTimeout>>();
+  const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const isFirst = useRef(true);
 
   useEffect(() => {
@@ -485,7 +485,7 @@ function EtapeExamenClinique({ consultation, onAutoSave }: any) {
         <div>
           <div className="flex items-center justify-between mb-1">
             <Label>Examen clinique (dictée ou saisie)</Label>
-            <VoiceInput onTranscript={(t) => setExamenClinique(prev => prev ? prev + " " + t : t)} />
+            <VoiceInput onTranscript={(t) => setExamenClinique((prev: any) => prev ? prev + " " + t : t)} />
           </div>
           <Textarea rows={10} value={examenClinique} onChange={e => setExamenClinique(e.target.value)}
             placeholder="État général, muqueuses, fréquence cardiaque, respiratoire, palpation abdominale, auscultation cardiopulmonaire, examen locomoteur, ganglions, peau et phanères..." />
@@ -498,7 +498,7 @@ function EtapeExamenClinique({ consultation, onAutoSave }: any) {
 function EtapeExamensCompl({ consultation, onAutoSave }: any) {
   const [examens, setExamens] = useState(consultation.examensComplementaires ?? "");
   const [saveState, setSaveState] = useState<"idle" | "pending" | "saved">("idle");
-  const timerRef = useRef<ReturnType<typeof setTimeout>>();
+  const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const isFirst = useRef(true);
 
   useEffect(() => {
@@ -525,7 +525,7 @@ function EtapeExamensCompl({ consultation, onAutoSave }: any) {
         <div>
           <div className="flex items-center justify-between mb-1">
             <Label>Résultats des examens complémentaires</Label>
-            <VoiceInput onTranscript={(t) => setExamens(prev => prev ? prev + " " + t : t)} />
+            <VoiceInput onTranscript={(t) => setExamens((prev: any) => prev ? prev + " " + t : t)} />
           </div>
           <Textarea rows={10} value={examens} onChange={e => setExamens(e.target.value)}
             placeholder="NFS, biochimie, urines, résultats radiographiques, échographiques, etc. Laissez vide si aucun examen complémentaire." />
@@ -538,7 +538,7 @@ function EtapeExamensCompl({ consultation, onAutoSave }: any) {
 function EtapeDiagnosticIA({ consultation, onAutoSave, onGenerateIA, isGenerating }: any) {
   const [diagnostic, setDiagnostic] = useState(consultation.diagnostic ?? "");
   const [saveState, setSaveState] = useState<"idle" | "pending" | "saved">("idle");
-  const timerRef = useRef<ReturnType<typeof setTimeout>>();
+  const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const isFirst = useRef(true);
 
   useEffect(() => {
@@ -583,7 +583,7 @@ function EtapeDiagnosticIA({ consultation, onAutoSave, onGenerateIA, isGeneratin
         <div>
           <div className="flex items-center justify-between mb-1">
             <Label>Diagnostic retenu (à compléter par le vétérinaire)</Label>
-            <VoiceInput onTranscript={(t) => setDiagnostic(prev => prev ? prev + " " + t : t)} />
+            <VoiceInput onTranscript={(t) => setDiagnostic((prev: any) => prev ? prev + " " + t : t)} />
           </div>
           <Textarea rows={4} value={diagnostic} onChange={e => setDiagnostic(e.target.value)}
             placeholder="Diagnostic final retenu après analyse..." />
@@ -1266,7 +1266,7 @@ function RappelsPostConsultation({ consultationId, patientId }: { consultationId
   const queryClient = useQueryClient();
   const [creating, setCreating] = useState<string | null>(null);
 
-  const { data: rappels = [], isLoading } = useQuery({
+  const { data: rappels = [], isLoading } = useQuery<any>({
     queryKey: ["rappels-consultation", consultationId],
     queryFn: () => fetch(`/api/rappels?consultationId=${consultationId}`).then(__unwrapEnvelope),
     enabled: !!consultationId,

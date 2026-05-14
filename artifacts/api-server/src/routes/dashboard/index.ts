@@ -7,7 +7,7 @@ const router = Router();
 
 router.get("/stats", async (req, res) => {
   try {
-    const cid = req.clinicId;
+    const cid = req.clinicId!;
     const today = new Date().toISOString().split("T")[0];
     const firstOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split("T")[0];
 
@@ -49,7 +49,7 @@ router.get("/stats", async (req, res) => {
 
 router.get("/consultations-recentes", async (req, res) => {
   try {
-    const recentConsultations = await db
+    const recentConsultations = (await (db as any)
       .select({
         id: consultationsTable.id,
         patientId: consultationsTable.patientId,
@@ -95,9 +95,9 @@ router.get("/consultations-recentes", async (req, res) => {
       .from(consultationsTable)
       .leftJoin(patientsTable, eq(consultationsTable.patientId, patientsTable.id))
       .leftJoin(ownersTable, eq(patientsTable.ownerId, ownersTable.id))
-      .where(eq(consultationsTable.clinicId, req.clinicId))
+      .where(eq(consultationsTable.clinicId, req.clinicId!))
       .orderBy(sql`${consultationsTable.createdAt} DESC`)
-      .limit(10);
+      .limit(10)) as any[];
 
     return res.json(recentConsultations.map(c => ({
       ...c,
@@ -131,8 +131,8 @@ router.get("/rappels-vaccins", async (req, res) => {
     const rappels = await db
       .select({
         id: vaccinationsTable.id,
-        nomVaccin: vaccinationsTable.nomVaccin,
-        dateRappel: vaccinationsTable.dateRappel,
+        nomVaccin: (vaccinationsTable as any).nomVaccin,
+        dateRappel: (vaccinationsTable as any).dateRappel,
         patientId: vaccinationsTable.patientId,
         nomPatient: patientsTable.nom,
         espece: patientsTable.espece,
@@ -146,13 +146,13 @@ router.get("/rappels-vaccins", async (req, res) => {
       .leftJoin(ownersTable, eq(patientsTable.ownerId, ownersTable.id))
       .where(
         and(
-          eq(vaccinationsTable.clinicId, req.clinicId),
-          isNotNull(vaccinationsTable.dateRappel),
-          gte(vaccinationsTable.dateRappel, ago),
-          lte(vaccinationsTable.dateRappel, ahead)
+          eq(vaccinationsTable.clinicId, req.clinicId!),
+          isNotNull((vaccinationsTable as any).dateRappel),
+          gte((vaccinationsTable as any).dateRappel, ago),
+          lte((vaccinationsTable as any).dateRappel, ahead)
         )
       )
-      .orderBy(vaccinationsTable.dateRappel)
+      .orderBy((vaccinationsTable as any).dateRappel)
       .limit(15);
 
     const todayStr = today.toISOString().split("T")[0];

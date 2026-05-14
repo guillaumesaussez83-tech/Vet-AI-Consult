@@ -3,13 +3,13 @@ import { db } from "@workspace/db";
 import { ventesTable, venteLignesTable, insertVenteSchema, insertVenteLigneSchema, ownersTable } from "@workspace/db/schema";
 import { eq, and, desc } from "drizzle-orm";
 import { ok, fail } from "../../lib/response";
-import { extractClinic } from "../../middlewares/extractClinic";
+import { requireClinicId } from "../../middleware/requireClinicId";
 import { generateVenteNumero } from "../../lib/numbering";
 
 const router = Router();
 
 // GET /api/ventes?type=comptoir|prescription
-router.get("/", extractClinic(), async (req, res) => {
+router.get("/", requireClinicId, async (req, res) => {
   try {
     const clinicId = req.clinicId!;
     const type = req.query.type as string | undefined;
@@ -50,10 +50,10 @@ router.get("/", extractClinic(), async (req, res) => {
 });
 
 // GET /api/ventes/:id
-router.get("/:id", extractClinic(), async (req, res) => {
+router.get("/:id", requireClinicId, async (req, res) => {
   try {
     const clinicId = req.clinicId!;
-    const id = parseInt(req.params.id);
+    const id = parseInt(req.params.id as string);
     if (isNaN(id)) return res.status(400).json(fail("VALIDATION_ERROR", "ID invalide"));
     const [vente] = await db
       .select()
@@ -71,7 +71,7 @@ router.get("/:id", extractClinic(), async (req, res) => {
 });
 
 // POST /api/ventes
-router.post("/", extractClinic(), async (req, res) => {
+router.post("/", requireClinicId, async (req, res) => {
   try {
     const clinicId = req.clinicId!;
     const { lignes: lignesData, ...venteData } = req.body;
@@ -95,10 +95,10 @@ router.post("/", extractClinic(), async (req, res) => {
 });
 
 // PUT /api/ventes/:id
-router.put("/:id", extractClinic(), async (req, res) => {
+router.put("/:id", requireClinicId, async (req, res) => {
   try {
     const clinicId = req.clinicId!;
-    const id = parseInt(req.params.id);
+    const id = parseInt(req.params.id as string);
     if (isNaN(id)) return res.status(400).json(fail("VALIDATION_ERROR", "ID invalide"));
     const { id: _id, clinicId: _cid, numero: _num, createdAt: _ca, updatedAt: _ua, lignes: lignesData, ...body } = req.body;
     const [updated] = await db
@@ -126,10 +126,10 @@ router.put("/:id", extractClinic(), async (req, res) => {
 });
 
 // DELETE /api/ventes/:id
-router.delete("/:id", extractClinic(), async (req, res) => {
+router.delete("/:id", requireClinicId, async (req, res) => {
   try {
     const clinicId = req.clinicId!;
-    const id = parseInt(req.params.id);
+    const id = parseInt(req.params.id as string);
     if (isNaN(id)) return res.status(400).json(fail("VALIDATION_ERROR", "ID invalide"));
     await db.delete(ventesTable).where(and(eq(ventesTable.id, id), eq(ventesTable.clinicId, clinicId)));
     return res.json(ok({ message: "Vente supprimee" }));

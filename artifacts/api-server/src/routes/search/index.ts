@@ -12,7 +12,7 @@ router.get("/", async (req, res) => {
   }
 
   const term = `%${q}%`;
-  const cid = req.clinicId;
+  const cid = req.clinicId!;
 
   try {
     const [patients, owners, consultations] = await Promise.all([

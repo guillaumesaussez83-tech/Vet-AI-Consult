@@ -61,7 +61,7 @@ router.get("/", async (req, res) => {
     const query = ListFacturesQueryParams.safeParse(req.query);
     const { statut } = query.success ? query.data : ({} as { statut?: string });
 
-    const cidEq = eq(facturesTable.clinicId, req.clinicId);
+    const cidEq = eq(facturesTable.clinicId, req.clinicId!);
     const rawPage  = parseInt(String(req.query["page"]  ?? "1"),  10);
     const rawLimit = parseInt(String(req.query["limit"] ?? "50"), 10);
     const pageNum  = Number.isNaN(rawPage)  || rawPage  < 1               ? 1  : rawPage;
@@ -77,7 +77,7 @@ router.get("/", async (req, res) => {
     const consultationIds = [...new Set(factures.map((f) => f.consultationId))];
 
     // 1) Tous les actes d'un coup, avec tvaRate.
-    const allActes: ActeRow[] = await db
+    const allActes: ActeRow[] = await (db as any)
       .select({
         consultationId: actesConsultationsTable.consultationId,
         prixUnitaire: actesConsultationsTable.prixUnitaire,
@@ -87,7 +87,7 @@ router.get("/", async (req, res) => {
       .from(actesConsultationsTable)
       .where(
         and(
-          eq(actesConsultationsTable.clinicId, req.clinicId),
+          eq(actesConsultationsTable.clinicId, req.clinicId!),
           inArray(actesConsultationsTable.consultationId, consultationIds),
         ),
       );
@@ -95,7 +95,7 @@ router.get("/", async (req, res) => {
     const totalsByCons = buildTotalsByConsultation(allActes);
 
     // 2) Toutes les consultations + patients + owners d'un coup (batch join).
-    const consultations = await db
+    const consultations = (await (db as any)
       .select({
         id: consultationsTable.id,
         patientId: consultationsTable.patientId,
@@ -143,10 +143,10 @@ router.get("/", async (req, res) => {
       .leftJoin(ownersTable, eq(patientsTable.ownerId, ownersTable.id))
       .where(
         and(
-          eq(consultationsTable.clinicId, req.clinicId),
+          eq(consultationsTable.clinicId, req.clinicId!),
           inArray(consultationsTable.id, consultationIds),
         ),
-      );
+      )) as any[];
 
     const consById = new Map(consultations.map((c) => [c.id, c]));
 
@@ -176,7 +176,7 @@ router.get("/", async (req, res) => {
               tva: s.fresh.tvaMoyenne,
               tvaBreakdown: s.fresh.tvaBreakdown,
             })
-            .where(and(eq(facturesTable.clinicId, req.clinicId), eq(facturesTable.id, s.id)));
+            .where(and(eq(facturesTable.clinicId, req.clinicId!), eq(facturesTable.id, s.id)));
         }
       }).catch((err) => req.log.warn({ err }, "Stale facture background update failed"));
     }
@@ -236,7 +236,7 @@ router.get("/by-consultation/:consultationId", async (req, res) => {
       .from(facturesTable)
       .where(
         and(
-          eq(facturesTable.clinicId, req.clinicId),
+          eq(facturesTable.clinicId, req.clinicId!),
           eq(facturesTable.consultationId, consultationId),
         ),
       );
@@ -257,10 +257,10 @@ router.get("/:id", async (req, res) => {
     const [facture] = await db
       .select()
       .from(facturesTable)
-      .where(and(eq(facturesTable.clinicId, req.clinicId), eq(facturesTable.id, params.data.id)));
+      .where(and(eq(facturesTable.clinicId, req.clinicId!), eq(facturesTable.id, params.data.id)));
     if (!facture) return res.status(404).json(fail("NOT_FOUND", "Facture non trouvÃÂÃÂ©e"));
 
-    const [consultation] = await db
+    const [consultation] = (await (db as any)
       .select({
         id: consultationsTable.id,
         patientId: consultationsTable.patientId,
@@ -308,12 +308,12 @@ router.get("/:id", async (req, res) => {
       .leftJoin(ownersTable, eq(patientsTable.ownerId, ownersTable.id))
       .where(
         and(
-          eq(consultationsTable.clinicId, req.clinicId),
+          eq(consultationsTable.clinicId, req.clinicId!),
           eq(consultationsTable.id, facture.consultationId),
         ),
-      );
+      )) as any[];
 
-    const lignes = await db
+    const lignes = (await (db as any)
       .select({
         id: actesConsultationsTable.id,
         acteId: actesConsultationsTable.acteId,
@@ -331,13 +331,13 @@ router.get("/:id", async (req, res) => {
       .leftJoin(actesTable, eq(actesConsultationsTable.acteId, actesTable.id))
       .where(
         and(
-          eq(actesConsultationsTable.clinicId, req.clinicId),
+          eq(actesConsultationsTable.clinicId, req.clinicId!),
           eq(actesConsultationsTable.consultationId, facture.consultationId),
         ),
-      );
+      )) as any[];
 
     // P1-1 : calcul ligne par ligne avec le tvaRate rÃÂÃÂ©el de chaque acte.
-    const lignesMapped = lignes.map((l) => {
+    const lignesMapped = lignes.map((l: any) => {
       const rate = l.tvaRate ?? TVA_DEFAULT_RATE;
       const ht = Math.round(l.prixUnitaire * l.quantite * 100) / 100;
       const tva = Math.round((ht * rate) / 100 * 100) / 100;
@@ -366,7 +366,7 @@ router.get("/:id", async (req, res) => {
           tva: totals.tvaMoyenne,
           tvaBreakdown: totals.tvaBreakdown,
         })
-        .where(and(eq(facturesTable.clinicId, req.clinicId), eq(facturesTable.id, facture.id)));
+        .where(and(eq(facturesTable.clinicId, req.clinicId!), eq(facturesTable.id, facture.id)));
     }
 
     return res.json({
@@ -414,15 +414,15 @@ router.post("/", validate(CreateFactureSchema), async (req, res) => {
     const [existing] = await db
       .select()
       .from(facturesTable)
-      .where(and(eq(facturesTable.clinicId, req.clinicId), eq(facturesTable.consultationId, consultationId)));
+      .where(and(eq(facturesTable.clinicId, req.clinicId!), eq(facturesTable.consultationId, consultationId)));
     if (existing) {
       return res.status(409).json({ success: false, error: { code: "ALREADY_EXISTS", message: "Facture dÃÂÃÂ©jÃÂÃÂ  crÃÂÃÂ©ÃÂÃÂ©e pour cette consultation" } });
     }
-    const montants = await FactureService.recalculerDepuisActes(consultationId, req.clinicId);
-    const numero = await FactureService.genererNumero(req.clinicId);
+    const montants = await FactureService.recalculerDepuisActes(consultationId);
+    const numero = await FactureService.genererNumero(Number(req.clinicId!));
     const today = new Date().toISOString().split("T")[0];
     const [facture] = await db.insert(facturesTable).values({
-      clinicId: req.clinicId,
+      clinicId: req.clinicId!,
       consultationId,
       numero,
       montantHT: montants.montantHT,
@@ -445,7 +445,7 @@ router.delete("/:id", async (req, res) => {
 
     const [deleted] = await db
       .delete(facturesTable)
-      .where(and(eq(facturesTable.clinicId, req.clinicId), eq(facturesTable.id, params.data.id)))
+      .where(and(eq(facturesTable.clinicId, req.clinicId!), eq(facturesTable.id, params.data.id)))
       .returning();
     if (!deleted) return res.status(404).json(fail("NOT_FOUND", "Facture non trouvÃÂÃÂ©e"));
 
@@ -504,7 +504,7 @@ router.patch("/:id", async (req, res) => {
       .select()
       .from(facturesTable)
       .where(
-        and(eq(facturesTable.clinicId, req.clinicId), eq(facturesTable.id, params.data.id)),
+        and(eq(facturesTable.clinicId, req.clinicId!), eq(facturesTable.id, params.data.id)),
       );
     if (!factureBefore) return res.status(404).json(fail("NOT_FOUND", "Facture non trouvÃÂÃÂ©e"));
 
@@ -514,7 +514,7 @@ router.patch("/:id", async (req, res) => {
       );
     }
 
-    const actesPourTotal = await db
+    const actesPourTotal = await (db as any)
       .select({
         prixUnitaire: actesConsultationsTable.prixUnitaire,
         quantite: actesConsultationsTable.quantite,
@@ -523,7 +523,7 @@ router.patch("/:id", async (req, res) => {
       .from(actesConsultationsTable)
       .where(
         and(
-          eq(actesConsultationsTable.clinicId, req.clinicId),
+          eq(actesConsultationsTable.clinicId, req.clinicId!),
           eq(actesConsultationsTable.consultationId, factureBefore.consultationId),
         ),
       );
@@ -539,14 +539,14 @@ router.patch("/:id", async (req, res) => {
     const [facture] = await db
       .update(facturesTable)
       .set(updateData)
-      .where(and(eq(facturesTable.clinicId, req.clinicId), eq(facturesTable.id, params.data.id)))
+      .where(and(eq(facturesTable.clinicId, req.clinicId!), eq(facturesTable.id, params.data.id)))
       .returning();
     if (!facture) return res.status(404).json(fail("NOT_FOUND", "Facture non trouvÃÂÃÂ©e"));
 
     // FEFO auto-decrement ÃÂÃÂ  l'encaissement.
     if (body.data.statut === "payee" && factureBefore.statut !== "payee") {
       try {
-        const lignes = await db
+        const lignes = await (db as any)
           .select({
             nom: actesTable.nom,
             categorie: actesTable.categorie,
@@ -557,24 +557,24 @@ router.patch("/:id", async (req, res) => {
           .leftJoin(actesTable, eq(actesConsultationsTable.acteId, actesTable.id))
           .where(
             and(
-              eq(actesConsultationsTable.clinicId, req.clinicId),
+              eq(actesConsultationsTable.clinicId, req.clinicId!),
               eq(actesConsultationsTable.consultationId, facture.consultationId),
             ),
           );
 
         const medicamentLignes = lignes
           .filter(
-            (l) =>
+            (l: any) =>
               l.nom &&
               (l.categorie?.toLowerCase().includes("mÃÂÃÂ©dic") ||
                 l.categorie?.toLowerCase().includes("medic") ||
                 l.code?.startsWith("MED") ||
                 l.code?.startsWith("VACCI")),
           )
-          .map((l) => ({ nom: l.nom!, quantite: l.quantite ?? 1 }));
+          .map((l: any) => ({ nom: l.nom!, quantite: l.quantite ?? 1 }));
 
         if (medicamentLignes.length > 0) {
-          await decrementerConsultationFEFO(req.clinicId, facture.consultationId, medicamentLignes);
+          await decrementerConsultationFEFO(req.clinicId!, facture.consultationId, medicamentLignes);
         }
       } catch (fefoErr) {
         req.log.warn({ err: fefoErr }, "FEFO auto-decrement failed (non-blocking)");

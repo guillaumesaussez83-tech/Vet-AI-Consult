@@ -13,4 +13,3 @@ export function formatTime(iso: string | null | undefined): string {
                               timeZone: 'Europe/Paris',
                                 });
                                 }
-}

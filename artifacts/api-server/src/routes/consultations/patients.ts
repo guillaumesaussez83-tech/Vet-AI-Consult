@@ -1,7 +1,6 @@
 import { Router, Request, Response } from "express";
 import { requireAuth } from "@clerk/express";
-import { db } from "../../../db";
-import { consultationPatientsTable, patientsTable, ownersTable } from "../../../../lib/db/src/schema";
+import { db, consultationPatientsTable, patientsTable, ownersTable } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
 
 const router = Router({ mergeParams: true });
@@ -23,9 +22,9 @@ router.get("/", requireAuth(), async (req: Request, res: Response) => {
       .innerJoin(patientsTable, eq(patientsTable.id, consultationPatientsTable.patientId))
       .leftJoin(ownersTable, eq(ownersTable.id, patientsTable.ownerId))
       .where(eq(consultationPatientsTable.consultationId, consultationId));
-    res.json({ data: rows });
+    return res.json({ data: rows });
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: err.message });
   }
 });
 
@@ -40,9 +39,9 @@ router.post("/", requireAuth(), async (req: Request, res: Response) => {
       .values({ consultationId, patientId: Number(patientId) })
       .onConflictDoNothing()
       .returning();
-    res.status(201).json({ data: row });
+    return res.status(201).json({ data: row });
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: err.message });
   }
 });
 
@@ -57,9 +56,9 @@ router.delete("/:patientId", requireAuth(), async (req: Request, res: Response) 
         eq(consultationPatientsTable.consultationId, consultationId),
         eq(consultationPatientsTable.patientId, patientId)
       ));
-    res.json({ success: true });
+    return res.json({ success: true });
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: err.message });
   }
 });
 

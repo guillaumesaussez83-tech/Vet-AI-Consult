@@ -45,7 +45,7 @@ export default function StupefiantsPage() {
   const entreeMutation = useMutation({
     mutationFn: async (body: any) => {
       const res = await fetch(`${API}/stock/stupefiants/entree`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-      if (!res.ok) { const e = await __unwrapResponse(res); throw new Error(e.error); }
+      if (!res.ok) { const e: any = await __unwrapResponse(res); throw new Error(e.error); }
       return __unwrapResponse(res);
     },
     onSuccess: () => {
@@ -60,7 +60,7 @@ export default function StupefiantsPage() {
   const sortieMutation = useMutation({
     mutationFn: async (body: any) => {
       const res = await fetch(`${API}/stock/stupefiants/sortie`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-      if (!res.ok) { const e = await __unwrapResponse(res); throw new Error(e.error); }
+      if (!res.ok) { const e: any = await __unwrapResponse(res); throw new Error(e.error); }
       return __unwrapResponse(res);
     },
     onSuccess: () => {

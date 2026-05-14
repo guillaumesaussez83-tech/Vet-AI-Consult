@@ -10,7 +10,7 @@ const router = Router();
 router.get("/", async (req, res) => {
   try {
     const actes = await db.select().from(actesTable)
-      .where(eq(actesTable.clinicId, req.clinicId))
+      .where(eq(actesTable.clinicId, req.clinicId!))
       .orderBy(actesTable.nom);
     return res.json(actes);
   } catch (err) {
@@ -42,7 +42,7 @@ router.patch("/:id", async (req, res) => {
 
     const [acte] = await db.update(actesTable).set(body.data).where(and(
       eq(actesTable.id, params.data.id),
-      eq(actesTable.clinicId, req.clinicId),
+      eq(actesTable.clinicId, req.clinicId!),
     )).returning();
     if (!acte) return res.status(404).json({ error: "Acte non trouvÃ©" });
 
@@ -60,7 +60,7 @@ router.delete("/:id", async (req, res) => {
 
     await db.delete(actesTable).where(and(
       eq(actesTable.id, params.data.id),
-      eq(actesTable.clinicId, req.clinicId),
+      eq(actesTable.clinicId, req.clinicId!),
     ));
     return res.status(204).send();
   } catch (err) {
@@ -75,7 +75,7 @@ router.get("/export-csv", requireAuth(), async (req, res) => {
     const rows = await db.select().from(actesTable);
     const header = "code,nom,categorie,prix_ht,tva_rate,description,unite";
     const csvRows = rows.map(r => [
-      r.code, r.nom, r.categorie, r.prixDefault, r.tvaRate, r.description ?? "", r.unite
+      r.code, r.nom, r.categorie, r.prixDefaut, r.tvaRate, r.description ?? "", r.unite
     ].map(v => {
       const s = String(v ?? "");
       return s.includes(",") || s.includes('"') ? `"${s.replace(/"/g,'""')}"` : s;
@@ -95,16 +95,16 @@ router.post("/import-csv", requireAuth(), async (req, res) => {
   try {
     const { csv, clinicId: bodyClinicId } = req.body as { csv: string; clinicId?: string };
     const clinicId = bodyClinicId || (req.auth?.sessionClaims?.clinicId as string) || "default";
-    if (!csv) return res.status(400).json({ error: "csv content required" });
+    if (!csv) { res.status(400).json({ error: "csv content required" }); return; }
     const lines = csv.trim().split("\n");
-    if (lines.length < 2) return res.status(400).json({ error: "Header + data required" });
+    if (lines.length < 2) { res.status(400).json({ error: "Header + data required" }); return; }
     const hdrs = lines[0].toLowerCase().split(",").map(h => h.trim());
     const codeIdx = hdrs.indexOf("code");
     const nomIdx = hdrs.indexOf("nom");
     const catIdx = hdrs.indexOf("categorie");
     const prixIdx = hdrs.findIndex(h => h.includes("prix"));
     const tvaIdx = hdrs.findIndex(h => h.includes("tva"));
-    if (codeIdx < 0 || nomIdx < 0) return res.status(400).json({ error: "CSV must have code,nom" });
+    if (codeIdx < 0 || nomIdx < 0) { res.status(400).json({ error: "CSV must have code,nom" }); return; }
     let inserted = 0; let updated = 0;
     for (const line of lines.slice(1)) {
       if (!line.trim()) continue;
@@ -114,7 +114,7 @@ router.post("/import-csv", requireAuth(), async (req, res) => {
       const vals = {
         clinicId, code, nom,
         categorie: catIdx >= 0 ? cols[catIdx] || "General" : "General",
-        prixDefault: prixIdx >= 0 ? parseFloat(cols[prixIdx]) || 0 : 0,
+        prixDefaut: prixIdx >= 0 ? parseFloat(cols[prixIdx]) || 0 : 0,
         tvaRate: tvaIdx >= 0 ? parseFloat(cols[tvaIdx]) || 20 : 20,
         unite: "U",
       };
@@ -122,10 +122,10 @@ router.post("/import-csv", requireAuth(), async (req, res) => {
       if (ex.length > 0) { await db.update(actesTable).set(vals).where(eq(actesTable.code, code)); updated++; }
       else { await db.insert(actesTable).values(vals); inserted++; }
     }
-    res.json({ success: true, inserted, updated });
+    res.json({ success: true, inserted, updated }); return;
   } catch (err) {
     req.log.error(err);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: "Internal server error" }); return;
   }
 });
 

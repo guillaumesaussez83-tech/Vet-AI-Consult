@@ -1,6 +1,6 @@
 import { Router, Request, Response } from "express";
 import { requireAuth } from "@clerk/express";
-import { db } from "../../../db";
+import { db } from "@workspace/db";
 import { sql } from "drizzle-orm";
 
 const router = Router();
@@ -31,9 +31,9 @@ router.get("/", requireAuth(), async (req: Request, res: Response) => {
       FROM communications WHERE clinic_id = ${clinicId}
     `);
 
-    res.json({ data: { communications: rows.rows, stats: stats.rows[0] } });
+    return res.json({ data: { communications: rows.rows, stats: stats.rows[0] } });
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: err.message });
   }
 });
 
@@ -84,15 +84,15 @@ Pour toute question, n'hésitez pas à nous contacter.
 Cordialement,
 L'équipe vétérinaire`;
 
-    const [comm] = await db.execute(sql`
+    const { rows: [comm] } = await db.execute(sql`
       INSERT INTO communications (clinic_id, type, channel, recipient_email, recipient_name, subject, body, status, ref_id, ref_type, sent_at, created_by)
       VALUES (${clinicId}, 'POST_CONSULTATION', 'email', ${c.owner_email}, ${c.owner_name}, ${subject}, ${body}, 'SENT', ${Number(consultationId)}, 'consultation', NOW(), ${userId||null})
       RETURNING *
     `);
 
-    res.status(201).json({ data: { communication: comm, subject, body, recipientEmail: c.owner_email } });
+    return res.status(201).json({ data: { communication: comm, subject, body, recipientEmail: c.owner_email } });
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: err.message });
   }
 });
 
@@ -160,9 +160,9 @@ router.post("/relance-impaye", requireAuth(), async (req: Request, res: Response
       results.push({ invoiceId: inv.id, invoiceNumber: inv.invoice_number, step, tone, recipientEmail: inv.owner_email });
     }
 
-    res.json({ data: { relancesEnvoyees: results.length, details: results } });
+    return res.json({ data: { relancesEnvoyees: results.length, details: results } });
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: err.message });
   }
 });
 
@@ -174,14 +174,14 @@ router.post("/custom", requireAuth(), async (req: Request, res: Response) => {
     const { recipientEmail, recipientName, subject, body, channel = 'email', refId, refType } = req.body;
     if (!recipientEmail || !subject || !body) return res.status(400).json({ error: "recipientEmail, subject, body requis" });
 
-    const [comm] = await db.execute(sql`
+    const { rows: [comm] } = await db.execute(sql`
       INSERT INTO communications (clinic_id, type, channel, recipient_email, recipient_name, subject, body, status, ref_id, ref_type, sent_at, created_by)
       VALUES (${clinicId}, 'CUSTOM', ${channel}, ${recipientEmail}, ${recipientName||null}, ${subject}, ${body}, 'SENT', ${refId||null}, ${refType||null}, NOW(), ${userId||null})
       RETURNING *
     `);
-    res.status(201).json({ data: comm });
+    return res.status(201).json({ data: comm });
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: err.message });
   }
 });
 

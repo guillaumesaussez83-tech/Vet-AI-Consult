@@ -1,7 +1,7 @@
 import { Router, Request, Response } from "express";
-import requireClinicId from "../../middleware/requireClinicId";
+import { requireClinicId } from "../../middleware/requireClinicId";
 import { requireAuth, getAuth } from "@clerk/express";
-import { db } from "../../../db";
+import { db } from "@workspace/db";
 import { sql } from "drizzle-orm";
 
 const router = Router();
@@ -64,7 +64,7 @@ router.get("/dashboard", requireAuth(), async (req: Request, res: Response) => {
       ORDER BY total DESC
     `);
 
-    res.json({
+    return res.json({
       data: {
         kpis: kpis.rows[0],
         monthly: monthly.rows,
@@ -73,7 +73,7 @@ router.get("/dashboard", requireAuth(), async (req: Request, res: Response) => {
       }
     });
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: err.message });
   }
 });
 
@@ -183,10 +183,10 @@ router.get("/export-fec", requireAuth(), async (req: Request, res: Response) => 
     const filename = `FEC_VetoAI_${dateFrom}_${dateTo}.txt`;
     res.setHeader("Content-Type", "text/plain; charset=utf-8");
     res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
-    res.send(lines.join("\r\n"));
+    return res.send(lines.join("\r\n"));
 
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: err.message });
   }
 });
 
@@ -229,7 +229,7 @@ router.get("/journal-caisse", requireAuth(), async (req: Request, res: Response)
 
     const grandTotal = (totaux.rows as any[]).reduce((acc, r) => acc + Number(r.total), 0);
 
-    res.json({
+    return res.json({
       data: {
         date,
         encaissements: journal.rows,
@@ -238,7 +238,7 @@ router.get("/journal-caisse", requireAuth(), async (req: Request, res: Response)
       }
     });
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: err.message });
   }
 });
 
@@ -287,7 +287,7 @@ router.get("/impayes", requireAuth(), async (req: Request, res: Response) => {
       totalImpayes += Number(row.reste_a_payer);
     }
 
-    res.json({
+    return res.json({
       data: {
         impayes: impayes.rows,
         buckets,
@@ -296,7 +296,7 @@ router.get("/impayes", requireAuth(), async (req: Request, res: Response) => {
       }
     });
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: err.message });
   }
 });
 
@@ -319,15 +319,15 @@ router.post("/relances", requireAuth(), async (req: Request, res: Response) => {
     `);
     if (!check.rows.length) return res.status(404).json({ error: "Facture non trouvÃ©e" });
 
-    const [row] = await db.execute(sql`
+    const { rows: [row] } = await db.execute(sql`
       INSERT INTO relances (clinic_id, invoice_id, sent_by, channel, recipient_email, recipient_name, message, status)
       VALUES (${clinicId}, ${invoiceId}, ${userId}, ${channel || 'email'}, ${recipientEmail || null}, ${recipientName || null}, ${message || null}, 'sent')
       RETURNING *
     `);
 
-    res.status(201).json({ data: row });
+    return res.status(201).json({ data: row });
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: err.message });
   }
 });
 

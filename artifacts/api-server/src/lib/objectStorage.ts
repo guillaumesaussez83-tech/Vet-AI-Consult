@@ -271,7 +271,7 @@ async function signObjectURLViaReplitSidecar(args: {
         `Ensure you're running on Replit or switch OBJECT_STORAGE_PROVIDER=gcs.`,
     );
   }
-  const { signed_url: signedURL } = await response.json();
+  const { signed_url: signedURL } = await response.json() as { signed_url: string };
   return signedURL;
 }
 

@@ -2,7 +2,7 @@
 // Phase 4 — Architecture multi-cliniques : DIRECTION_GROUPE
 
 import { Router, Request, Response } from "express";
-import { db } from "../../lib/db";
+import { db } from "@workspace/db";
 import {
   clinicsTable,
   clinicGroupsTable,
@@ -27,15 +27,15 @@ import {
 import { asyncHandler } from "../../middleware/errorHandler";
 import { requireClinicId } from "../../middleware/requireClinicId";
 import { z } from "zod";
-import logger from "../../lib/logger";
+import { logger } from "../../lib/logger";
 
 const router = Router();
 
 // ─── Middleware vérification role DIRECTION_GROUPE ──────────────────────────
-async function requireGroupRole(req: Request, res: Response, next: Function) {
+async function requireGroupRole(req: Request, res: Response, next: Function): Promise<void> {
   // Vérifie que l'utilisateur a DIRECTION_GROUPE ou ADMIN sur au moins une clinique
   const userId = req.auth?.userId;
-  if (!userId) return res.status(401).json({ error: "Non authentifié" });
+  if (!userId) { res.status(401).json({ error: "Non authentifié" }); return; }
 
   const [userRole] = await db
     .select()
@@ -50,13 +50,12 @@ async function requireGroupRole(req: Request, res: Response, next: Function) {
     .limit(1);
 
   if (!userRole) {
-    return res
-      .status(403)
-      .json({ error: "Accès réservé à la Direction Groupe" });
+    res.status(403).json({ error: "Accès réservé à la Direction Groupe" });
+      return;
   }
 
   (req as Request & { groupAccess: typeof userRole }).groupAccess = userRole;
-  next();
+  return next();
 }
 
 // ─── GET /api/groupe/cliniques ────────────────────────────────────────────────
@@ -90,7 +89,7 @@ router.get(
       });
     }
 
-    const clinicIds = accessibleClinics.map((r) => r.clinicId);
+    const clinicIds = accessibleClinics.map((r: { clinicId: string }) => r.clinicId);
 
     // Infos cliniques + KPIs agrégés du mois courant
     const now = new Date();
@@ -125,7 +124,6 @@ router.get(
             and(
               eq(facturesTable.clinicId, c.id),
               gte(facturesTable.createdAt, monthStart),
-              isNull(facturesTable.deletedAt)
             )
           ),
         db
@@ -135,7 +133,6 @@ router.get(
             and(
               eq(consultationsTable.clinicId, c.id),
               gte(consultationsTable.createdAt, monthStart),
-              isNull(consultationsTable.deletedAt)
             )
           ),
         db
@@ -144,7 +141,6 @@ router.get(
           .where(
             and(
               eq(patientsTable.clinicId, c.id),
-              isNull(patientsTable.deletedAt)
             )
           ),
       ]);
@@ -173,7 +169,7 @@ router.get(
         )
       );
 
-    res.json({
+    return res.json({
       cliniques: cliniquesWithKpis,
       total,
       page,
@@ -207,7 +203,7 @@ router.get(
         )
       );
 
-    const clinicIds = accessibleClinics.map((r) => r.clinicId);
+    const clinicIds = accessibleClinics.map((r: { clinicId: string }) => r.clinicId);
 
     if (clinicIds.length === 0) {
       return res.json({ message: "Aucune clinique accessible", kpis: null });
@@ -229,7 +225,6 @@ router.get(
           and(
             inArray(facturesTable.clinicId, clinicIds),
             gte(facturesTable.createdAt, monthStart),
-            isNull(facturesTable.deletedAt)
           )
         ),
       db
@@ -240,7 +235,6 @@ router.get(
             inArray(facturesTable.clinicId, clinicIds),
             gte(facturesTable.createdAt, prevMonthStart),
             sql`created_at <= ${prevMonthEnd}`,
-            isNull(facturesTable.deletedAt)
           )
         ),
       db
@@ -250,7 +244,6 @@ router.get(
           and(
             inArray(facturesTable.clinicId, clinicIds),
             gte(facturesTable.createdAt, yearStart),
-            isNull(facturesTable.deletedAt)
           )
         ),
       db
@@ -260,7 +253,6 @@ router.get(
           and(
             inArray(consultationsTable.clinicId, clinicIds),
             gte(consultationsTable.createdAt, monthStart),
-            isNull(consultationsTable.deletedAt)
           )
         ),
       db
@@ -269,7 +261,6 @@ router.get(
         .where(
           and(
             inArray(patientsTable.clinicId, clinicIds),
-            isNull(patientsTable.deletedAt)
           )
         ),
       db
@@ -282,7 +273,6 @@ router.get(
           and(
             inArray(facturesTable.clinicId, clinicIds),
             ne(facturesTable.statut, "payee"),
-            isNull(facturesTable.deletedAt)
           )
         ),
     ]);
@@ -308,7 +298,7 @@ router.get(
       ORDER BY 1, 2
     `).catch(() => ({ rows: [] }));
 
-    res.json({
+    return res.json({
       nbCliniques: clinicIds.length,
       kpis: {
         caTtcMois: caMoisV,
@@ -345,7 +335,7 @@ router.get(
         )
       );
 
-    const clinicIds = accessibleClinics.map((r) => r.clinicId);
+    const clinicIds = accessibleClinics.map((r: { clinicId: string }) => r.clinicId);
     if (clinicIds.length === 0) return res.json({ comparatif: [] });
 
     const cliniquesInfo = await db
@@ -366,7 +356,6 @@ router.get(
                 and(
                   eq(facturesTable.clinicId, c.id),
                   gte(facturesTable.createdAt, monthStart),
-                  isNull(facturesTable.deletedAt)
                 )
               ),
             db
@@ -376,7 +365,6 @@ router.get(
                 and(
                   eq(consultationsTable.clinicId, c.id),
                   gte(consultationsTable.createdAt, monthStart),
-                  isNull(consultationsTable.deletedAt)
                 )
               ),
             db
@@ -385,7 +373,6 @@ router.get(
               .where(
                 and(
                   eq(patientsTable.clinicId, c.id),
-                  isNull(patientsTable.deletedAt)
                 )
               ),
             db
@@ -395,7 +382,6 @@ router.get(
                 and(
                   eq(facturesTable.clinicId, c.id),
                   ne(facturesTable.statut, "payee"),
-                  isNull(facturesTable.deletedAt)
                 )
               ),
             db
@@ -406,7 +392,6 @@ router.get(
                   eq(consultationsTable.clinicId, c.id),
                   gte(consultationsTable.createdAt, monthStart),
                   sql`synthese_ia IS NOT NULL`,
-                  isNull(consultationsTable.deletedAt)
                 )
               ),
           ]);
@@ -444,8 +429,8 @@ router.get(
       comparatif.reduce((s, c) => s + c.nbConsultations, 0) /
       comparatif.length;
 
-    res.json({
-      comparatif: comparatif.map((c, i) => ({
+    return res.json({
+      comparatif: comparatif.map((c: any, i: number) => ({
         ...c,
         rang: i + 1,
         vsMoyenneCAPct:
@@ -502,7 +487,7 @@ router.post(
       .returning();
 
     logger.info({ clinicId: clinic.id }, "New clinic created");
-    res.status(201).json(clinic);
+    return res.status(201).json(clinic);
   })
 );
 

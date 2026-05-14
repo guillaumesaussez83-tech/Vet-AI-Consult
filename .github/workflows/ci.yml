@@ -106,7 +106,7 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: |
-          for m in vetoai-fixes/migrations/0*.sql; do
+          for m in $(ls migrations/0*.sql | grep -v '\.down\.sql' | sort); do
             echo "Appliquant $m"
             psql -h localhost -U postgres -d vetoai_test -f "$m"
           done

@@ -61,7 +61,7 @@ function KpiCard({ title, value, sub, icon: Icon, trend }: {
 }
 
 export default function StatistiquesPage() {
-  const { data, isLoading } = useQuery({ queryKey: ["statistiques"], queryFn: fetchStats });
+  const { data, isLoading } = useQuery<any>({ queryKey: ["statistiques"], queryFn: fetchStats });
 
   if (isLoading) {
     return (

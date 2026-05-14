@@ -35,9 +35,9 @@ router.get("/", async (req: any, res) => {
       `;
     }
     const rows = await db.execute(query);
-    res.json({ success: true, data: rows.rows });
+    return res.json({ success: true, data: rows.rows });
   } catch (e: any) {
-    res.status(500).json({ success: false, error: e.message });
+    return res.status(500).json({ success: false, error: e.message });
   }
 });
 
@@ -57,9 +57,9 @@ router.post("/", async (req: any, res) => {
         ${sendNow ? now : null}, ${userId || null}, ${now})
       RETURNING id
     `);
-    res.json({ success: true, data: { id: (result.rows[0] as any).id } });
+    return res.json({ success: true, data: { id: (result.rows[0] as any).id } });
   } catch (e: any) {
-    res.status(500).json({ success: false, error: e.message });
+    return res.status(500).json({ success: false, error: e.message });
   }
 });
 
@@ -71,9 +71,9 @@ router.put("/:id/send", async (req: any, res) => {
       UPDATE client_letters SET sent_at = NOW()
       WHERE id = ${req.params.id} AND clinic_id = ${clinicId}
     `);
-    res.json({ success: true });
+    return res.json({ success: true });
   } catch (e: any) {
-    res.status(500).json({ success: false, error: e.message });
+    return res.status(500).json({ success: false, error: e.message });
   }
 });
 
@@ -84,9 +84,9 @@ router.delete("/:id", async (req: any, res) => {
     await db.execute(sql`
       DELETE FROM client_letters WHERE id = ${req.params.id} AND clinic_id = ${clinicId}
     `);
-    res.json({ success: true });
+    return res.json({ success: true });
   } catch (e: any) {
-    res.status(500).json({ success: false, error: e.message });
+    return res.status(500).json({ success: false, error: e.message });
   }
 });
 

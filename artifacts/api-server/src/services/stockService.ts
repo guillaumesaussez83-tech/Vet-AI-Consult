@@ -1,7 +1,7 @@
 import { db } from "@workspace/db";
 import { stockMedicamentsTable, mouvementsStockTable } from "@workspace/db";
 import { eq, and, sql } from "drizzle-orm";
-import { NotFoundError, ValidationError, AppError } from "../middlewares/errorHandler";
+import { createError } from "../middleware/errorHandler";
 import { logger } from "../lib/logger";
 
 export type TypeMouvement =
@@ -35,28 +35,19 @@ export class StockService {
       .limit(1);
 
     if (!stock) {
-      throw new NotFoundError("Médicament");
+      throw createError(404, "Médicament introuvable", "NOT_FOUND");
     }
 
     if (!stock.actif) {
-      throw new ValidationError("Ce médicament n'est plus actif");
+      throw createError(400, "Ce médicament n'est plus actif", "VALIDATION_ERROR");
     }
 
     if (stock.quantiteStock < quantiteRequise) {
-      throw new AppError(
-        409,
-        `Stock insuffisant : ${stock.quantiteStock} disponible, ${quantiteRequise} requis`,
-        "STOCK_INSUFFISANT",
-        { stockActuel: stock.quantiteStock, quantiteRequise },
-      );
+      throw createError(409, `Stock insuffisant : ${stock.quantiteStock} disponible, ${quantiteRequise} requis`, "STOCK_INSUFFISANT");
     }
 
     if (stock.estStupefiant) {
-      throw new AppError(
-        400,
-        "Ce médicament est un stupéfiant — utiliser l'endpoint dédié /api/stock/stupefiants",
-        "STUPEFIANT_REQUIRED",
-      );
+      throw createError(400, "Ce médicament est un stupéfiant — utiliser l'endpoint dédié /api/stock/stupefiants", "STUPEFIANT_REQUIRED");
     }
 
     return stock;
@@ -132,7 +123,7 @@ export class StockService {
       ))
       .limit(1);
 
-    if (!stock) throw new NotFoundError("Médicament");
+    if (!stock) throw createError(404, "Médicament introuvable", "NOT_FOUND");
     return stock;
   }
 }

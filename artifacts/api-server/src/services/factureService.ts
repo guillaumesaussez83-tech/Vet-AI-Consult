@@ -6,7 +6,7 @@ import {
   actesTable,
 } from "@workspace/db";
 import { eq, sql } from "drizzle-orm";
-import { NotFoundError, ValidationError } from "../middlewares/errorHandler";
+import { createError } from "../middleware/errorHandler";
 import { logger } from "../lib/logger";
 
 export interface MontantsFacture {
@@ -67,7 +67,7 @@ export class FactureService {
     return `FAC-${year}-${String(count).padStart(5, "0")}`;
   }
 
-  static async verifierExistence(  static async verifierExistence(
+  static async verifierExistence(
     factureId: number,
   ): Promise<typeof facturesTable.$inferSelect> {
     const [facture] = await db
@@ -77,7 +77,7 @@ export class FactureService {
       .limit(1);
 
     if (!facture) {
-      throw new NotFoundError("Facture");
+      throw createError(404, "Facture introuvable", "NOT_FOUND");
     }
 
     return facture;
@@ -91,7 +91,7 @@ export class FactureService {
     const facture = await this.verifierExistence(factureId);
 
     if (facture.statut === "payee") {
-      throw new ValidationError("Cette facture est déjà payée");
+      throw createError(400, "Cette facture est déjà payée", "VALIDATION_ERROR");
     }
 
     const montants = await this.recalculerDepuisActes(facture.consultationId);
@@ -100,12 +100,10 @@ export class FactureService {
 
     if (modePaiement === "especes") {
       if (!montantEspecesRecu) {
-        throw new ValidationError("Montant reçu en espèces requis");
+        throw createError(400, "Montant reçu en espèces requis", "VALIDATION_ERROR");
       }
       if (montantEspecesRecu < montants.montantTTC) {
-        throw new ValidationError(
-          `Montant insuffisant : ${montants.montantTTC.toFixed(2)} € requis`,
-        );
+        throw createError(400, `Montant insuffisant : ${montants.montantTTC.toFixed(2)} € requis`, "VALIDATION_ERROR");
       }
       renduMonnaie =
         Math.round((montantEspecesRecu - montants.montantTTC) * 100) / 100;
@@ -143,7 +141,7 @@ export class FactureService {
       .limit(1);
 
     if (!consultation) {
-      throw new NotFoundError("Consultation liée à la facture");
+      throw createError(404, "Consultation liée à la facture introuvable", "NOT_FOUND");
     }
 
     return { facture, consultation };

@@ -31,7 +31,7 @@ import { CreateConsultationSchema } from "../../schemas";
 const router = Router();
 
 async function getConsultationWithDetails(id: number, clinicId: string) {
-  const [c] = await db
+  const [c] = (await (db as any)
     .select({
       id: consultationsTable.id,
       patientId: consultationsTable.patientId,
@@ -77,7 +77,7 @@ async function getConsultationWithDetails(id: number, clinicId: string) {
     .from(consultationsTable)
     .leftJoin(patientsTable, eq(consultationsTable.patientId, patientsTable.id))
     .leftJoin(ownersTable, eq(patientsTable.ownerId, ownersTable.id))
-    .where(and(eq(consultationsTable.clinicId, clinicId), eq(consultationsTable.id, id)));
+    .where(and(eq(consultationsTable.clinicId, clinicId), eq(consultationsTable.id, id)))) as any[];
 
   if (!c) return null;
 
@@ -89,7 +89,7 @@ async function getConsultationWithDetails(id: number, clinicId: string) {
         consultationId: actesConsultationsTable.consultationId,
         quantite: actesConsultationsTable.quantite,
         prixUnitaire: actesConsultationsTable.prixUnitaire,
-        tvaRate: actesConsultationsTable.tvaRate,
+        tvaRate: (actesConsultationsTable as any).tvaRate,
         description: actesConsultationsTable.description,
         acte: {
           id: actesTable.id,
@@ -147,7 +147,7 @@ router.get("/", async (req, res) => {
   const pageSize = Number.isNaN(rawLimit) || rawLimit < 1 || rawLimit > 200 ? 50 : rawLimit;
   const pageOffset = (pageNum - 1) * pageSize;
 
-    const cidEq = eq(consultationsTable.clinicId, req.clinicId);
+    const cidEq = eq(consultationsTable.clinicId, req.clinicId!);
     let consultations;
     if (statut && date) {
       consultations = await db.select().from(consultationsTable)
@@ -194,7 +194,7 @@ router.get("/", async (req, res) => {
           .leftJoin(ownersTable, eq(patientsTable.ownerId, ownersTable.id))
           .where(
             and(
-              eq(patientsTable.clinicId, req.clinicId),
+              eq(patientsTable.clinicId, req.clinicId!),
               inArray(patientsTable.id, patientIds as Array<number>),
             ),
           )
@@ -237,12 +237,12 @@ router.post("/", validate(CreateConsultationSchema), async (req, res) => {
     const [pat] = await db
       .select({ id: patientsTable.id })
       .from(patientsTable)
-      .where(and(eq(patientsTable.clinicId, req.clinicId), eq(patientsTable.id, body.data.patientId)));
+      .where(and(eq(patientsTable.clinicId, req.clinicId!), eq(patientsTable.id, body.data.patientId)));
     if (!pat) return res.status(400).json(fail("PATIENT_NOT_FOUND", "Patient introuvable"));
 
     const [consultation] = await db
       .insert(consultationsTable)
-      .values({ ...body.data, clinicId: req.clinicId })
+      .values({ ...body.data, clinicId: req.clinicId! })
       .returning();
 
     return res
@@ -259,7 +259,7 @@ router.get("/:id", async (req, res) => {
     const params = GetConsultationParams.safeParse({ id: Number(req.params.id) });
     if (!params.success) return res.status(400).json(fail("INVALID_ID", "ID invalide"));
 
-    const consultation = await getConsultationWithDetails(params.data.id, req.clinicId);
+    const consultation = await getConsultationWithDetails(params.data.id, req.clinicId!);
     if (!consultation) return res.status(404).json(fail("NOT_FOUND", "Consultation non trouvÃÂÃÂÃÂÃÂ©e"));
 
     return res.json(consultation);
@@ -289,7 +289,7 @@ router.patch("/:id", async (req, res) => {
     const [exists] = await db
       .select({ id: consultationsTable.id })
       .from(consultationsTable)
-      .where(and(eq(consultationsTable.clinicId, req.clinicId), eq(consultationsTable.id, params.data.id)));
+      .where(and(eq(consultationsTable.clinicId, req.clinicId!), eq(consultationsTable.id, params.data.id)));
     if (!exists) return res.status(404).json(fail("NOT_FOUND", "Consultation non trouvÃÂÃÂÃÂÃÂ©e"));
 
     await db.transaction(async (tx) => {
@@ -299,7 +299,7 @@ router.patch("/:id", async (req, res) => {
           .set(consultationData)
           .where(
             and(
-              eq(consultationsTable.clinicId, req.clinicId),
+              eq(consultationsTable.clinicId, req.clinicId!),
               eq(consultationsTable.id, params.data.id),
             ),
           );
@@ -310,7 +310,7 @@ router.patch("/:id", async (req, res) => {
           .delete(actesConsultationsTable)
           .where(
             and(
-              eq(actesConsultationsTable.clinicId, req.clinicId),
+              eq(actesConsultationsTable.clinicId, req.clinicId!),
               eq(actesConsultationsTable.consultationId, params.data.id),
             ),
           );
@@ -321,16 +321,16 @@ router.patch("/:id", async (req, res) => {
               consultationId: params.data.id,
               quantite: a.quantite,
               prixUnitaire: a.prixUnitaire,
-              tvaRate: a.tvaRate ?? TVA_DEFAULT_RATE,
+              tvaRate: (a as any).tvaRate ?? TVA_DEFAULT_RATE,
               description: a.description ?? null,
-              clinicId: req.clinicId,
+              clinicId: req.clinicId!,
             })),
           );
         }
       }
     });
 
-    const consultation = await getConsultationWithDetails(params.data.id, req.clinicId);
+    const consultation = await getConsultationWithDetails(params.data.id, req.clinicId!);
     if (!consultation) return res.status(404).json(fail("NOT_FOUND", "Consultation non trouvÃÂÃÂÃÂÃÂ©e"));
     return res.json(consultation);
   } catch (err) {
@@ -354,7 +354,7 @@ router.post("/:id/actes", async (req, res) => {
     const [exists] = await db
       .select({ id: consultationsTable.id })
       .from(consultationsTable)
-      .where(and(eq(consultationsTable.clinicId, req.clinicId), eq(consultationsTable.id, id)));
+      .where(and(eq(consultationsTable.clinicId, req.clinicId!), eq(consultationsTable.id, id)));
     if (!exists) return res.status(404).json(fail("NOT_FOUND", "Consultation non trouvÃÂÃÂÃÂÃÂ©e"));
 
     const [acte] = await db
@@ -366,7 +366,7 @@ router.post("/:id/actes", async (req, res) => {
         prixUnitaire: Number(prixUnitaire),
         tvaRate: tvaRate !== undefined ? Number(tvaRate) : TVA_DEFAULT_RATE,
         description: String(description).trim(),
-        clinicId: req.clinicId,
+        clinicId: req.clinicId!,
       })
       .returning();
 
@@ -382,7 +382,7 @@ router.post("/:id/ordonnance", async (req, res) => {
     const params = GenerateOrdonnanceParams.safeParse({ id: Number(req.params.id) });
     if (!params.success) return res.status(400).json(fail("INVALID_ID", "ID invalide"));
 
-    const consultation = await getConsultationWithDetails(params.data.id, req.clinicId);
+    const consultation = await getConsultationWithDetails(params.data.id, req.clinicId!);
     if (!consultation) return res.status(404).json(fail("NOT_FOUND", "Consultation non trouvÃÂÃÂÃÂÃÂ©e"));
 
     const patient = consultation.patient;
@@ -398,7 +398,7 @@ VÃÂÃÂÃÂÃÂTÃÂÃÂÃÂÃÂRINAIRE : Dr. 
 DIAGNOSTIC : ${consultation.diagnostic ?? consultation.diagnosticIA ?? "ÃÂÃÂÃÂÃÂ prÃÂÃÂÃÂÃÂ©ciser"}
 ANAMNÃÂÃÂÃÂÃÂSE : ${consultation.anamnese ?? ""}
 EXAMEN CLINIQUE : ${consultation.examenClinique ?? ""}
-${actes.length > 0 ? `ACTES RÃÂÃÂÃÂÃÂALISÃÂÃÂÃÂÃÂS : ${actes.map((a) => a.acte?.nom).filter(Boolean).join(", ")}` : ""}
+${actes.length > 0 ? `ACTES RÃÂÃÂÃÂÃÂALISÃÂÃÂÃÂÃÂS : ${actes.map((a: any) => a.acte?.nom).filter(Boolean).join(", ")}` : ""}
 
 GÃÂÃÂÃÂÃÂ©nÃÂÃÂÃÂÃÂ¨re une ordonnance mÃÂÃÂÃÂÃÂ©dicale vÃÂÃÂÃÂÃÂ©tÃÂÃÂÃÂÃÂ©rinaire complÃÂÃÂÃÂÃÂ¨te avec :
 - En-tÃÂÃÂÃÂÃÂªte professionnel
@@ -425,7 +425,7 @@ Format: texte structurÃÂÃÂÃÂÃÂ© lisible, en franÃÂ�
       .set({ ordonnance: content.text })
       .where(
         and(
-          eq(consultationsTable.clinicId, req.clinicId),
+          eq(consultationsTable.clinicId, req.clinicId!),
           eq(consultationsTable.id, params.data.id),
         ),
       );
@@ -451,7 +451,7 @@ router.post("/:id/facture", async (req, res) => {
       .from(consultationsTable)
       .where(
         and(
-          eq(consultationsTable.clinicId, req.clinicId),
+          eq(consultationsTable.clinicId, req.clinicId!),
           eq(consultationsTable.id, params.data.id),
         ),
       );
@@ -462,7 +462,7 @@ router.post("/:id/facture", async (req, res) => {
       .from(actesConsultationsTable)
       .where(
         and(
-          eq(actesConsultationsTable.clinicId, req.clinicId),
+          eq(actesConsultationsTable.clinicId, req.clinicId!),
           eq(actesConsultationsTable.consultationId, params.data.id),
         ),
       );
@@ -492,7 +492,7 @@ router.post("/:id/facture", async (req, res) => {
       .from(facturesTable)
       .where(
         and(
-          eq(facturesTable.clinicId, req.clinicId),
+          eq(facturesTable.clinicId, req.clinicId!),
           eq(facturesTable.consultationId, params.data.id),
         ),
       );
@@ -507,7 +507,7 @@ router.post("/:id/facture", async (req, res) => {
           tvaBreakdown: totals.tvaBreakdown,
         })
         .where(
-          and(eq(facturesTable.clinicId, req.clinicId), eq(facturesTable.id, existingFacture.id)),
+          and(eq(facturesTable.clinicId, req.clinicId!), eq(facturesTable.id, existingFacture.id)),
         )
         .returning();
       return res.json({ ...updated, createdAt: updated.createdAt.toISOString() });
@@ -515,7 +515,7 @@ router.post("/:id/facture", async (req, res) => {
 
     // Transaction atomique : numÃÂÃÂÃÂÃÂ©ro + insert.
     const facture = await db.transaction(async (tx) => {
-      const numero = await nextInvoiceNumber(tx, req.clinicId);
+      const numero = await nextInvoiceNumber(tx as any, req.clinicId!);
       const [inserted] = await tx
         .insert(facturesTable)
         .values({
@@ -527,7 +527,7 @@ router.post("/:id/facture", async (req, res) => {
           tvaBreakdown: totals.tvaBreakdown,
           statut: "en_attente",
           dateEmission: new Date().toISOString().split("T")[0],
-          clinicId: req.clinicId,
+          clinicId: req.clinicId!,
         })
         .returning();
       return inserted;

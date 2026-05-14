@@ -78,7 +78,7 @@ router.get("/", async (req, res) => {
     const patientId = req.query.patientId
       ? Number(req.query.patientId)
       : null;
-    const cidEq = eq(ordonnancesTable.clinicId, req.clinicId);
+    const cidEq = eq(ordonnancesTable.clinicId, req.clinicId!);
     let rows;
     if (consultationId) {
       rows = await db
@@ -122,7 +122,7 @@ router.get("/:id", async (req, res) => {
       .from(ordonnancesTable)
       .where(
         and(
-          eq(ordonnancesTable.clinicId, req.clinicId),
+          eq(ordonnancesTable.clinicId, req.clinicId!),
           eq(ordonnancesTable.id, id),
         ),
       );
@@ -160,7 +160,7 @@ router.post("/", validate(CreateOrdonnanceSchema), async (req, res) => {
       .from(consultationsTable)
       .where(
         and(
-          eq(consultationsTable.clinicId, req.clinicId),
+          eq(consultationsTable.clinicId, req.clinicId!),
           eq(consultationsTable.id, Number(consultationId)),
         ),
       );
@@ -173,7 +173,7 @@ router.post("/", validate(CreateOrdonnanceSchema), async (req, res) => {
       .from(ordonnancesTable)
       .where(
         and(
-          eq(ordonnancesTable.clinicId, req.clinicId),
+          eq(ordonnancesTable.clinicId, req.clinicId!),
           sql`numero_ordonnance LIKE ${`ORD-${year}-%`}`,
         ),
       )
@@ -195,14 +195,14 @@ router.post("/", validate(CreateOrdonnanceSchema), async (req, res) => {
         genereIA: genereIA ?? false,
         instructionsClient: instructionsClient ?? null,
         numeroAmm: numeroAmm ?? null,
-        clinicId: req.clinicId,
+        clinicId: req.clinicId!,
       })
       .returning();
 
     // DÃÂÃÂ©crÃÂÃÂ©menter le stock automatiquement (FEFO) ÃÂ¢ÃÂÃÂ fire and forget
     setImmediate(() =>
       void decrementeStockDepuisOrdonnance(
-        req.clinicId,
+        req.clinicId!,
         Number(consultationId),
         contenu,
         (msg) => req.log.info({ ordonnanceId: row.id }, msg),
@@ -236,7 +236,7 @@ router.patch("/:id", async (req, res) => {
       .set(updateData)
       .where(
         and(
-          eq(ordonnancesTable.clinicId, req.clinicId),
+          eq(ordonnancesTable.clinicId, req.clinicId!),
           eq(ordonnancesTable.id, id),
         ),
       )
@@ -261,7 +261,7 @@ router.delete("/:id", async (req, res) => {
       .delete(ordonnancesTable)
       .where(
         and(
-          eq(ordonnancesTable.clinicId, req.clinicId),
+          eq(ordonnancesTable.clinicId, req.clinicId!),
           eq(ordonnancesTable.id, id),
         ),
       )
@@ -275,7 +275,7 @@ router.delete("/:id", async (req, res) => {
   }
 });
 
-router.post("/ia/generer", validate(z.object({ consultationId: z.number().int().positive() })), async (req, res) => {})
+router.post("/ia/generer", validate(z.object({ consultationId: z.number().int().positive() })), async (req, res) => {
   try {
     const { consultationId } = req.body;
 
@@ -301,19 +301,16 @@ router.post("/ia/generer", validate(z.object({ consultationId: z.number().int().
           poids: patientsTable.poids,
           allergies: patientsTable.allergies,
           antecedents: patientsTable.antecedents,
-          owner: {
-            id: ownersTable.id,
-            nom: ownersTable.nom,
-            prenom: ownersTable.prenom,
-          },
         },
+        ownerNom: ownersTable.nom,
+        ownerPrenom: ownersTable.prenom,
       })
       .from(consultationsTable)
       .leftJoin(patientsTable, eq(consultationsTable.patientId, patientsTable.id))
       .leftJoin(ownersTable, eq(patientsTable.ownerId, ownersTable.id))
       .where(
         and(
-          eq(consultationsTable.clinicId, req.clinicId),
+          eq(consultationsTable.clinicId, req.clinicId!),
           eq(consultationsTable.id, Number(consultationId)),
         ),
       );
@@ -348,9 +345,9 @@ router.post("/ia/generer", validate(z.object({ consultationId: z.number().int().
             (365.25 * 24 * 3600 * 1000),
         )} ans`
       : "âge inconnu";
-    const proprietaire = consultation.patient?.owner
-      ? `${consultation.patient.owner.prenom ?? ""} ${consultation.patient.owner.nom ?? ""}`.trim()
-      : "";
+    const proprietaire = (consultation.ownerPrenom || consultation.ownerNom)
+        ? `${consultation.ownerPrenom ?? ""} ${consultation.ownerNom ?? ""}`.trim()
+        : "";
     const allergies = consultation.patient?.allergies;
     const antecedents = consultation.patient?.antecedents;
     const medicaments =
@@ -403,7 +400,7 @@ RÃÂÃÂ©ponds en JSON strict (sans markdown) :
 
     const response = await anthropic.messages.create({
       model: AI_MODEL,
-      max_tokens: AI_MAX_TOKENS,
+      max_tokens: AI_MAX_TOKENS.long,
       messages: [{ role: "user", content: prompt }],
     });
     const raw =
@@ -425,7 +422,7 @@ RÃÂÃÂ©ponds en JSON strict (sans markdown) :
       .from(ordonnancesTable)
       .where(
         and(
-          eq(ordonnancesTable.clinicId, req.clinicId),
+          eq(ordonnancesTable.clinicId, req.clinicId!),
           sql`numero_ordonnance LIKE ${`ORD-${yearAI}-%`}`,
         ),
       )
@@ -447,14 +444,14 @@ RÃÂÃÂ©ponds en JSON strict (sans markdown) :
         numeroOrdonnance: numeroOrdonnanceAI,
         genereIA: true,
         instructionsClient: parsed.instructionsClient || null,
-        clinicId: req.clinicId,
+        clinicId: req.clinicId!,
       })
       .returning();
 
     // DÃÂÃÂ©crÃÂÃÂ©menter le stock automatiquement (FEFO) ÃÂ¢ÃÂÃÂ fire and forget
     setImmediate(() =>
       void decrementeStockDepuisOrdonnance(
-        req.clinicId,
+        req.clinicId!,
         Number(consultationId),
         parsed.contenu,
         (msg) => req.log.info({ ordonnanceId: ordonnance.id }, msg),

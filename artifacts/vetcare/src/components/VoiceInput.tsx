@@ -14,7 +14,7 @@ export function VoiceInput({ onTranscript, className }: VoiceInputProps) {
     typeof window !== "undefined" &&
       ("SpeechRecognition" in window || "webkitSpeechRecognition" in window)
   );
-  const recRef = useRef<SpeechRecognition | null>(null);
+  const recRef = useRef<any>(null);
 
   if (!supported) return null;
 
@@ -23,13 +23,13 @@ export function VoiceInput({ onTranscript, className }: VoiceInputProps) {
       const SR =
         (window as any).SpeechRecognition ||
         (window as any).webkitSpeechRecognition;
-      recRef.current = new SR() as SpeechRecognition;
+      recRef.current = new SR() as any;
       recRef.current.lang = "fr-FR";
       recRef.current.continuous = true;
       recRef.current.interimResults = false;
-      recRef.current.onresult = (e: SpeechRecognitionEvent) => {
+      recRef.current.onresult = (e: any) => {
         const transcript = Array.from(e.results)
-          .map((r) => r[0].transcript)
+          .map((r: any) => r[0].transcript)
           .join(" ");
         onTranscript(transcript);
       };

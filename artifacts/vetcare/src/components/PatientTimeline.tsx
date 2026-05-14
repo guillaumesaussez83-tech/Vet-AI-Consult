@@ -94,13 +94,13 @@ interface Props {
 export function PatientTimeline({ patientId, consultations }: Props) {
   const { data: vaccinations = [], isLoading: vacLoading } = useQuery<any[]>({
     queryKey: ["vaccinations", patientId],
-    queryFn: () => fetch(`${API_BASE}/vaccinations/patient/${patientId}`).then(__unwrapEnvelope),
+    queryFn: () => fetch(`${API_BASE}/vaccinations/patient/${patientId}`).then(__unwrapEnvelope) as Promise<any[]>,
     enabled: !!patientId,
   });
 
   const { data: ordonnances = [], isLoading: ordLoading } = useQuery<any[]>({
     queryKey: ["ordonnances-patient", patientId],
-    queryFn: () => fetch(`${API_BASE}/ordonnances?patientId=${patientId}`).then(__unwrapEnvelope),
+    queryFn: () => fetch(`${API_BASE}/ordonnances?patientId=${patientId}`).then(__unwrapEnvelope) as Promise<any[]>,
     enabled: !!patientId,
   });
 

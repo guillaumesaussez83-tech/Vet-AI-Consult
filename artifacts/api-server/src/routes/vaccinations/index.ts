@@ -1,6 +1,6 @@
 import { Router, Request, Response } from "express";
 import { requireAuth } from "@clerk/express";
-import { db } from "../../../db";
+import { db } from "@workspace/db";
 import { sql } from "drizzle-orm";
 
 const router = Router();
@@ -32,9 +32,9 @@ router.get("/", requireAuth(), async (req: Request, res: Response) => {
       ${whereExtra}
       ORDER BY v.next_due_date ASC NULLS LAST, v.vaccine_date DESC
     `));
-    res.json({ data: rows.rows });
+    return res.json({ data: rows.rows });
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: err.message });
   }
 });
 
@@ -71,13 +71,13 @@ router.post("/", requireAuth(), async (req: Request, res: Response) => {
       }
     }
 
-    const [row] = await db.execute(sql`
+    const row = (await db.execute(sql`
       INSERT INTO vaccinations (clinic_id, patient_id, owner_id, vaccine_type, vaccine_name, vaccine_date, next_due_date, batch_number, notes, consultation_id, created_by)
       VALUES (${clinicId}, ${Number(patientId)}, ${ownerId ? Number(ownerId) : null},
               ${vaccineType}, ${vaccineName||null}, ${vaccineDate}, ${nextDueDate||null},
               ${batchNumber||null}, ${notes||null}, ${consultationId ? Number(consultationId) : null}, ${userId||null})
       RETURNING *
-    `);
+    `)).rows[0];
 
     // Créer un rappel auto si nextDueDate est renseigné
     if (nextDueDate) {
@@ -103,9 +103,9 @@ router.post("/", requireAuth(), async (req: Request, res: Response) => {
       `).catch(() => {});
     }
 
-    res.status(201).json({ data: row });
+    return res.status(201).json({ data: row });
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: err.message });
   }
 });
 
@@ -131,9 +131,9 @@ router.get("/rappels", requireAuth(), async (req: Request, res: Response) => {
       ORDER BY v.next_due_date ASC
     `);
 
-    res.json({ data: rappels.rows });
+    return res.json({ data: rappels.rows });
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: err.message });
   }
 });
 
@@ -167,9 +167,9 @@ router.post("/rappels/:id/send", requireAuth(), async (req: Request, res: Respon
       `).catch(() => {});
     }
 
-    res.json({ success: true });
+    return res.json({ success: true });
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: err.message });
   }
 });
 
@@ -187,9 +187,9 @@ router.get("/stats", requireAuth(), async (req: Request, res: Response) => {
       LEFT JOIN vaccination_reminders vr ON vr.vaccination_id = v.id
       WHERE v.clinic_id = ${clinicId}
     `);
-    res.json({ data: stats.rows[0] });
+    return res.json({ data: stats.rows[0] });
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: err.message });
   }
 });
 

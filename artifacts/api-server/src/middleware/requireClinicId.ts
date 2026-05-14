@@ -19,14 +19,15 @@ export function requireClinicId(
   req: Request,
   res: Response,
   next: NextFunction
-) {
+): void {
   const auth = getAuth(req);
 
   if (!auth?.userId) {
-    return res.status(401).json({
+    res.status(401).json({
       error: "UNAUTHORIZED",
       message: "Authentication required",
     });
+    return;
   }
 
   const clinicId =
@@ -34,11 +35,12 @@ export function requireClinicId(
     (auth.sessionClaims?.publicMetadata as any)?.clinicId;
 
   if (typeof clinicId !== "string" || clinicId.trim() === "") {
-    return res.status(403).json({
+    res.status(403).json({
       error: "FORBIDDEN",
       message:
         "No clinic associated with this account. Contact your administrator.",
     });
+    return;
   }
 
   // Attach to request for use in route handlers

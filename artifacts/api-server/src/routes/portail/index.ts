@@ -35,7 +35,7 @@ const generateLimiter = rateLimit({
 // GET /:token — ROUTE PUBLIQUE (lecture portail client par le proprietaire)
 router.get("/:token", async (req: Request, res: Response) => {
   try {
-    const { token } = req.params;
+    const token = req.params["token"] as string;
     if (!token || !/^[a-f0-9]{64}$/.test(token)) {
       return res.status(400).json(fail("INVALID_TOKEN_FORMAT", "Token invalide."));
     }
@@ -89,7 +89,7 @@ router.get("/:token", async (req: Request, res: Response) => {
               eq(vaccinationsTable.patientId, patient.id),
             ),
           )
-          .orderBy(desc(vaccinationsTable.dateInjection));
+          .orderBy(desc(vaccinationsTable.vaccineDate));
         return { ...patient, lastConsultation: lastConsultation ?? null, vaccinations };
       }),
     );
@@ -116,14 +116,14 @@ router.post(
   generateLimiter,
   async (req: Request, res: Response) => {
     try {
-      const ownerId = Number.parseInt(req.params.ownerId ?? "", 10);
+      const ownerId = Number.parseInt((req.params.ownerId as string) ?? "", 10);
       if (!Number.isInteger(ownerId) || ownerId <= 0) {
         return res.status(400).json(fail("INVALID_ID", "ID proprietaire invalide."));
       }
       const [owner] = await db
         .select({ id: ownersTable.id })
         .from(ownersTable)
-        .where(and(eq(ownersTable.clinicId, req.clinicId), eq(ownersTable.id, ownerId)));
+        .where(and(eq(ownersTable.clinicId, req.clinicId!), eq(ownersTable.id, ownerId)));
       if (!owner) {
         return res.status(404).json(fail("OWNER_NOT_FOUND", "Proprietaire introuvable."));
       }
@@ -133,7 +133,7 @@ router.post(
         .from(portailTokensTable)
         .where(
           and(
-            eq(portailTokensTable.clinicId, req.clinicId),
+            eq(portailTokensTable.clinicId, req.clinicId!),
             eq(portailTokensTable.ownerId, ownerId),
             gt(portailTokensTable.expiresAt, now),
           ),

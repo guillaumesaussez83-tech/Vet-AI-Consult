@@ -2,7 +2,7 @@
 // Phase 4 — Rapports mensuels PDF
 
 import React, { useState, useEffect, useRef } from "react";
-import { useAuth } from "@clerk/clerk-react";
+import { useAuth } from "@clerk/react";
 
 interface Report {
   id: number;
@@ -293,7 +293,7 @@ export default function ReportsPage() {
                   </td>
                   <td style={{ padding: "12px 16px" }}>
                     <StatusBadge status={r.status} />
-                    {r.pollingId === r.id && <span style={{ marginLeft: 6, fontSize: 11, color: "#888" }}>actualisation…</span>}
+                    {pollingId === r.id && <span style={{ marginLeft: 6, fontSize: 11, color: "#888" }}>actualisation…</span>}
                   </td>
                   <td style={{ padding: "12px 16px", color: "#666", fontSize: 12 }}>
                     {r.generatedAt ? new Date(r.generatedAt).toLocaleDateString("fr-FR") : "—"}

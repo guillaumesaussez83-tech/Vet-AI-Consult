@@ -1,5 +1,5 @@
 import { Router } from "express";
-import requireClinicId from "../middleware/requireClinicId";
+import { requireClinicId } from "../middleware/requireClinicId";
 import { requireAuth } from "@clerk/express";
 import { db } from "@workspace/db";
 import { sql } from "drizzle-orm";
@@ -43,7 +43,7 @@ async function sendTwilioSMS(to: string, body: string): Promise<{ sid?: string; 
 // POST /api/sms/send â envoi manuel
 router.post("/send", async (req: any, res) => {
   try {
-    const clinicId = req.auth?.sessionClaims?.clinicId as string;
+    const clinicId = (req as any).clinicId as string;
     const { phone, message, rdvId, ownerId, type = "CUSTOM" } = req.body;
     if (!phone || !message) return res.status(400).json({ success: false, error: "phone et message requis" });
 
@@ -58,9 +58,9 @@ router.post("/send", async (req: any, res) => {
     `);
 
     if (result.error) return res.status(500).json({ success: false, error: result.error });
-    res.json({ success: true, sid: result.sid });
+    return res.json({ success: true, sid: result.sid });
   } catch (e: any) {
-    res.status(500).json({ success: false, error: e.message });
+    return res.status(500).json({ success: false, error: e.message });
   }
 });
 
@@ -145,7 +145,7 @@ router.post("/send-reminders", async (req: any, res) => {
 // GET /api/sms/log â historique SMS
 router.get("/log", async (req: any, res) => {
   try {
-    const clinicId = req.auth?.sessionClaims?.clinicId as string;
+    const clinicId = (req as any).clinicId as string;
     const rows = await db.execute(sql`
       SELECT * FROM sms_log WHERE clinic_id = ${clinicId} ORDER BY created_at DESC LIMIT 100
     `);

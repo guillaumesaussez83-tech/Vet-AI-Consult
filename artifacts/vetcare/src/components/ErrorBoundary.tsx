@@ -26,7 +26,7 @@ export function ErrorBoundary({ children, boundaryKey }: Props) {
       }}
       onError={(error, info) => {
         // eslint-disable-next-line no-console
-        console.error("[ErrorBoundary]", boundaryKey ?? "root", error, info.componentStack);
+        console.error("[ErrorBoundary]", boundaryKey ?? "root", error, info);
       }}
     >
       {children}
