@@ -2,7 +2,7 @@
 // Phase 4 — Dashboard Analytics IA
 
 import React, { useState, useEffect, useCallback } from "react";
-import {, useLocation} from 'wouter';
+import { useLocation } from 'wouter';
 import { useAuth } from "@clerk/react";
 
 interface KPIs {
