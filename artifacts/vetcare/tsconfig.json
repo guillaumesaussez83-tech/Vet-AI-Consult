@@ -1,7 +1,7 @@
 {
   "extends": "../../tsconfig.base.json",
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "build", "dist", "**/*.test.ts"],
+  "exclude": ["node_modules", "build", "dist", "**/*.test.ts", "src/__tests__/**"],
   "compilerOptions": {
     "noEmit": true,
     "jsx": "preserve",
@@ -9,6 +9,7 @@
     "resolveJsonModule": true,
     "allowImportingTsExtensions": true,
     "moduleResolution": "bundler",
+    "useUnknownInCatchVariables": false,
     "types": ["node", "vite/client"],
     "paths": {
       "@/*": ["./src/*"]
