@@ -381,7 +381,7 @@ export default function PatientDetailPage() {
             </CardHeader>
             {showPorteeForm && (
               <CardContent>
-                <PorteeForm motherPatient={patient} onSuccess={() => setShowPorteeForm(false)} />
+                <PorteeForm motherPatient={patient as any} onSuccess={() => setShowPorteeForm(false)} />
               </CardContent>
             )}
           </Card>
