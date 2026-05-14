@@ -1,7 +1,7 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
-import { ClerkProvider } from "@clerk/clerk-react";
-import App from "./App";
+import { ClerkProvider } from "@clerk/react";
+import { App } from "./App";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import "./index.css";
 
