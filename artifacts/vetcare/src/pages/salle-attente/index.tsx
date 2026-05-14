@@ -114,7 +114,7 @@ export default function SalleAttentePage() {
 
   const { data: rdvs = [], isFetching } = useQuery<RDV[]>({
     queryKey: ["salle-attente"],
-    queryFn: () => fetch(`${API_BASE}/rendez-vous/salle-attente`).then(__unwrapEnvelope),
+    queryFn: () => fetch(`${API_BASE}/rendez-vous/salle-attente`).then(__unwrapEnvelope) as Promise<RDV[]>,
     refetchInterval: 30000,
     staleTime: 10000,
   });
