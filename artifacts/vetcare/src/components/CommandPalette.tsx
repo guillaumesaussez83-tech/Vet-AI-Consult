@@ -48,7 +48,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   const [loading, setLoading] = useState(false);
   const [selected, setSelected] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
-  const timerRef = useRef<ReturnType<typeof setTimeout>>();
+  const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   // Flatten results for keyboard navigation
   const flat: { type: "patient" | "owner" | "consultation"; id: number; label: string; sub: string; href: string }[] = [];
