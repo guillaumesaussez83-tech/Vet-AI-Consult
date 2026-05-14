@@ -15,7 +15,7 @@ interface Props {
 export function ErrorBoundary({ children, boundaryKey }: Props) {
   return (
     <Sentry.ErrorBoundary
-      fallback={(props) => (
+      fallback={(props) => (h
         <ErrorFallback
           error={props.error as Error}
           resetErrorBoundary={props.resetError}
@@ -26,7 +26,7 @@ export function ErrorBoundary({ children, boundaryKey }: Props) {
       }}
       onError={(error, info) => {
         // eslint-disable-next-line no-console
-        console.error("[ErrorBoundary]", boundaryKey ?? "root", error, info.componentStack);
+        console.error("[ErrorBoundary]", boundaryKey ?? "root", error, info);
       }}
     >
       {children}
