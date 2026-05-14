@@ -56,7 +56,7 @@ export default function ConsultationDetailPage() {
   });
   const { data: actesList } = useListActes();
 
-  const { data: factureExistante } = useQuery({
+  const { data: factureExistante } = useQuery<any>({
     queryKey: ["facture-by-consultation", id],
     queryFn: async () => {
       const res = await fetch(`/api/factures/by-consultation/${id}`);
@@ -398,7 +398,7 @@ function EtapeAnamnese({ consultation, onAutoSave }: any) {
   const [anamnese, setAnamnese] = useState(consultation.anamnese ?? "");
   const [motif, setMotif] = useState(consultation.motif ?? "");
   const [saveState, setSaveState] = useState<"idle" | "pending" | "saved">("idle");
-  const timerRef = useRef<ReturnType<typeof setTimeout>>();
+  const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const isFirst = useRef(true);
 
   useEffect(() => {
@@ -444,7 +444,7 @@ function EtapeExamenClinique({ consultation, onAutoSave }: any) {
   const [poids, setPoids] = useState(consultation.poids?.toString() ?? "");
   const [temperature, setTemperature] = useState(consultation.temperature?.toString() ?? "");
   const [saveState, setSaveState] = useState<"idle" | "pending" | "saved">("idle");
-  const timerRef = useRef<ReturnType<typeof setTimeout>>();
+  const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const isFirst = useRef(true);
 
   useEffect(() => {
@@ -498,7 +498,7 @@ function EtapeExamenClinique({ consultation, onAutoSave }: any) {
 function EtapeExamensCompl({ consultation, onAutoSave }: any) {
   const [examens, setExamens] = useState(consultation.examensComplementaires ?? "");
   const [saveState, setSaveState] = useState<"idle" | "pending" | "saved">("idle");
-  const timerRef = useRef<ReturnType<typeof setTimeout>>();
+  const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const isFirst = useRef(true);
 
   useEffect(() => {
@@ -538,7 +538,7 @@ function EtapeExamensCompl({ consultation, onAutoSave }: any) {
 function EtapeDiagnosticIA({ consultation, onAutoSave, onGenerateIA, isGenerating }: any) {
   const [diagnostic, setDiagnostic] = useState(consultation.diagnostic ?? "");
   const [saveState, setSaveState] = useState<"idle" | "pending" | "saved">("idle");
-  const timerRef = useRef<ReturnType<typeof setTimeout>>();
+  const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const isFirst = useRef(true);
 
   useEffect(() => {
@@ -1266,7 +1266,7 @@ function RappelsPostConsultation({ consultationId, patientId }: { consultationId
   const queryClient = useQueryClient();
   const [creating, setCreating] = useState<string | null>(null);
 
-  const { data: rappels = [], isLoading } = useQuery({
+  const { data: rappels = [], isLoading } = useQuery<any>({
     queryKey: ["rappels-consultation", consultationId],
     queryFn: () => fetch(`/api/rappels?consultationId=${consultationId}`).then(__unwrapEnvelope),
     enabled: !!consultationId,
