@@ -74,7 +74,7 @@ export function AnesthesieSection({ consultationId, espece, race, poids, diagnos
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ espece, race, poids: form.poids ?? poids, diagnostic }),
       });
-      const data = await __unwrapResponse(r);
+      const data: any = await __unwrapResponse(r);
       if (data.protocole) {
         setForm(f => ({ ...f, protocoleIA: data.protocole }));
         toast({ title: "Protocole IA genere" });
