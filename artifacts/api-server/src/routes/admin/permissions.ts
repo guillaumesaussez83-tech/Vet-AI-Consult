@@ -68,7 +68,7 @@ router.patch("/:id", async (req: Request, res: Response) => {
 router.delete("/:id", async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    await db.delete(userPermissions).where(eq(userPermissions.id, id));
+    await db.delete(userPermissions).where(eq(userPermissions.id, String(id)));
     return res.json({ success: true });
   } catch (err: any) {
     return res.status(500).json({ error: err.message });
