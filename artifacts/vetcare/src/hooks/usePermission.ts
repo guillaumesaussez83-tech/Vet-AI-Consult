@@ -1,4 +1,4 @@
-import { useAuth } from "@clerk/clerk-react";
+import { useAuth } from "@clerk/react";
 import { useQuery } from "@tanstack/react-query";
 
 const API = import.meta.env.VITE_API_URL || "";
