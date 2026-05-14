@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import { useAuth } from "@clerk/clerk-react";
+import { useParams, useLocation } from "wouter";
+import { useAuth } from "@clerk/react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -243,7 +243,7 @@ function OrdonnanceEditor({
 
 export default function WorkflowPage() {
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
+  const [, navigate] = useLocation();
   const { userId } = useAuth();
 
   const [state, setState] = useState<WorkflowState | null>(null);
@@ -300,7 +300,7 @@ export default function WorkflowPage() {
   // ── Phase handlers ────────────────────────────────────────────────────────────
 
   const handleAnamnese = async () => {
-    if (!anamneseTranscript.trim()) return toast.error("Dictez d'abord l'anamnèse");
+    if (!anamneseTranscript.trim()) { toast.error("Dictez d'abord l'anamnèse"); return; }
     setProcessing(true);
     try {
       const resp = await fetch(`/api/consultations/${id}/workflow/anamnese`, {
