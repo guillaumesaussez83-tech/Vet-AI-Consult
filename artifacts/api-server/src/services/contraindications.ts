@@ -36,7 +36,7 @@ export const CONTRAINDICATIONS: Contraindication[] = [
   { drug_a: "digoxine", drug_b: "furosemide", severity: "MODERE", message: "Digoxine + Furosemide: hypokaliemie augmente toxicite digitale." },
   { drug_a: "enalapril", drug_b: "spironolactone", severity: "MODERE", message: "IECA + Spironolactone: risque hyperkaliemie. Surveiller kaliemie." },
   { drug_a: "phenobarbital", drug_b: "chloramphenicol", severity: "MODERE", message: "Phenobarbital + Chloramphenicol: inhibition metabolism, toxicite barbiturique." },
-  { drug_a: "amiodarone", drug_b: "digoxine"e: toxicite digitale augmentee. Contre-indique." },
+    { drug_a: "amiodarone", drug_b: "digoxine", severity: "CRITIQUE", message: "Amiodarone + Digoxine: toxicite digitale augmentee. Contre-indique." },
   { drug_a: "atropine", drug_b: "metoclopramide", severity: "MODERE", message: "Atropine + Metoclopramide: effets antagonistes sur motilite intestinale." },
   { drug_a: "insuline", drug_b: "corticoide", severity: "MODERE", message: "Insuline + Corticoide: antagonisme glycemique. Adapter doses insuline." },
   { drug_a: "trimethoprime", drug_b: "sulfadiazine", species: "chat", severity: "MODERE", message: "Trimethoprime-Sulfa chez chat: risque keratoconjonctivite seche (KCS)." },
