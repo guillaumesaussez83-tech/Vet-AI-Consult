@@ -1,6 +1,6 @@
 import { Router, Request, Response } from "express";
 import { requireAuth } from "@clerk/express";
-import { db } from "../../../db";
+import { db } from "@workspace/db";
 import { sql } from "drizzle-orm";
 
 const router = Router();
@@ -47,9 +47,9 @@ router.get("/", requireAuth(), async (req: Request, res: Response) => {
       WHERE clinic_id = '${clinicId}' AND active = true
     `));
 
-    res.json({ data: { items: items.rows, stats: stats.rows[0] } });
+    return res.json({ data: { items: items.rows, stats: stats.rows[0] } });
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: err.message });
   }
 });
 
@@ -67,9 +67,9 @@ router.post("/", requireAuth(), async (req: Request, res: Response) => {
               ${Number(tvaRate)||20}, ${supplierId||null}, ${location||null})
       RETURNING *
     `);
-    res.status(201).json({ data: row });
+    return res.status(201).json({ data: row });
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: err.message });
   }
 });
 
@@ -98,9 +98,9 @@ router.put("/:id", requireAuth(), async (req: Request, res: Response) => {
       RETURNING *
     `);
     if (!row) return res.status(404).json({ error: "Article non trouvé" });
-    res.json({ data: row });
+    return res.json({ data: row });
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: err.message });
   }
 });
 
@@ -153,9 +153,9 @@ router.post("/:id/mouvement", requireAuth(), async (req: Request, res: Response)
       `).catch(() => {});
     }
 
-    res.status(201).json({ data: mvt });
+    return res.status(201).json({ data: mvt });
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: err.message });
   }
 });
 
@@ -171,9 +171,9 @@ router.get("/:id/mouvements", requireAuth(), async (req: Request, res: Response)
       ORDER BY created_at DESC
       LIMIT 100
     `);
-    res.json({ data: mvts.rows });
+    return res.json({ data: mvts.rows });
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: err.message });
   }
 });
 
@@ -208,9 +208,9 @@ router.get("/alertes/actives", requireAuth(), async (req: Request, res: Response
         )
       ORDER BY si.current_stock ASC
     `);
-    res.json({ data: alertes.rows });
+    return res.json({ data: alertes.rows });
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: err.message });
   }
 });
 

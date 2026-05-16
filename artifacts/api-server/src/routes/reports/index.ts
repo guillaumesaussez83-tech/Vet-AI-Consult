@@ -415,6 +415,7 @@ router.post(
           .where(eq(groupReportsTable.id, report.id));
       }
     })();
+        return;
   })
 );
 
@@ -452,7 +453,7 @@ router.get(
       .from(groupReportsTable)
       .where(eq(groupReportsTable.clinicId, clinicId));
 
-    res.json({
+    return res.json({
       reports: reports.map((r) => ({
         ...r,
         kpiSummary: r.kpiSummary ? JSON.parse(r.kpiSummary) : null,
@@ -488,7 +489,7 @@ router.get(
 
     if (!report) return res.status(404).json({ error: "Rapport introuvable" });
 
-    res.json({
+    return res.json({
       ...report,
       kpiSummary: report.kpiSummary ? JSON.parse(report.kpiSummary) : null,
       // Ne renvoie pas pdfData dans le listing (trop lourd)
@@ -531,7 +532,7 @@ router.get(
     const pdfBuffer = Buffer.from(report.pdfData, "base64");
     const filename = `VetoAI_Rapport_${report.periodLabel.replace(/\s/g, "_")}_${clinicId}.pdf`;
 
-    res
+    return res
       .set({
         "Content-Type": "application/pdf",
         "Content-Disposition": `attachment; filename="${filename}"`,
@@ -568,7 +569,7 @@ router.get(
       .limit(1);
 
     if (!report) return res.status(404).json({ error: "Rapport introuvable" });
-    res.json(report);
+    return res.json(report);
   })
 );
 

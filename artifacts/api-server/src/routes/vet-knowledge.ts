@@ -39,7 +39,7 @@ router.post("/search", async (req, res, next) => {
 
     return res.json(ok({ results }));
   } catch (err) {
-    next(err);
+    return next(err);
   }
 });
 

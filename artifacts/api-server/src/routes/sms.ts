@@ -1,5 +1,5 @@
 import { Router } from "express";
-import requireClinicId from "../middleware/requireClinicId";
+import { requireClinicId } from "../middleware/requireClinicId";
 import { requireAuth } from "@clerk/express";
 import { db } from "@workspace/db";
 import { sql } from "drizzle-orm";
@@ -58,9 +58,9 @@ router.post("/send", async (req: any, res) => {
     `);
 
     if (result.error) return res.status(500).json({ success: false, error: result.error });
-    res.json({ success: true, sid: result.sid });
+    return res.json({ success: true, sid: result.sid });
   } catch (e: any) {
-    res.status(500).json({ success: false, error: e.message });
+    return res.status(500).json({ success: false, error: e.message });
   }
 });
 
@@ -136,9 +136,9 @@ router.post("/send-reminders", async (req: any, res) => {
       else results.errors.push(_sr.status === 'rejected' ? String(_sr.reason) : `RDV ${_sr.value.rdvId}: ${_sr.value.err}`);
     }
 
-    res.json({ success: true, data: results });
+    return res.json({ success: true, data: results });
   } catch (e: any) {
-    res.status(500).json({ success: false, error: e.message });
+    return res.status(500).json({ success: false, error: e.message });
   }
 });
 
@@ -149,9 +149,9 @@ router.get("/log", async (req: any, res) => {
     const rows = await db.execute(sql`
       SELECT * FROM sms_log WHERE clinic_id = ${clinicId} ORDER BY created_at DESC LIMIT 100
     `);
-    res.json({ success: true, data: rows.rows });
+    return res.json({ success: true, data: rows.rows });
   } catch (e: any) {
-    res.status(500).json({ success: false, error: e.message });
+    return res.status(500).json({ success: false, error: e.message });
   }
 });
 

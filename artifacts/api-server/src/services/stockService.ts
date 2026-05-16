@@ -1,7 +1,7 @@
 import { db } from "@workspace/db";
 import { stockMedicamentsTable, mouvementsStockTable } from "@workspace/db";
 import { eq, and, sql } from "drizzle-orm";
-import { NotFoundError, ValidationError, AppError } from "../middlewares/errorHandler";
+import { NotFoundError, ValidationError, AppError } from "../middleware/errorHandler";
 import { logger } from "../lib/logger";
 
 export type TypeMouvement =

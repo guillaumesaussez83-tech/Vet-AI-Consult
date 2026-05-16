@@ -6,7 +6,7 @@ import {
   actesTable,
 } from "@workspace/db";
 import { eq, sql } from "drizzle-orm";
-import { NotFoundError, ValidationError } from "../middlewares/errorHandler";
+import { NotFoundError, ValidationError } from "../middleware/errorHandler";
 import { logger } from "../lib/logger";
 
 export interface MontantsFacture {
