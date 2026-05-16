@@ -299,4 +299,48 @@ router.post("/confirmer-dictee-ordonnance", async (req, res) => {
   } catch (err) { req.log.error(err); return res.status(500).json({ error: "Erreur lors de la confirmation de l'ordonnance" }); }
 });
 
+// GET /budget — budget IA 30 jours depuis v_ai_budget_clinic_30d
+router.get("/budget", async (req, res) => {
+  try {
+    const clinicId = req.clinicId;
+    if (!clinicId) return res.status(401).json({ error: "Non autorise" });
+
+    const result = await db.execute(
+      drizzleSql`
+        SELECT *
+        FROM v_ai_budget_clinic_30d
+        WHERE clinic_id = ${clinicId}
+        LIMIT 1
+      `
+    );
+
+    const row = result.rows?.[0] ?? null;
+    if (!row) {
+      return res.status(200).json({
+        clinicId,
+        nb_appels: 0,
+        consults_avec_ia: 0,
+        cout_total_usd: 0,
+        cout_moyen_par_consult_usd: 0,
+        latence_moyenne_ms: null,
+        nb_appels_sonnet: 0,
+        nb_appels_mini: 0,
+        alerte_budget: false,
+        seuil_alerte: 0.15,
+        message: "Aucune donnee IA sur les 30 derniers jours",
+      });
+    }
+
+    return res.status(200).json({
+      ...row,
+      seuil_alerte: 0.15,
+      cout_total_usd: Number(row.cout_total_usd ?? 0),
+      cout_moyen_par_consult_usd: Number(row.cout_moyen_par_consult_usd ?? 0),
+    });
+  } catch (err) {
+    req.log.error(err);
+    return res.status(500).json({ error: "Erreur budget IA" });
+  }
+});
+
 export default router;

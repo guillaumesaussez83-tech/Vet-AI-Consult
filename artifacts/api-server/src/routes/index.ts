@@ -27,6 +27,7 @@ import ventesRouter from "./ventes";
 import statistiquesRouter from "./statistiques";
 import vaccinationsRouter from "./vaccinations";
 import fournisseursRouter from "./fournisseurs";
+import facturxRouter from "./facturx";
 
 
 // Routes orphelines branchees -- audit Phase 0
@@ -95,5 +96,6 @@ router.use("/analytics", requireClinicId, analyticsRouter);
 router.use("/groupe", requireClinicId, groupeRouter);
 
 router.use("/reports", requireClinicId, reportsRouter);
+router.use("/facturx", requireClinicId, facturxRouter);
 
 export default router;

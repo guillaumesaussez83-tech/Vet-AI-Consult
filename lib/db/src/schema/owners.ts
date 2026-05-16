@@ -30,6 +30,8 @@ export const ownersTable = pgTable("owners", {
 
   // Localisation
   paysIso2: text("pays_iso2").default("FR"),      // ISO 3166-1 alpha-2 — BT-55
+  codePostal: text("code_postal"),           // BT-53 PostcodeCode acheteur
+  ville: text("ville"),                      // BT-52 CityName acheteur
   // ──────────────────────────────────────────────────────────────────────────
 
   // RGPD

@@ -35,6 +35,10 @@ export const facturesTable = pgTable(
     // ── Montants ─────────────────────────────────────────────────────────────
     montantHT: real("montant_ht").notNull(),             // BT-109
     tva: real("tva").notNull().default(20),
+    facturxXml: text("facturx_xml"),
+    facturxPdfUrl: text("facturx_pdf_url"),
+    facturxGeneratedAt: timestamp("facturx_generated_at", { withTimezone: true }),
+    facturxVersion: text("facturx_version").default("EN16931-BASIC"),
     tvaBreakdown: jsonb("tva_breakdown"),                // Ventilation par taux
     montantTTC: real("montant_ttc").notNull(),           // BT-112
 
