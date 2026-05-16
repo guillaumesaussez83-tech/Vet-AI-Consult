@@ -67,7 +67,7 @@ export class FactureService {
     return `FAC-${year}-${String(count).padStart(5, "0")}`;
   }
 
-    static async verifierExistence()
+    static async verifierExistence(
     factureId: number,
   ): Promise<typeof facturesTable.$inferSelect> {
     const [facture] = await db
