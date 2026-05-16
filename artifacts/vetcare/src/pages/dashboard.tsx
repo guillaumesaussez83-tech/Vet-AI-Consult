@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import { formatDateHeureFR } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 
+import AiBudgetWidget from "@/components/AiBudgetWidget";
+
 interface RappelVaccin {
   id: number;
   nomVaccin: string;
@@ -256,6 +258,9 @@ export default function Dashboard() {
             </Link>
           </CardContent>
         </Card>
+
+        {/* Widget Budget IA — Sprint 3 */}
+        <AiBudgetWidget className="col-span-full mt-4" />
       </div>
     </div>
   );
