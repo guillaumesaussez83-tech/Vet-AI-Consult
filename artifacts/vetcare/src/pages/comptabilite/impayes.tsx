@@ -1,1 +1,307 @@
-aW1wb3J0IHsgdXNlU3RhdGUgfSBmcm9tICJyZWFjdCI7CmltcG9ydCB7IHVzZVF1ZXJ5LCB1c2VNdXRhdGlvbiwgdXNlUXVlcnlDbGllbnQgfSBmcm9tICJAdGFuc3RhY2svcmVhY3QtcXVlcnkiOwppbXBvcnQgeyBDYXJkLCBDYXJkQ29udGVudCwgQ2FyZEhlYWRlciwgQ2FyZFRpdGxlIH0gZnJvbSAiQC9jb21wb25lbnRzL3VpL2NhcmQiOwppbXBvcnQgeyBCdXR0b24gfSBmcm9tICJAL2NvbXBvbmVudHMvdWkvYnV0dG9uIjsKaW1wb3J0IHsgQmFkZ2UgfSBmcm9tICJAL2NvbXBvbmVudHMvdWkvYmFkZ2UiOwppbXBvcnQgeyBUZXh0YXJlYSB9IGZyb20gIkAvY29tcG9uZW50cy91aS90ZXh0YXJlYSI7CmltcG9ydCB7CiAgRGlhbG9nLCBEaWFsb2dDb250ZW50LCBEaWFsb2dIZWFkZXIsIERpYWxvZ1RpdGxlLCBEaWFsb2dGb290ZXIKfSBmcm9tICJAL2NvbXBvbmVudHMvdWkvZGlhbG9nIjsKaW1wb3J0IHsgQWxlcnRDaXJjbGUsIEFycm93TGVmdCwgTWFpbCwgQ2xvY2ssIENoZWNrQ2lyY2xlMiB9IGZyb20gImx1Y2lkZS1yZWFjdCI7CmltcG9ydCB7IExpbmsgfSBmcm9tICJ3b3V0ZXIiOwppbXBvcnQgeyB1c2VUb2FzdCB9IGZyb20gIkAvaG9va3MvdXNlLXRvYXN0IjsKCmNvbnN0IEFQSV9CQVNFID0gaW1wb3J0Lm1ldGEuZW52LkJBU0VfVVJMLnJlcGxhY2UoL1wvJC8sICIiKTsKCmZ1bmN0aW9uIGZtdChuOiBudW1iZXIgfCBzdHJpbmcpIHsKICByZXR1cm4gTnVtYmVyKG4pLnRvTG9jYWxlU3RyaW5nKCJmci1GUiIsIHsgc3R5bGU6ICJjdXJyZW5jeSIsIGN1cnJlbmN5OiAiRVVSIiB9KTsKfQoKY29uc3QgQlVDS0VUX0NPTE9SUzogUmVjb3JkPHN0cmluZywgc3RyaW5nPiA9IHsKICAiMC0zMCI6ICJiZy15ZWxsb3ctMTAwIHRleHQteWVsbG93LTgwMCBib3JkZXIteWVsbG93LTMwMCIsCiAgIjMxLTYwIjogImJnLW9yYW5nZS0xMDAgdGV4dC1vcmFuZ2UtODAwIGJvcmRlci1vcmFuZ2UtMzAwIiwKICAiNjEtOTAiOiAiYmctcmVkLTEwMCB0ZXh0LXJlZC04MDAgYm9yZGVyLXJlZC0zMDAiLAogICI5MCsiOiAgICJiZy1yZWQtMjAwIHRleHQtcmVkLTkwMCBib3JkZXItcmVkLTQwMCBmb250LWJvbGQiLAp9OwoKY29uc3QgQlVDS0VUX0xBQkVMUzogUmVjb3JkPHN0cmluZywgc3RyaW5nPiA9IHsKICAiMC0zMCI6ICI8IDMwIGpvdXJzIiwKICAiMzEtNjAiOiAiMzEg4oCTIDYwIGoiLAogICI2MS05MCI6ICI2MSDigJMgOTAgaiIsCiAgIjkwKyI6ICI+IDkwIGpvdXJzIiwKfTsKCmludGVyZmFjZSBJbXBheWUgewogIGlkOiBudW1iZXI7CiAgaW52b2ljZV9udW1iZXI6IHN0cmluZzsKICBpbnZvaWNlX2RhdGU6IHN0cmluZzsKICBkdWVfZGF0ZTogc3RyaW5nOwogIHRvdGFsX3R0YzogbnVtYmVyOwogIHRvdGFsX3BhaWQ6IG51bWJlcjsKICByZXN0ZV9hX3BheWVyOiBudW1iZXI7CiAgam91cnNfcmV0YXJkOiBudW1iZXI7CiAgYWdpbmdfYnVja2V0OiBzdHJpbmc7CiAgb3duZXJfbmFtZTogc3RyaW5nOwogIG93bmVyX2VtYWlsOiBzdHJpbmc7CiAgb3duZXJfcGhvbmU6IHN0cmluZzsKICBkZXJuaWVyZV9yZWxhbmNlOiBzdHJpbmcgfCBudWxsOwogIG5iX3JlbGFuY2VzOiBudW1iZXI7Cn0KCmV4cG9ydCBkZWZhdWx0IGZ1bmN0aW9uIEltcGF5ZXNQYWdlKCkgewogIGNvbnN0IHsgdG9hc3QgfSA9IHVzZVRvYXN0KCk7CiAgY29uc3QgcWMgPSB1c2VRdWVyeUNsaWVudCgpOwogIGNvbnN0IFtyZWxhbmNlRGlhbG9nLCBzZXRSZWxhbmNlRGlhbG9nXSA9IHVzZVN0YXRlPEltcGF5ZSB8IG51bGw+KG51bGwpOwogIGNvbnN0IFttZXNzYWdlLCBzZXRNZXNzYWdlXSA9IHVzZVN0YXRlKCIiKTsKICBjb25zdCBbZmlsdGVyQnVja2V0LCBzZXRGaWx0ZXJCdWNrZXRdID0gdXNlU3RhdGU8c3RyaW5nIHwgbnVsbD4obnVsbCk7CgogIGNvbnN0IHsgZGF0YSwgaXNMb2FkaW5nIH0gPSB1c2VRdWVyeSh7CiAgICBxdWVyeUtleTogWyJpbXBheWVzIl0sCiAgICBxdWVyeUZuOiBhc3luYyAoKSA9PiB7CiAgICAgIGNvbnN0IHIgPSBhd2FpdCBmZXRjaChgJHtBUElfQkFTRX0vYXBpL2NvbXB0YWJpbGl0ZS9pbXBheWVzYCk7CiAgICAgIGlmICghci5vaykgdGhyb3cgbmV3IEVycm9yKCJFcnJldXIgY2hhcmdlbWVudCBpbXBhecOpcyIpOwogICAgICByZXR1cm4gci5qc29uKCk7CiAgICB9LAogIH0pOwoKICBjb25zdCBpbXBheWVzOiBJbXBheWVbXSA9IGRhdGE/LmRhdGE/LmltcGF5ZXMgPz8gW107CiAgY29uc3QgYnVja2V0cyA9IGRhdGE/LmRhdGE/LmJ1Y2tldHMgPz8ge307CiAgY29uc3QgdG90YWxJbXBheWVzID0gZGF0YT8uZGF0YT8udG90YWxfaW1wYXllcyA/PyAwOwoKICBjb25zdCBmaWx0ZXJlZCA9IGZpbHRlckJ1Y2tldCA/IGltcGF5ZXMuZmlsdGVyKGkgPT4gaS5hZ2luZ19idWNrZXQgPT09IGZpbHRlckJ1Y2tldCkgOiBpbXBheWVzOwoKICBjb25zdCByZWxhbmNlTXV0YXRpb24gPSB1c2VNdXRhdGlvbih7CiAgICBtdXRhdGlvbkZuOiBhc3luYyAoeyBpbnZvaWNlSWQsIGVtYWlsLCBuYW1lLCBtc2cgfTogeyBpbnZvaWNlSWQ6IG51bWJlcjsgZW1haWw6IHN0cmluZzsgbmFtZTogc3RyaW5nOyBtc2c6IHN0cmluZyB9KSA9PiB7CiAgICAgIGNvbnN0IHIgPSBhd2FpdCBmZXRjaChgJHtBUElfQkFTRX0vYXBpL2NvbXB0YWJpbGl0ZS9yZWxhbmNlc2AsIHsKICAgICAgICBtZXRob2Q6ICJQT1NUIiwKICAgICAgICBoZWFkZXJzOiB7ICJDb250ZW50LVR5cGUiOiAiYXBwbGljYXRpb24vanNvbiIgfSwKICAgICAgICBib2R5OiBKU09OLnN0cmluZ2lmeSh7CiAgICAgICAgICBpbnZvaWNlSWQsCiAgICAgICAgICBjaGFubmVsOiAiZW1haWwiLAogICAgICAgICAgcmVjaXBpZW50RW1haWw6IGVtYWlsLAogICAgICAgICAgcmVjaXBpZW50TmFtZTogbmFtZSwKICAgICAgICAgIG1lc3NhZ2U6IG1zZywKICAgICAgICB9KSwKICAgICAgfSk7CiAgICAgIGlmICghci5vaykgdGhyb3cgbmV3IEVycm9yKCJFcnJldXIgcmVsYW5jZSIpOwogICAgICByZXR1cm4gci5qc29uKCk7CiAgICB9LAogICAgb25TdWNjZXNzOiAoKSA9PiB7CiAgICAgIHRvYXN0KHsgdGl0bGU6ICJSZWxhbmNlIGVucmVnaXN0csOpZSIsIGRlc2NyaXB0aW9uOiAiTGEgcmVsYW5jZSBhIMOpdMOpIHRyYWPDqWUuIiB9KTsKICAgICAgcWMuaW52YWxpZGF0ZVF1ZXJpZXMoeyBxdWVyeUtleTogWyJpbXBheWVzIl0gfSk7CiAgICAgIHNldFJlbGFuY2VEaWFsb2cobnVsbCk7CiAgICAgIHNldE1lc3NhZ2UoIiIpOwogICAgfSwKICAgIG9uRXJyb3I6IChlcnI6IGFueSkgPT4gewogICAgICB0b2FzdCh7IHRpdGxlOiAiRXJyZXVyIiwgZGVzY3JpcHRpb246IGVyci5tZXNzYWdlLCB2YXJpYW50OiAiZGVzdHJ1Y3RpdmUiIH0pOwogICAgfSwKICB9KTsKCiAgY29uc3Qgb3BlblJlbGFuY2UgPSAocm93OiBJbXBheWUpID0+IHsKICAgIHNldE1lc3NhZ2UoCiAgICAgIGBCb25qb3VyICR7cm93Lm93bmVyX25hbWV9LFxuXG5Ob3VzIHZvdXMgcmFwcGVsb25zIHF1ZSBsYSBmYWN0dXJlICR7cm93Lmludm9pY2VfbnVtYmVyfSBkJ3VuIG1vbnRhbnQgZGUgJHtmbXQocm93LnJlc3RlX2FfcGF5ZXIpfSBlc3QgZW4gYXR0ZW50ZSBkZSByw6hnbGVtZW50IGRlcHVpcyAke3Jvdy5qb3Vyc19yZXRhcmR9IGpvdXJzLlxuXG5NZXJjaSBkZSBiaWVuIHZvdWxvaXIgcsOpZ3VsYXJpc2VyIGNldHRlIHNpdHVhdGlvbiBkYW5zIGxlcyBwbHVzIGJyZWZzIGTDqWxhaXMuXG5cbkNvcmRpYWxlbWVudCxcbkwnw6lxdWlwZSBWw6l0b0FJYAogICAgKTsKICAgIHNldFJlbGFuY2VEaWFsb2cocm93KTsKICB9OwoKICByZXR1cm4gKAogICAgPGRpdiBjbGFzc05hbWU9InNwYWNlLXktNiBwLTYiPgogICAgICB7LyogSGVhZGVyICovfQogICAgICA8ZGl2IGNsYXNzTmFtZT0iZmxleCBpdGVtcy1jZW50ZXIgZ2FwLTMiPgogICAgICAgIDxMaW5rIGhyZWY9Ii9jb21wdGFiaWxpdGUiPgogICAgICAgICAgPEJ1dHRvbiB2YXJpYW50PSJnaG9zdCIgc2l6ZT0ic20iPgogICAgICAgICAgICA8QXJyb3dMZWZ0IGNsYXNzTmFtZT0iaC00IHctNCBtci0xIiAvPiBSZXRvdXIKICAgICAgICAgIDwvQnV0dG9uPgogICAgICAgIDwvTGluaz4KICAgICAgICA8ZGl2PgogICAgICAgICAgPGgxIGNsYXNzTmFtZT0idGV4dC0yeGwgZm9udC1ib2xkIGZsZXggaXRlbXMtY2VudGVyIGdhcC0yIj4KICAgICAgICAgICAgPEFsZXJ0Q2lyY2xlIGNsYXNzTmFtZT0iaC02IHctNiB0ZXh0LXJlZC01MDAiIC8+CiAgICAgICAgICAgIEltcGF5w6lzCiAgICAgICAgICA8L2gxPgogICAgICAgICAgPHAgY2xhc3NOYW1lPSJ0ZXh0LW11dGVkLWZvcmVncm91bmQgdGV4dC1zbSBtdC0xIj4KICAgICAgICAgICAge2ltcGF5ZXMubGVuZ3RofSBmYWN0dXJle2ltcGF5ZXMubGVuZ3RoID4gMSA/ICJzIiA6ICIifSDigJQgdG90YWwge2ZtdCh0b3RhbEltcGF5ZXMpfQogICAgICAgICAgPC9wPgogICAgICAgIDwvZGl2PgogICAgICA8L2Rpdj4KCiAgICAgIHsvKiBBZ2luZyBidWNrZXRzICovfQogICAgICA8ZGl2IGNsYXNzTmFtZT0iZ3JpZCBncmlkLWNvbHMtMiBtZDpncmlkLWNvbHMtNCBnYXAtMyI+CiAgICAgICAge09iamVjdC5lbnRyaWVzKEJVQ0tFVF9MQUJFTFMpLm1hcCgoW2tleSwgbGFiZWxdKSA9PiAoCiAgICAgICAgICA8YnV0dG9uCiAgICAgICAgICAgIGtleT17a2V5fQogICAgICAgICAgICBvbkNsaWNrPXsoKSA9PiBzZXRGaWx0ZXJCdWNrZXQoZmlsdGVyQnVja2V0ID09PSBrZXkgPyBudWxsIDoga2V5KX0KICAgICAgICAgICAgY2xhc3NOYW1lPXtgYm9yZGVyIHJvdW5kZWQtbGcgcC0zIHRleHQtbGVmdCB0cmFuc2l0aW9uLWFsbCAkewogICAgICAgICAgICAgIGZpbHRlckJ1Y2tldCA9PT0ga2V5ID8gInJpbmctMiByaW5nLWJsdWUtNTAwIiA6ICJob3ZlcjpzaGFkb3ctc20iCiAgICAgICAgICAgIH1gfQogICAgICAgICAgPgogICAgICAgICAgICA8ZGl2IGNsYXNzTmFtZT17YGlubGluZS1mbGV4IHB4LTIgcHktMC41IHJvdW5kZWQgdGV4dC14cyBib3JkZXIgbWItMSAke0JVQ0tFVF9DT0xPUlNba2V5XX1gfT4KICAgICAgICAgICAgICB7bGFiZWx9CiAgICAgICAgICAgIDwvZGl2PgogICAgICAgICAgICA8ZGl2IGNsYXNzTmFtZT0idGV4dC1sZyBmb250LWJvbGQiPntmbXQoYnVja2V0c1trZXldID8/IDApfTwvZGl2PgogICAgICAgICAgICA8ZGl2IGNsYXNzTmFtZT0idGV4dC14cyB0ZXh0LW11dGVkLWZvcmVncm91bmQiPgogICAgICAgICAgICAgIHtpbXBheWVzLmZpbHRlcihpID0+IGkuYWdpbmdfYnVja2V0ID09PSBrZXkpLmxlbmd0aH0gZmFjdHVyZShzKQogICAgICAgICAgICA8L2Rpdj4KICAgICAgICAgIDwvYnV0dG9uPgogICAgICAgICkpfQogICAgICA8L2Rpdj4KCiAgICAgIHtmaWx0ZXJCdWNrZXQgJiYgKAogICAgICAgIDxkaXYgY2xhc3NOYW1lPSJmbGV4IGl0ZW1zLWNlbnRlciBnYXAtMiB0ZXh0LXNtIHRleHQtbXV0ZWQtZm9yZWdyb3VuZCI+CiAgICAgICAgICA8c3Bhbj5GaWx0cmUgOiA8QmFkZ2UgdmFyaWFudD0ib3V0bGluZSI+e0JVQ0tFVF9MQUJFTFNbZmlsdGVyQnVja2V0XX08L0JhZGdlPjwvc3Bhbj4KICAgICAgICAgIDxCdXR0b24gdmFyaWFudD0iZ2hvc3QiIHNpemU9InNtIiBvbkNsaWNrPXsoKSA9PiBzZXRGaWx0ZXJCdWNrZXQobnVsbCl9PlRvdXQgdm9pcjwvQnV0dG9uPgogICAgICAgIDwvZGl2PgogICAgICApfQoKICAgICAgey8qIFRhYmxlICovfQogICAgICA8Q2FyZD4KICAgICAgICA8Q2FyZEhlYWRlciBjbGFzc05hbWU9InBiLTIiPgogICAgICAgICAgPENhcmRUaXRsZSBjbGFzc05hbWU9InRleHQtc20iPgogICAgICAgICAgICB7ZmlsdGVyQnVja2V0ID8gYEltcGF5w6lzICR7QlVDS0VUX0xBQkVMU1tmaWx0ZXJCdWNrZXRdfWAgOiAiVG91cyBsZXMgaW1wYXnDqXMifQogICAgICAgICAgICA8c3BhbiBjbGFzc05hbWU9Im1sLTIgdGV4dC1tdXRlZC1mb3JlZ3JvdW5kIGZvbnQtbm9ybWFsIj4oe2ZpbHRlcmVkLmxlbmd0aH0pPC9zcGFuPgogICAgICAgICAgPC9DYXJkVGl0bGU+CiAgICAgICAgPC9DYXJkSGVhZGVyPgogICAgICAgIDxDYXJkQ29udGVudCBjbGFzc05hbWU9InAtMCI+CiAgICAgICAgICB7aXNMb2FkaW5nID8gKAogICAgICAgICAgICA8ZGl2IGNsYXNzTmFtZT0idGV4dC1jZW50ZXIgcHktMTIgdGV4dC1tdXRlZC1mb3JlZ3JvdW5kIj5DaGFyZ2VtZW504oCmPC9kaXY+CiAgICAgICAgICApIDogZmlsdGVyZWQubGVuZ3RoID09PSAwID8gKAogICAgICAgICAgICA8ZGl2IGNsYXNzTmFtZT0idGV4dC1jZW50ZXIgcHktMTIgZmxleCBmbGV4LWNvbCBpdGVtcy1jZW50ZXIgZ2FwLTIgdGV4dC1tdXRlZC1mb3JlZ3JvdW5kIj4KICAgICAgICAgICAgICA8Q2hlY2tDaXJjbGUyIGNsYXNzTmFtZT0iaC04IHctOCB0ZXh0LWdyZWVuLTQwMCIgLz4KICAgICAgICAgICAgICA8c3Bhbj5BdWN1biBpbXBhecOpe2ZpbHRlckJ1Y2tldCA/IGAgZGFucyBjZXR0ZSB0cmFuY2hlYCA6ICIifSDwn46JPC9zcGFuPgogICAgICAgICAgICA8L2Rpdj4KICAgICAgICAgICkgOiAoCiAgICAgICAgICAgIDxkaXYgY2xhc3NOYW1lPSJvdmVyZmxvdy14LWF1dG8iPgogICAgICAgICAgICAgIDx0YWJsZSBjbGFzc05hbWU9InctZnVsbCB0ZXh0LXNtIj4KICAgICAgICAgICAgICAgIDx0aGVhZCBjbGFzc05hbWU9ImJvcmRlci1iIGJnLW11dGVkLzQwIj4KICAgICAgICAgICAgICAgICAgPHRyPgogICAgICAgICAgICAgICAgICAgIDx0aCBjbGFzc05hbWU9InRleHQtbGVmdCBwLTMgZm9udC1tZWRpdW0iPkZhY3R1cmU8L3RoPgogICAgICAgICAgICAgICAgICAgIDx0aCBjbGFzc05hbWU9InRleHQtbGVmdCBwLTMgZm9udC1tZWRpdW0iPkNsaWVudDwvdGg+CiAgICAgICAgICAgICAgICAgICAgPHRoIGNsYXNzTmFtZT0idGV4dC1sZWZ0IHAtMyBmb250LW1lZGl1bSI+RGF0ZTwvdGg+CiAgICAgICAgICAgICAgICAgICAgPHRoIGNsYXNzTmFtZT0idGV4dC1yaWdodCBwLTMgZm9udC1tZWRpdW0iPlJlc3RlIMOgIHBheWVyPC90aD4KICAgICAgICAgICAgICAgICAgICA8dGggY2xhc3NOYW1lPSJ0ZXh0LWNlbnRlciBwLTMgZm9udC1tZWRpdW0iPkFuY2llbm5ldMOpPC90aD4KICAgICAgICAgICAgICAgICAgICA8dGggY2xhc3NOYW1lPSJ0ZXh0LWNlbnRlciBwLTMgZm9udC1tZWRpdW0iPlJlbGFuY2VzPC90aD4KICAgICAgICAgICAgICAgICAgICA8dGggY2xhc3NOYW1lPSJ0ZXh0LWNlbnRlciBwLTMgZm9udC1tZWRpdW0iPkFjdGlvbnM8L3RoPgogICAgICAgICAgICAgICAgICA8L3RyPgogICAgICAgICAgICAgICAgPC90aGVhZD4KICAgICAgICAgICAgICAgIDx0Ym9keT4KICAgICAgICAgICAgICAgICAge2ZpbHRlcmVkLm1hcCgocm93KSA9PiAoCiAgICAgICAgICAgICAgICAgICAgPHRyIGtleT17cm93LmlkfSBjbGFzc05hbWU9ImJvcmRlci1iIGhvdmVyOmJnLW11dGVkLzIwIHRyYW5zaXRpb24tY29sb3JzIj4KICAgICAgICAgICAgICAgICAgICAgIDx0ZCBjbGFzc05hbWU9InAtMyBmb250LW1vbm8gZm9udC1tZWRpdW0iPntyb3cuaW52b2ljZV9udW1iZXJ9PC90ZD4KICAgICAgICAgICAgICAgICAgICAgIDx0ZCBjbGFzc05hbWU9InAtMyI+CiAgICAgICAgICAgICAgICAgICAgICAgIDxkaXY+e3Jvdy5vd25lcl9uYW1lfTwvZGl2PgogICAgICAgICAgICAgICAgICAgICAgICB7cm93Lm93bmVyX2VtYWlsICYmICgKICAgICAgICAgICAgICAgICAgICAgICAgICA8ZGl2IGNsYXNzTmFtZT0idGV4dC14cyB0ZXh0LW11dGVkLWZvcmVncm91bmQiPntyb3cub3duZXJfZW1haWx9PC9kaXY+CiAgICAgICAgICAgICAgICAgICAgICAgICl9CiAgICAgICAgICAgICAgICAgICAgICA8L3RkPgogICAgICAgICAgICAgICAgICAgICAgPHRkIGNsYXNzTmFtZT0icC0zIHRleHQtbXV0ZWQtZm9yZWdyb3VuZCI+CiAgICAgICAgICAgICAgICAgICAgICAgIHtuZXcgRGF0ZShyb3cuaW52b2ljZV9kYXRlKS50b0xvY2FsZURhdGVTdHJpbmcoImZyLUZSIil9CiAgICAgICAgICAgICAgICAgICAgICA8L3RkPgogICAgICAgICAgICAgICAgICAgICAgPHRkIGNsYXNzTmFtZT0icC0zIHRleHQtcmlnaHQgZm9udC1ib2xkIHRleHQtcmVkLTYwMCI+CiAgICAgICAgICAgICAgICAgICAgICAgIHtmbXQocm93LnJlc3RlX2FfcGF5ZXIpfQogICAgICAgICAgICAgICAgICAgICAgICB7TnVtYmVyKHJvdy50b3RhbF9wYWlkKSA+IDAgJiYgKAogICAgICAgICAgICAgICAgICAgICAgICAgIDxkaXYgY2xhc3NOYW1lPSJ0ZXh0LXhzIHRleHQtbXV0ZWQtZm9yZWdyb3VuZCBmb250LW5vcm1hbCI+CiAgICAgICAgICAgICAgICAgICAgICAgICAgICB7Zm10KHJvdy50b3RhbF9wYWlkKX0gcsOpZ2zDqSAvIHtmbXQocm93LnRvdGFsX3R0Yyl9CiAgICAgICAgICAgICAgICAgICAgICAgICAgPC9kaXY+CiAgICAgICAgICAgICAgICAgICAgICAgICl9CiAgICAgICAgICAgICAgICAgICAgICA8L3RkPgogICAgICAgICAgICAgICAgICAgICAgPHRkIGNsYXNzTmFtZT0icC0zIHRleHQtY2VudGVyIj4KICAgICAgICAgICAgICAgICAgICAgICAgPHNwYW4gY2xhc3NOYW1lPXtgaW5saW5lLWZsZXggcHgtMiBweS0wLjUgcm91bmRlZCB0ZXh0LXhzIGJvcmRlciAke0JVQ0tFVF9DT0xPUlNbcm93LmFnaW5nX2J1Y2tldF19YH0+CiAgICAgICAgICAgICAgICAgICAgICAgICAge3Jvdy5qb3Vyc19yZXRhcmR9agogICAgICAgICAgICAgICAgICAgICAgICA8L3NwYW4+CiAgICAgICAgICAgICAgICAgICAgICA8L3RkPgogICAgICAgICAgICAgICAgICAgICAgPHRkIGNsYXNzTmFtZT0icC0zIHRleHQtY2VudGVyIj4KICAgICAgICAgICAgICAgICAgICAgICAge3Jvdy5uYl9yZWxhbmNlcyA+IDAgPyAoCiAgICAgICAgICAgICAgICAgICAgICAgICAgPGRpdiBjbGFzc05hbWU9ImZsZXggZmxleC1jb2wgaXRlbXMtY2VudGVyIGdhcC0wLjUiPgogICAgICAgICAgICAgICAgICAgICAgICAgICAgPEJhZGdlIHZhcmlhbnQ9InNlY29uZGFyeSIgY2xhc3NOYW1lPSJ0ZXh0LXhzIj57cm93Lm5iX3JlbGFuY2VzfcOXPC9CYWRnZT4KICAgICAgICAgICAgICAgICAgICAgICAgICAgIHtyb3cuZGVybmllcmVfcmVsYW5jZSAmJiAoCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIDxzcGFuIGNsYXNzTmFtZT0idGV4dC14cyB0ZXh0LW11dGVkLWZvcmVncm91bmQiPgogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIHtuZXcgRGF0ZShyb3cuZGVybmllcmVfcmVsYW5jZSkudG9Mb2NhbGVEYXRlU3RyaW5nKCJmci1GUiIpfQogICAgICAgICAgICAgICAgICAgICAgICAgICAgICA8L3NwYW4+CiAgICAgICAgICAgICAgICAgICAgICAgICAgICApfQogICAgICAgICAgICAgICAgICAgICAgICAgIDwvZGl2PgogICAgICAgICAgICAgICAgICAgICAgICApIDogKAogICAgICAgICAgICAgICAgICAgICAgICAgIDxzcGFuIGNsYXNzTmFtZT0idGV4dC14cyB0ZXh0LW11dGVkLWZvcmVncm91bmQiPuKAlDwvc3Bhbj4KICAgICAgICAgICAgICAgICAgICAgICAgKX0KICAgICAgICAgICAgICAgICAgICAgIDwvdGQ+CiAgICAgICAgICAgICAgICAgICAgICA8dGQgY2xhc3NOYW1lPSJwLTMgdGV4dC1jZW50ZXIiPgogICAgICAgICAgICAgICAgICAgICAgICA8QnV0dG9uCiAgICAgICAgICAgICAgICAgICAgICAgICAgc2l6ZT0ic20iCiAgICAgICAgICAgICAgICAgICAgICAgICAgdmFyaWFudD0ib3V0bGluZSIKICAgICAgICAgICAgICAgICAgICAgICAgICBvbkNsaWNrPXsoKSA9PiBvcGVuUmVsYW5jZShyb3cpfQogICAgICAgICAgICAgICAgICAgICAgICAgIGRpc2FibGVkPXshcm93Lm93bmVyX2VtYWlsfQogICAgICAgICAgICAgICAgICAgICAgICAgIHRpdGxlPXshcm93Lm93bmVyX2VtYWlsID8gIkVtYWlsIGNsaWVudCBub24gcmVuc2VpZ27DqSIgOiAiRW52b3llciB1bmUgcmVsYW5jZSJ9CiAgICAgICAgICAgICAgICAgICAgICAgID4KICAgICAgICAgICAgICAgICAgICAgICAgICA8TWFpbCBjbGFzc05hbWU9ImgtMyB3LTMgbXItMSIgLz4KICAgICAgICAgICAgICAgICAgICAgICAgICBSZWxhbmNlcgogICAgICAgICAgICAgICAgICAgICAgICA8L0J1dHRvbj4KICAgICAgICAgICAgICAgICAgICAgIDwvdGQ+CiAgICAgICAgICAgICAgICAgICAgPC90cj4KICAgICAgICAgICAgICAgICAgKSl9CiAgICAgICAgICAgICAgICA8L3Rib2R5PgogICAgICAgICAgICAgIDwvdGFibGU+CiAgICAgICAgICAgIDwvZGl2PgogICAgICAgICAgKX0KICAgICAgICA8L0NhcmRDb250ZW50PgogICAgICA8L0NhcmQ+CgogICAgICB7LyogUmVsYW5jZSBkaWFsb2cgKi99CiAgICAgIDxEaWFsb2cgb3Blbj17ISFyZWxhbmNlRGlhbG9nfSBvbk9wZW5DaGFuZ2U9eyhvKSA9PiB7IGlmICghbykgc2V0UmVsYW5jZURpYWxvZyhudWxsKTsgfX0+CiAgICAgICAgPERpYWxvZ0NvbnRlbnQgY2xhc3NOYW1lPSJtYXgtdy1sZyI+CiAgICAgICAgICA8RGlhbG9nSGVhZGVyPgogICAgICAgICAgICA8RGlhbG9nVGl0bGUgY2xhc3NOYW1lPSJmbGV4IGl0ZW1zLWNlbnRlciBnYXAtMiI+CiAgICAgICAgICAgICAgPE1haWwgY2xhc3NOYW1lPSJoLTQgdy00IiAvPgogICAgICAgICAgICAgIFJlbGFuY2Ug4oCUIHtyZWxhbmNlRGlhbG9nPy5pbnZvaWNlX251bWJlcn0KICAgICAgICAgICAgPC9EaWFsb2dUaXRsZT4KICAgICAgICAgIDwvRGlhbG9nSGVhZGVyPgogICAgICAgICAge3JlbGFuY2VEaWFsb2cgJiYgKAogICAgICAgICAgICA8ZGl2IGNsYXNzTmFtZT0ic3BhY2UteS00Ij4KICAgICAgICAgICAgICA8ZGl2IGNsYXNzTmFtZT0iYmctbXV0ZWQvNDAgcm91bmRlZC1sZyBwLTMgdGV4dC1zbSBzcGFjZS15LTEiPgogICAgICAgICAgICAgICAgPGRpdj48c3BhbiBjbGFzc05hbWU9InRleHQtbXV0ZWQtZm9yZWdyb3VuZCI+Q2xpZW50IDo8L3NwYW4+IDxzdHJvbmc+e3JlbGFuY2VEaWFsb2cub3duZXJfbmFtZX08L3N0cm9uZz48L2Rpdj4KICAgICAgICAgICAgICAgIDxkaXY+PHNwYW4gY2xhc3NOYW1lPSJ0ZXh0LW11dGVkLWZvcmVncm91bmQiPkVtYWlsIDo8L3NwYW4+IHtyZWxhbmNlRGlhbG9nLm93bmVyX2VtYWlsfTwvZGl2PgogICAgICAgICAgICAgICAgPGRpdj48c3BhbiBjbGFzc05hbWU9InRleHQtbXV0ZWQtZm9yZWdyb3VuZCI+UmVzdGUgw6AgcGF5ZXIgOjwvc3Bhbj4gPHN0cm9uZyBjbGFzc05hbWU9InRleHQtcmVkLTYwMCI+e2ZtdChyZWxhbmNlRGlhbG9nLnJlc3RlX2FfcGF5ZXIpfTwvc3Ryb25nPjwvZGl2PgogICAgICAgICAgICAgICAgPGRpdj48c3BhbiBjbGFzc05hbWU9InRleHQtbXV0ZWQtZm9yZWdyb3VuZCI+UmV0YXJkIDo8L3NwYW4+IHtyZWxhbmNlRGlhbG9nLmpvdXJzX3JldGFyZH0gam91cnM8L2Rpdj4KICAgICAgICAgICAgICA8L2Rpdj4KCiAgICAgICAgICAgICAgPGRpdiBjbGFzc05hbWU9InNwYWNlLXktMSI+CiAgICAgICAgICAgICAgICA8bGFiZWwgY2xhc3NOYW1lPSJ0ZXh0LXNtIGZvbnQtbWVkaXVtIj5NZXNzYWdlIGRlIHJlbGFuY2U8L2xhYmVsPgogICAgICAgICAgICAgICAgPFRleHRhcmVhCiAgICAgICAgICAgICAgICAgIHJvd3M9ezh9CiAgICAgICAgICAgICAgICAgIHZhbHVlPXttZXNzYWdlfQogICAgICAgICAgICAgICAgICBvbkNoYW5nZT17KGUpID0+IHNldE1lc3NhZ2UoZS50YXJnZXQudmFsdWUpfQogICAgICAgICAgICAgICAgICBjbGFzc05hbWU9InRleHQtc20gZm9udC1tb25vIgogICAgICAgICAgICAgICAgLz4KICAgICAgICAgICAgICAgIDxwIGNsYXNzTmFtZT0idGV4dC14cyB0ZXh0LW11dGVkLWZvcmVncm91bmQiPgogICAgICAgICAgICAgICAgICBDZSBtZXNzYWdlIHNlcmEgdHJhY8OpIGRhbnMgbCdoaXN0b3JpcXVlLiBMJ2Vudm9pIGVtYWlsIGRvaXQgw6p0cmUgZmFpdCBtYW51ZWxsZW1lbnQgZGVwdWlzIHZvdHJlIG1lc3NhZ2VyaWUuCiAgICAgICAgICAgICAgICA8L3A+CiAgICAgICAgICAgICAgPC9kaXY+CgogICAgICAgICAgICAgIHtyZWxhbmNlRGlhbG9nLm5iX3JlbGFuY2VzID4gMCAmJiAoCiAgICAgICAgICAgICAgICA8ZGl2IGNsYXNzTmFtZT0iZmxleCBpdGVtcy1jZW50ZXIgZ2FwLTIgdGV4dC14cyB0ZXh0LW11dGVkLWZvcmVncm91bmQgYmcteWVsbG93LTUwIGJvcmRlciBib3JkZXIteWVsbG93LTIwMCByb3VuZGVkIHAtMiI+CiAgICAgICAgICAgICAgICAgIDxDbG9jayBjbGFzc05hbWU9ImgtMyB3LTMgdGV4dC15ZWxsb3ctNjAwIiAvPgogICAgICAgICAgICAgICAgICA8c3Bhbj4KICAgICAgICAgICAgICAgICAgICB7cmVsYW5jZURpYWxvZy5uYl9yZWxhbmNlc30gcmVsYW5jZShzKSBkw6lqw6AgZWZmZWN0dcOpZShzKSwKICAgICAgICAgICAgICAgICAgICBkZXJuacOocmUgbGUge25ldyBEYXRlKHJlbGFuY2VEaWFsb2cuZGVybmllcmVfcmVsYW5jZSEpLnRvTG9jYWxlRGF0ZVN0cmluZygiZnItRlIiKX0KICAgICAgICAgICAgICAgICAgPC9zcGFuPgogICAgICAgICAgICAgICAgPC9kaXY+CiAgICAgICAgICAgICAgKX0KICAgICAgICAgICAgPC9kaXY+CiAgICAgICAgICApfQogICAgICAgICAgPERpYWxvZ0Zvb3Rlcj4KICAgICAgICAgICAgPEJ1dHRvbiB2YXJpYW50PSJvdXRsaW5lIiBvbkNsaWNrPXsoKSA9PiBzZXRSZWxhbmNlRGlhbG9nKG51bGwpfT5Bbm51bGVyPC9CdXR0b24+CiAgICAgICAgICAgIDxCdXR0b24KICAgICAgICAgICAgICBvbkNsaWNrPXsoKSA9PiByZWxhbmNlTXV0YXRpb24ubXV0YXRlKHsKICAgICAgICAgICAgICAgIGludm9pY2VJZDogcmVsYW5jZURpYWxvZyEuaWQsCiAgICAgICAgICAgICAgICBlbWFpbDogcmVsYW5jZURpYWxvZyEub3duZXJfZW1haWwsCiAgICAgICAgICAgICAgICBuYW1lOiByZWxhbmNlRGlhbG9nIS5vd25lcl9uYW1lLAogICAgICAgICAgICAgICAgbXNnOiBtZXNzYWdlLAogICAgICAgICAgICAgIH0pfQogICAgICAgICAgICAgIGRpc2FibGVkPXtyZWxhbmNlTXV0YXRpb24uaXNQZW5kaW5nfQogICAgICAgICAgICA+CiAgICAgICAgICAgICAgPE1haWwgY2xhc3NOYW1lPSJoLTQgdy00IG1yLTIiIC8+CiAgICAgICAgICAgICAge3JlbGFuY2VNdXRhdGlvbi5pc1BlbmRpbmcgPyAiRW5yZWdpc3RyZW1lbnTigKYiIDogIkVucmVnaXN0cmVyIGxhIHJlbGFuY2UifQogICAgICAgICAgICA8L0J1dHRvbj4KICAgICAgICAgIDwvRGlhbG9nRm9vdGVyPgogICAgICAgIDwvRGlhbG9nQ29udGVudD4KICAgICAgPC9EaWFsb2c+CiAgICA8L2Rpdj4KICApOwp9Cg==
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter
+} from "@/components/ui/dialog";
+import { AlertCircle, ArrowLeft, Mail, Clock, CheckCircle2 } from "lucide-react";
+import { Link } from "wouter";
+import { useToast } from "@/hooks/use-toast";
+
+const API_BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
+
+function fmt(n: number | string) {
+  return Number(n).toLocaleString("fr-FR", { style: "currency", currency: "EUR" });
+}
+
+const BUCKET_COLORS: Record<string, string> = {
+  "0-30": "bg-yellow-100 text-yellow-800 border-yellow-300",
+  "31-60": "bg-orange-100 text-orange-800 border-orange-300",
+  "61-90": "bg-red-100 text-red-800 border-red-300",
+  "90+":   "bg-red-200 text-red-900 border-red-400 font-bold",
+};
+
+const BUCKET_LABELS: Record<string, string> = {
+  "0-30": "< 30 jours",
+  "31-60": "31 – 60 j",
+  "61-90": "61 – 90 j",
+  "90+": "> 90 jours",
+};
+
+interface Impaye {
+  id: number;
+  invoice_number: string;
+  invoice_date: string;
+  due_date: string;
+  total_ttc: number;
+  total_paid: number;
+  reste_a_payer: number;
+  jours_retard: number;
+  aging_bucket: string;
+  owner_name: string;
+  owner_email: string;
+  owner_phone: string;
+  derniere_relance: string | null;
+  nb_relances: number;
+}
+
+export default function ImpayesPage() {
+  const { toast } = useToast();
+  const qc = useQueryClient();
+  const [relanceDialog, setRelanceDialog] = useState<Impaye | null>(null);
+  const [message, setMessage] = useState("");
+  const [filterBucket, setFilterBucket] = useState<string | null>(null);
+
+  const { data, isLoading } = useQuery({
+    queryKey: ["impayes"],
+    queryFn: async () => {
+      const r = await fetch(`${API_BASE}/api/comptabilite/impayes`);
+      if (!r.ok) throw new Error("Erreur chargement impayés");
+      return r.json();
+    },
+  });
+
+  const impayes: Impaye[] = data?.data?.impayes ?? [];
+  const buckets = data?.data?.buckets ?? {};
+  const totalImpayes = data?.data?.total_impayes ?? 0;
+
+  const filtered = filterBucket ? impayes.filter(i => i.aging_bucket === filterBucket) : impayes;
+
+  const relanceMutation = useMutation({
+    mutationFn: async ({ invoiceId, email, name, msg }: { invoiceId: number; email: string; name: string; msg: string }) => {
+      const r = await fetch(`${API_BASE}/api/comptabilite/relances`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          invoiceId,
+          channel: "email",
+          recipientEmail: email,
+          recipientName: name,
+          message: msg,
+        }),
+      });
+      if (!r.ok) throw new Error("Erreur relance");
+      return r.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Relance enregistrée", description: "La relance a été tracée." });
+      qc.invalidateQueries({ queryKey: ["impayes"] });
+      setRelanceDialog(null);
+      setMessage("");
+    },
+    onError: (err: any) => {
+      toast({ title: "Erreur", description: err.message, variant: "destructive" });
+    },
+  });
+
+  const openRelance = (row: Impaye) => {
+    setMessage(
+      `Bonjour ${row.owner_name},\n\nNous vous rappelons que la facture ${row.invoice_number} d'un montant de ${fmt(row.reste_a_payer)} est en attente de règlement depuis ${row.jours_retard} jours.\n\nMerci de bien vouloir régulariser cette situation dans les plus brefs délais.\n\nCordialement,\nL'équipe VétoAI`
+    );
+    setRelanceDialog(row);
+  };
+
+  return (
+    <div className="space-y-6 p-6">
+      {/* Header */}
+      <div className="flex items-center gap-3">
+        <Link href="/comptabilite">
+          <Button variant="ghost" size="sm">
+            <ArrowLeft className="h-4 w-4 mr-1" /> Retour
+          </Button>
+        </Link>
+        <div>
+          <h1 className="text-2xl font-bold flex items-center gap-2">
+            <AlertCircle className="h-6 w-6 text-red-500" />
+            Impayés
+          </h1>
+          <p className="text-muted-foreground text-sm mt-1">
+            {impayes.length} facture{impayes.length > 1 ? "s" : ""} — total {fmt(totalImpayes)}
+          </p>
+        </div>
+      </div>
+
+      {/* Aging buckets */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {Object.entries(BUCKET_LABELS).map(([key, label]) => (
+          <button
+            key={key}
+            onClick={() => setFilterBucket(filterBucket === key ? null : key)}
+            className={`border rounded-lg p-3 text-left transition-all ${
+              filterBucket === key ? "ring-2 ring-blue-500" : "hover:shadow-sm"
+            }`}
+          >
+            <div className={`inline-flex px-2 py-0.5 rounded text-xs border mb-1 ${BUCKET_COLORS[key]}`}>
+              {label}
+            </div>
+            <div className="text-lg font-bold">{fmt(buckets[key] ?? 0)}</div>
+            <div className="text-xs text-muted-foreground">
+              {impayes.filter(i => i.aging_bucket === key).length} facture(s)
+            </div>
+          </button>
+        ))}
+      </div>
+
+      {filterBucket && (
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <span>Filtre : <Badge variant="outline">{BUCKET_LABELS[filterBucket]}</Badge></span>
+          <Button variant="ghost" size="sm" onClick={() => setFilterBucket(null)}>Tout voir</Button>
+        </div>
+      )}
+
+      {/* Table */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm">
+            {filterBucket ? `Impayés ${BUCKET_LABELS[filterBucket]}` : "Tous les impayés"}
+            <span className="ml-2 text-muted-foreground font-normal">({filtered.length})</span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          {isLoading ? (
+            <div className="text-center py-12 text-muted-foreground">Chargement…</div>
+          ) : filtered.length === 0 ? (
+            <div className="text-center py-12 flex flex-col items-center gap-2 text-muted-foreground">
+              <CheckCircle2 className="h-8 w-8 text-green-400" />
+              <span>Aucun impayé{filterBucket ? ` dans cette tranche` : ""} 🎉</span>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="border-b bg-muted/40">
+                  <tr>
+                    <th className="text-left p-3 font-medium">Facture</th>
+                    <th className="text-left p-3 font-medium">Client</th>
+                    <th className="text-left p-3 font-medium">Date</th>
+                    <th className="text-right p-3 font-medium">Reste à payer</th>
+                    <th className="text-center p-3 font-medium">Ancienneté</th>
+                    <th className="text-center p-3 font-medium">Relances</th>
+                    <th className="text-center p-3 font-medium">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map((row) => (
+                    <tr key={row.id} className="border-b hover:bg-muted/20 transition-colors">
+                      <td className="p-3 font-mono font-medium">{row.invoice_number}</td>
+                      <td className="p-3">
+                        <div>{row.owner_name}</div>
+                        {row.owner_email && (
+                          <div className="text-xs text-muted-foreground">{row.owner_email}</div>
+                        )}
+                      </td>
+                      <td className="p-3 text-muted-foreground">
+                        {new Date(row.invoice_date).toLocaleDateString("fr-FR")}
+                      </td>
+                      <td className="p-3 text-right font-bold text-red-600">
+                        {fmt(row.reste_a_payer)}
+                        {Number(row.total_paid) > 0 && (
+                          <div className="text-xs text-muted-foreground font-normal">
+                            {fmt(row.total_paid)} réglé / {fmt(row.total_ttc)}
+                          </div>
+                        )}
+                      </td>
+                      <td className="p-3 text-center">
+                        <span className={`inline-flex px-2 py-0.5 rounded text-xs border ${BUCKET_COLORS[row.aging_bucket]}`}>
+                          {row.jours_retard}j
+                        </span>
+                      </td>
+                      <td className="p-3 text-center">
+                        {row.nb_relances > 0 ? (
+                          <div className="flex flex-col items-center gap-0.5">
+                            <Badge variant="secondary" className="text-xs">{row.nb_relances}×</Badge>
+                            {row.derniere_relance && (
+                              <span className="text-xs text-muted-foreground">
+                                {new Date(row.derniere_relance).toLocaleDateString("fr-FR")}
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        )}
+                      </td>
+                      <td className="p-3 text-center">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => openRelance(row)}
+                          disabled={!row.owner_email}
+                          title={!row.owner_email ? "Email client non renseigné" : "Envoyer une relance"}
+                        >
+                          <Mail className="h-3 w-3 mr-1" />
+                          Relancer
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Relance dialog */}
+      <Dialog open={!!relanceDialog} onOpenChange={(o) => { if (!o) setRelanceDialog(null); }}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Mail className="h-4 w-4" />
+              Relance — {relanceDialog?.invoice_number}
+            </DialogTitle>
+          </DialogHeader>
+          {relanceDialog && (
+            <div className="space-y-4">
+              <div className="bg-muted/40 rounded-lg p-3 text-sm space-y-1">
+                <div><span className="text-muted-foreground">Client :</span> <strong>{relanceDialog.owner_name}</strong></div>
+                <div><span className="text-muted-foreground">Email :</span> {relanceDialog.owner_email}</div>
+                <div><span className="text-muted-foreground">Reste à payer :</span> <strong className="text-red-600">{fmt(relanceDialog.reste_a_payer)}</strong></div>
+                <div><span className="text-muted-foreground">Retard :</span> {relanceDialog.jours_retard} jours</div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-sm font-medium">Message de relance</label>
+                <Textarea
+                  rows={8}
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  className="text-sm font-mono"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Ce message sera tracé dans l'historique. L'envoi email doit être fait manuellement depuis votre messagerie.
+                </p>
+              </div>
+
+              {relanceDialog.nb_relances > 0 && (
+                <div className="flex items-center gap-2 text-xs text-muted-foreground bg-yellow-50 border border-yellow-200 rounded p-2">
+                  <Clock className="h-3 w-3 text-yellow-600" />
+                  <span>
+                    {relanceDialog.nb_relances} relance(s) déjà effectuée(s),
+                    dernière le {new Date(relanceDialog.derniere_relance!).toLocaleDateString("fr-FR")}
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRelanceDialog(null)}>Annuler</Button>
+            <Button
+              onClick={() => relanceMutation.mutate({
+                invoiceId: relanceDialog!.id,
+                email: relanceDialog!.owner_email,
+                name: relanceDialog!.owner_name,
+                msg: message,
+              })}
+              disabled={relanceMutation.isPending}
+            >
+              <Mail className="h-4 w-4 mr-2" />
+              {relanceMutation.isPending ? "Enregistrement…" : "Enregistrer la relance"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
