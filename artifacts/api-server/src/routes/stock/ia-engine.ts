@@ -122,7 +122,7 @@ export async function analyserConsommationTous(clinicId: string): Promise<{
       await db.update(stockMedicamentsTable)
         .set({
           pointCommande: m.pointCommande,
-          quantiteMin: m.quantiteMin,
+          quantiteMinimum: m.quantiteMin,
           quantiteMax: m.quantiteMax,
           quantiteCommandeOptimale: m.eoq,
         })

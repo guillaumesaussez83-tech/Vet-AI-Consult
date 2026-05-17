@@ -60,7 +60,7 @@ router.post("/", requireAuth(), async (req: Request, res: Response) => {
     const { name, reference, category, unit, minStock, unitPriceBuy, unitPriceSell, tvaRate, supplierId, location } = req.body;
     if (!name) return res.status(400).json({ error: "name requis" });
 
-    const [row] = await db.execute(sql`
+    const { rows: [row] } = await db.execute(sql`
       INSERT INTO stock_items (clinic_id, name, reference, category, unit, min_stock, unit_price_buy, unit_price_sell, tva_rate, supplier_id, location)
       VALUES (${clinicId}, ${name}, ${reference||null}, ${category||'MEDICAMENT'}, ${unit||'unité'},
               ${Number(minStock)||0}, ${Number(unitPriceBuy)||0}, ${Number(unitPriceSell)||0},
@@ -80,7 +80,7 @@ router.put("/:id", requireAuth(), async (req: Request, res: Response) => {
     const { id } = req.params;
     const { name, reference, category, unit, minStock, unitPriceBuy, unitPriceSell, tvaRate, supplierId, location, active } = req.body;
 
-    const [row] = await db.execute(sql`
+    const { rows: [row] } = await db.execute(sql`
       UPDATE stock_items SET
         name = COALESCE(${name}, name),
         reference = COALESCE(${reference||null}, reference),
@@ -121,7 +121,7 @@ router.post("/:id/mouvement", requireAuth(), async (req: Request, res: Response)
     const qty = type === 'SORTIE' ? -Math.abs(Number(quantity)) : Math.abs(Number(quantity));
 
     // Enregistrer le mouvement
-    const [mvt] = await db.execute(sql`
+    const { rows: [mvt] } = await db.execute(sql`
       INSERT INTO stock_movements (clinic_id, stock_item_id, type, quantity, unit_price, expiration_date, batch_number, reference, notes, created_by)
       VALUES (${clinicId}, ${Number(id)}, ${type}, ${qty}, ${unitPrice ? Number(unitPrice) : null},
               ${expirationDate||null}, ${batchNumber||null}, ${reference||null}, ${notes||null}, ${userId||null})
