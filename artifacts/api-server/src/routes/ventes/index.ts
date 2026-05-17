@@ -3,7 +3,7 @@ import { db } from "@workspace/db";
 import { ventesTable, venteLignesTable, insertVenteSchema, insertVenteLigneSchema, ownersTable } from "@workspace/db/schema";
 import { eq, and, desc } from "drizzle-orm";
 import { ok, fail } from "../../lib/response";
-import { extractClinic } from "../../middlewares/extractClinic";
+import { extractClinic } from "../../middleware/extractClinic";
 import { generateVenteNumero } from "../../lib/numbering";
 
 const router = Router();

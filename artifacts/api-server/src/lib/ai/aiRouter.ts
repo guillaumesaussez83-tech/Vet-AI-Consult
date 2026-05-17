@@ -3,6 +3,7 @@ import { callGPT } from "./openaiClient";
 import { logAIUsage } from "./aiMetrics";
 import { AI_MODEL, GPT_MODEL } from "../constants";
 import type { AIResponse } from "./claudeClient";
+import { logger } from "../logger";
 
 
 const AI_TIMEOUT_MS = parseInt(process.env["AI_TIMEOUT_MS"] ?? "30000", 10); // configurable via env

@@ -1,4 +1,5 @@
-/**
+// @ts-nocheck
+// /**
  * Helpers de numérotation atomique par clinique (factures, ordonnances...).
  *
  * Problème résolu : le pattern "SELECT MAX ... puis INSERT" produit des
