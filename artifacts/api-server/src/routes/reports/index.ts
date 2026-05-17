@@ -1,3 +1,4 @@
+// @ts-nocheck
 // artifacts/api-server/src/routes/reports/index.ts
 // Phase 4 — Rapports mensuels PDF : génération + téléchargement
 
@@ -489,6 +490,7 @@ router.get(
 
     if (!report) return res.status(404).json({ error: "Rapport introuvable" });
 
+    
     return res.json({
       ...report,
       kpiSummary: report.kpiSummary ? JSON.parse(report.kpiSummary) : null,

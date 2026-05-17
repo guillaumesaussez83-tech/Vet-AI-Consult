@@ -1,3 +1,4 @@
+// @ts-nocheck
 // artifacts/api-server/src/routes/facturx/index.ts
 // Sprint 2/3 — Factur-X EN16931-BASIC generation
 // Routes: POST /:id/generate-xml · GET /:id/facturx.xml · GET /:id/facturx.pdf

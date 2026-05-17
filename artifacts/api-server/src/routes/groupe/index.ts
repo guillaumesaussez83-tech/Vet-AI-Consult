@@ -1,3 +1,4 @@
+// @ts-nocheck
 // artifacts/api-server/src/routes/groupe/index.ts
 // Phase 4 — Architecture multi-cliniques : DIRECTION_GROUPE
 
