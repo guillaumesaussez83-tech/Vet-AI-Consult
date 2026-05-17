@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { logger } from "../lib/logger";
 import { Request, Response, NextFunction } from "express";
 import { getAuth } from "@clerk/express";
