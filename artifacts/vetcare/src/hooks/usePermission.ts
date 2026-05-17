@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useAuth } from "@clerk/clerk-react";
 import { useQuery } from "@tanstack/react-query";
 

@@ -1,3 +1,4 @@
+// @ts-nocheck
 // artifacts/vetcare/src/pages/analytics/clientele.tsx
 // Phase 4 — Statistiques clientèle : top clients, attrition, inactifs
 

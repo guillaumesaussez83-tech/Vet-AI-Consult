@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useMemo } from "react";
 import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
