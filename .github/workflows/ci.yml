@@ -68,7 +68,7 @@ jobs:
         run: pnpm install --no-frozen-lockfile
 
       - name: Run unit tests
-        run: pnpm -w test -- run
+        run: pnpm -r --if-present run test
         env:
           NODE_ENV: test
 
@@ -143,6 +143,7 @@ jobs:
         env:
           VITE_CLERK_PUBLISHABLE_KEY: pk_test_dummy_for_build
           PORT: "3000"
+          BASE_PATH: "/"
         run: pnpm -w build
 
       - name: Upload artifact (frontend dist)
