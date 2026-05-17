@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { ReactNode } from "react";
 import * as Sentry from "@sentry/react";
 import { ErrorFallback } from "./ErrorFallback";

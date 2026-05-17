@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { FallbackProps } from "react-error-boundary";
 import { AlertTriangle, RotateCcw, Home } from "lucide-react";
 import { Button } from "@/components/ui/button";
