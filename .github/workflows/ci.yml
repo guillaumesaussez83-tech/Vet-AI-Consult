@@ -48,8 +48,8 @@ jobs:
       - name: Typecheck (tous packages)
         run: pnpm -w typecheck
 
-      - name: Lint (si configuré)
-        run: pnpm -w lint || echo "lint non configuré — à faire"
+      - name: Lint (si configure)
+        run: pnpm -w lint || echo "lint non configure"
 
   test-unit:
     name: Tests unitaires
@@ -68,7 +68,7 @@ jobs:
         run: pnpm install --no-frozen-lockfile
 
       - name: Run unit tests
-        run: pnpm -w test --run
+        run: pnpm -w test -- run
         env:
           NODE_ENV: test
 
@@ -106,7 +106,7 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: |
-          for m in vetoai-fixes/migrations/0*.sql; do
+          for m in migrations/0*.sql; do
             echo "Appliquant $m"
             psql -h localhost -U postgres -d vetoai_test -f "$m"
           done
@@ -120,7 +120,7 @@ jobs:
           ANTHROPIC_API_KEY: sk-ant-dummy
           CORS_ALLOWED_ORIGINS: http://localhost:5173
           OBJECT_STORAGE_PROVIDER: replit-sidecar
-        run: pnpm --filter @workspace/api-server test --run
+        run: pnpm --filter @workspace/api-server test -- run
 
   build:
     name: Build complet
@@ -142,6 +142,7 @@ jobs:
       - name: Build tous packages
         env:
           VITE_CLERK_PUBLISHABLE_KEY: pk_test_dummy_for_build
+          PORT: "3000"
         run: pnpm -w build
 
       - name: Upload artifact (frontend dist)
@@ -155,7 +156,6 @@ jobs:
     name: pnpm audit
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    # Ne casse pas la CI sur un audit — informatif seulement.
     continue-on-error: true
     steps:
       - uses: actions/checkout@v4
