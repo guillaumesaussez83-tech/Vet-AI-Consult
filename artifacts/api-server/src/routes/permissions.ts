@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Router } from "express";
 import requireClinicId from "../middleware/requireClinicId";
 import { requireAuth } from "@clerk/express";

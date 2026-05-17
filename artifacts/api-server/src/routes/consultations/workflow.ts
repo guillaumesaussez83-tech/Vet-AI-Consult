@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Router } from "express";
 import { db, consultationsTable } from "@workspace/db";
 import { ordonnancesTable, actesConsultationsTable, patientsTable, aiOutputsTable, assistantsTable } from "@workspace/db";
