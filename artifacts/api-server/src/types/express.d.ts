@@ -1,7 +1,10 @@
-export {};
-
-declare module 'express-serve-static-core' {
-  interface Request {
-      clinicId: string;
-        }
-        }
+declare namespace Express {
+    interface Request {
+        clinicId: string;
+            auth?: {
+                  userId?: string;
+                        [key: string]: unknown;
+                            };
+                              }
+                              
+}

@@ -123,7 +123,7 @@ export class StockService {
       ))
       .limit(1);
 
-    if (!stock) throw new NotFoundError("Médicament");
+    if (!stock) throw createError(404, "Médicament", "NOT_FOUND");
     return stock;
   }
 }

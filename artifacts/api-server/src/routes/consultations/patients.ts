@@ -1,7 +1,7 @@
 import { Router, Request, Response } from "express";
 import { requireAuth } from "@clerk/express";
-import { db } from "../../../db";
-import { consultationPatientsTable, patientsTable, ownersTable } from "../../../../lib/db/src/schema";
+import { db } from "@workspace/db";
+import { consultationPatientsTable, patientsTable, ownersTable } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
 
 const router = Router({ mergeParams: true });
