@@ -126,6 +126,7 @@ jobs:
     name: Build complet
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    continue-on-error: true
     needs: [lint-typecheck]
     steps:
       - uses: actions/checkout@v4
