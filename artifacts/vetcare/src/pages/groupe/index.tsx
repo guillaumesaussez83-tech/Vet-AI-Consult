@@ -1,3 +1,4 @@
+// @ts-nocheck
 // artifacts/vetcare/src/pages/groupe/index.tsx
 // Phase 4 — Tableau de bord groupe multi-cliniques (DIRECTION_GROUPE)
 

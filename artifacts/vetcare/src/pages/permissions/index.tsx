@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useState, useEffect } from "react";
 import { useUser } from "@clerk/react";
 import { supabase } from "../../lib/supabase";

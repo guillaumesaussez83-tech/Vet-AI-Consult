@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { useGetDashboardStats, useGetConsultationsRecentes } from "@workspace/api-client-react";

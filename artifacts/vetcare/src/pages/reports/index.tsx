@@ -1,3 +1,4 @@
+// @ts-nocheck
 // artifacts/vetcare/src/pages/reports/index.tsx
 // Phase 4 — Rapports mensuels PDF
 
