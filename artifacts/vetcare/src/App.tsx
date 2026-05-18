@@ -33,6 +33,10 @@ import VaccinationsPage from "./pages/vaccinations";
 import FournisseursPage from "./pages/fournisseurs";
 
 
+// Auth pages
+import SignInPage from "./pages/auth/sign-in";
+import SignUpPage from "./pages/auth/sign-up";
+
 // Pages orphelines branchees -- audit Phase 0
 import ActesPage from "./pages/actes";
 import AdminPage from "./pages/admin";
@@ -59,7 +63,8 @@ function PrivateRoute({ component: Component, ...rest }: any) {
 export default function App() {
   return (
     <Switch>
-      <Route path="/sign-in" component={() => <div>Sign in...</div>} />
+      <Route path="/sign-in" component={SignInPage} />
+        <Route path="/sign-up" component={SignUpPage} />
       <AppLayout>
         <Switch>
           <Route path="/" component={() => <Redirect to="/dashboard" />} />
