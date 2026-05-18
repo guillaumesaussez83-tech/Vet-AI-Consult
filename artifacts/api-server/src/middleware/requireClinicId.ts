@@ -66,3 +66,6 @@ export function getClinicId(req: Request): string {
   }
   return clinicId;
 }
+
+
+export default requireClinicId;
