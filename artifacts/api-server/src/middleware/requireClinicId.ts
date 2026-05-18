@@ -7,13 +7,14 @@ import { getAuth } from "@clerk/express";
  * Extracts clinicId from Clerk session claims and attaches it to req.
  * Returns 401 if unauthenticated, 403 if no clinicId found.
  *
- * Usage:
- *   router.get("/", requireAuth(), requireClinicId, async (req, res) => {
- *     const { clinicId } = req;  // guaranteed non-null here
- *   });
+ * Clerk JWT claim lookup order:
+ *  1. sessionClaims.clinicId            — custom JWT template (top-level claim)
+ *  2. sessionClaims.public_metadata.clinicId  — Clerk standard (snake_case)
+ *  3. sessionClaims.publicMetadata.clinicId   — legacy camelCase (Replit proxy)
+ *  4. sessionClaims.public_metadata.clinic_id — snake_case variant
  *
- * OR apply globally in app.ts:
- *   app.use("/api", requireAuth(), requireClinicId, router);
+ * To set clinicId for a user:
+ *   Clerk Dashboard → Users → select user → Public metadata → { "clinicId": "default" }
  */
 export function requireClinicId(
   req: Request,
@@ -29,9 +30,14 @@ export function requireClinicId(
     });
   }
 
-  const clinicId =
-    (auth.sessionClaims?.clinicId as string) ??
-    (auth.sessionClaims?.publicMetadata as any)?.clinicId;
+  // Support multiple Clerk JWT claim shapes (camelCase + snake_case)
+  const claims = auth.sessionClaims as Record<string, any> | null | undefined;
+  const clinicId: string | undefined =
+    (claims?.clinicId as string | undefined) ||
+    (claims?.["public_metadata"]?.clinicId as string | undefined) ||
+    (claims?.publicMetadata?.clinicId as string | undefined) ||
+    (claims?.["public_metadata"]?.clinic_id as string | undefined) ||
+    undefined;
 
   if (typeof clinicId !== "string" || clinicId.trim() === "") {
     return res.status(403).json({
