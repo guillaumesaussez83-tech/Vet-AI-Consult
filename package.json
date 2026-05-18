@@ -18,5 +18,10 @@
     "typescript": "~5.9.2",
     "prettier": "^3.8.1",
     "@playwright/test": "^1.44.0"
+  },
+  "pnpm": {
+    "auditConfig": {
+      "ignoreCves": ["CVE-2021-23337"]
+    }
   }
 }
