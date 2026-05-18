@@ -3,6 +3,8 @@
 // MODIFIE -- fix imports + ajout routes manquantes (audit Phase 0)
 
 import { Router } from "express";
+import { requireClinicId } from "../middleware/requireClinicId"; // fix: manquait — ReferenceError en prod
+
 import rendezVousRouter from "./rendez-vous";
 import agendaRouter from "./agenda";
 import patientsRouter from "./patients";
@@ -29,7 +31,6 @@ import statistiquesRouter from "./statistiques";
 import vaccinationsRouter from "./vaccinations";
 import fournisseursRouter from "./fournisseurs";
 import facturxRouter from "./facturx";
-
 
 // Routes orphelines branchees -- audit Phase 0
 import actesRouter from "./actes";
@@ -77,7 +78,6 @@ router.use("/statistiques", statistiquesRouter);
 router.use("/vaccinations", vaccinationsRouter);
 router.use("/fournisseurs", fournisseursRouter);
 
-
 // Routes orphelines -- audit Phase 0
 router.use("/actes", actesRouter);
 router.use("/admin", adminRouter);
@@ -92,10 +92,10 @@ router.use("/portail", portailRouter);
 router.use("/search", searchRouter);
 router.use("/vet-knowledge", vetKnowledgeRouter);
 
+// NOTE: requireClinicId deja applique globalement dans app.ts sur /api
+// Les applications inline ci-dessous ajoutent une double protection (ok, idempotent)
 router.use("/analytics", requireClinicId, analyticsRouter);
-
 router.use("/groupe", requireClinicId, groupeRouter);
-
 router.use("/reports", requireClinicId, reportsRouter);
 router.use("/facturx", requireClinicId, facturxRouter);
 
