@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { useState, useEffect, useCallback } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useLocation } from "wouter";
 import { useAuth } from "@clerk/clerk-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -244,7 +244,7 @@ function OrdonnanceEditor({
 
 export default function WorkflowPage() {
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
+  const [, navigate] = useLocation();
   const { userId } = useAuth();
 
   const [state, setState] = useState<WorkflowState | null>(null);
