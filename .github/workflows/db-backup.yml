@@ -21,7 +21,7 @@ jobs:
         with:
           credentials_json: ${{ secrets.GCP_BACKUP_SA_JSON }}
 
-      - uses: google-github-actions/setup-gcloud@v2
+      - uses: google-github-actions/setup-gcloud@v3
 
       - name: Installer Postgres client 15
         run: |
