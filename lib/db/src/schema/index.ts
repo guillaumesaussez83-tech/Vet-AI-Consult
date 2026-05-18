@@ -52,3 +52,5 @@ export * from "./veterinaires";
 export * from "./weight-history";
 export * from "./analytics-snapshots";
 export * from "./group-reports";
+
+export * from "./encaissements";
