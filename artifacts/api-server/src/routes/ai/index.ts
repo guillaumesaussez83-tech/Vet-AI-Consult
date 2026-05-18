@@ -1,5 +1,5 @@
 // @ts-nocheck
-// import { Router } from "express";
+import { Router } from "express";
 import {
   db,
   actesTable,
