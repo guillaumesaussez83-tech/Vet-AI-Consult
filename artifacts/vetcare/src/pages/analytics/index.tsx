@@ -3,7 +3,7 @@
 // Phase 4 — Dashboard Analytics IA
 
 import React, { useState, useEffect, useCallback } from "react";
-import { useNavigate } from "wouter";
+import { useLocation } from "wouter";
 import { useAuth } from "@clerk/clerk-react";
 
 interface KPIs {
@@ -206,7 +206,7 @@ function SimpleBarChart({
 
 export default function AnalyticsDashboard() {
   const { getToken } = useAuth();
-  const [navigate] = useNavigate();
+  const [, navigate] = useLocation();
   const [kpis, setKpis] = useState<KPIs | null>(null);
   const [evolution, setEvolution] = useState<EvolutionPoint[]>([]);
   const [forecast, setForecast] = useState<ForecastPoint[]>([]);
