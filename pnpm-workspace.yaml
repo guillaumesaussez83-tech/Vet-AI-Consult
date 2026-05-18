@@ -18,7 +18,7 @@ catalog:
   '@vitejs/plugin-react': ^5.0.4
   class-variance-authority: ^0.7.1
   clsx: ^2.1.1
-  drizzle-orm: ^0.45.1
+  drizzle-orm: ^0.45.2
   framer-motion: ^12.23.24
   lucide-react: ^0.545.0
   react: 19.1.0
@@ -42,6 +42,14 @@ onlyBuiltDependencies:
   - unrs-resolver
 
 overrides:
+  # Security overrides — force patched versions (2026-05-18)
+  '@clerk/shared': '>=4.8.3'
+  '@clerk/backend': '>=3.2.14'
+  '@clerk/express': '>=2.1.6'
+  '@clerk/react': '>=6.4.3'
+  drizzle-orm: '>=0.45.2'
+  picomatch: '>=2.3.2'
+  path-to-regexp: '>=8.4.0'
   '@esbuild-kit/esm-loader': npm:tsx@^4.21.0
   '@expo/ngrok-bin>@expo/ngrok-bin-darwin-arm64': '-'
   '@expo/ngrok-bin>@expo/ngrok-bin-darwin-x64': '-'
