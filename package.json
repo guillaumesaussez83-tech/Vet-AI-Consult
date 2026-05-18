@@ -20,8 +20,15 @@
     "@playwright/test": "^1.44.0"
   },
   "pnpm": {
+    "overrides": {
+      "picomatch": ">=2.3.2",
+      "path-to-regexp": ">=8.4.0",
+      "fast-xml-builder": ">=1.1.7"
+    },
     "auditConfig": {
-      "ignoreCves": ["CVE-2021-23337"]
+      "ignoreCves": [
+        "CVE-2021-23337"
+      ]
     }
   }
 }
