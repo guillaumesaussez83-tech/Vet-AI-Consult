@@ -23,6 +23,7 @@ import {
   Stethoscope,
 } from "lucide-react";
 import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
+import { apiFetch } from "@/lib/api-fetch";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -278,7 +279,7 @@ export default function WorkflowPage() {
 
   const fetchState = useCallback(async () => {
     try {
-      const resp = await fetch(`${apiBase}-state`, { credentials: "include" });
+      const resp = await apiFetch(`${apiBase}-state`, { credentials: "include" });
       if (!resp.ok) throw new Error("Erreur chargement");
       const data: WorkflowState = await resp.json();
       setState(data);
@@ -304,7 +305,7 @@ export default function WorkflowPage() {
     if (!anamneseTranscript.trim()) return toast.error("Dictez d'abord l'anamnèse");
     setProcessing(true);
     try {
-      const resp = await fetch(`/api/consultations/${id}/workflow/anamnese`, {
+      const resp = await apiFetch(`/api/consultations/${id}/workflow/anamnese`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -324,7 +325,7 @@ export default function WorkflowPage() {
     if (!examenTranscript.trim()) return toast.error("Dictez d'abord l'examen clinique");
     setProcessing(true);
     try {
-      const resp = await fetch(`/api/consultations/${id}/workflow/examen`, {
+      const resp = await apiFetch(`/api/consultations/${id}/workflow/examen`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -343,7 +344,7 @@ export default function WorkflowPage() {
   const handleValiderExamens = async (examensValides: { examen: string; priorite: string }[]) => {
     setProcessing(true);
     try {
-      const resp = await fetch(`/api/consultations/${id}/workflow/valider-examens`, {
+      const resp = await apiFetch(`/api/consultations/${id}/workflow/valider-examens`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -373,7 +374,7 @@ export default function WorkflowPage() {
         ? { ordonnance_modifiee: editedOrdonnance }
         : null;
 
-      const resp = await fetch(`/api/consultations/${id}/workflow/terminer`, {
+      const resp = await apiFetch(`/api/consultations/${id}/workflow/terminer`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
