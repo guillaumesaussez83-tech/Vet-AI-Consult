@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { formatDateHeureFR } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 
+import { apiFetch } from "@/lib/api-fetch";
 import AiBudgetWidget from "@/components/AiBudgetWidget";
 
 interface RappelVaccin {
@@ -28,7 +29,7 @@ function useRappelsVaccins() {
   return useQuery<RappelVaccin[]>({
     queryKey: ["dashboard-rappels-vaccins"],
     queryFn: async () => {
-      const res = await fetch("/api/dashboard/rappels-vaccins");
+      const res = await apiFetch("/api/dashboard/rappels-vaccins");
       if (!res.ok) throw new Error("Erreur chargement rappels");
       return res.json();
     },

@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useParams, Link } from "wouter";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { apiFetch } from "@/lib/api-fetch";
 type Tab = "infos" | "animaux" | "finances" | "courriers" | "rgpd";
 
 const TABS: { id: Tab; label: string }[] = [
@@ -34,7 +35,7 @@ export default function ProprietaireDetailPage() {
   const { data: owner, isLoading } = useQuery({
     queryKey: ["owner", id],
     queryFn: async () => {
-      const r = await fetch(`/api/owners/${id}`);
+      const r = await apiFetch(`/api/owners/${id}`);
       const d = await r.json();
       return d.data;
     },
@@ -44,7 +45,7 @@ export default function ProprietaireDetailPage() {
   const { data: patients = [] } = useQuery({
     queryKey: ["owner-patients", id],
     queryFn: async () => {
-      const r = await fetch(`/api/owners/${id}/patients`);
+      const r = await apiFetch(`/api/owners/${id}/patients`);
       const d = await r.json();
       return d.data || [];
     },
@@ -54,7 +55,7 @@ export default function ProprietaireDetailPage() {
   const { data: factures = [] } = useQuery({
     queryKey: ["owner-factures", id],
     queryFn: async () => {
-      const r = await fetch(`/api/factures?ownerId=${id}`);
+      const r = await apiFetch(`/api/factures?ownerId=${id}`);
       const d = await r.json();
       return d.data || [];
     },
@@ -65,7 +66,7 @@ export default function ProprietaireDetailPage() {
   const { data: courriers = [] } = useQuery({
     queryKey: ["owner-courriers", id],
     queryFn: async () => {
-      const r = await fetch(`/api/client-letters?ownerId=${id}`);
+      const r = await apiFetch(`/api/client-letters?ownerId=${id}`);
       const d = await r.json();
       return d.data || [];
     },
@@ -76,7 +77,7 @@ export default function ProprietaireDetailPage() {
   const { data: rdvStats } = useQuery({
     queryKey: ["owner-rdv-stats", id],
     queryFn: async () => {
-      const r = await fetch(`/api/rendez-vous?ownerId=${id}&limit=200`);
+      const r = await apiFetch(`/api/rendez-vous?ownerId=${id}&limit=200`);
       const d = await r.json();
       const all = d.data || [];
       return {
@@ -90,7 +91,7 @@ export default function ProprietaireDetailPage() {
   // Update owner
   const updateOwner = useMutation({
     mutationFn: async (data: any) => {
-      const r = await fetch(`/api/owners/${id}`, {
+      const r = await apiFetch(`/api/owners/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
@@ -106,7 +107,7 @@ export default function ProprietaireDetailPage() {
   // Create courrier
   const createLetter = useMutation({
     mutationFn: async (data: any) => {
-      const r = await fetch("/api/client-letters", {
+      const r = await apiFetch("/api/client-letters", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ownerId: id, ...data }),
@@ -123,7 +124,7 @@ export default function ProprietaireDetailPage() {
   // Delete courrier
   const deleteLetter = useMutation({
     mutationFn: async (lid: number) => {
-      await fetch(`/api/client-letters/${lid}`, { method: "DELETE" });
+      await apiFetch(`/api/client-letters/${lid}`, { method: "DELETE" });
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["owner-courriers", id] }),
   });
@@ -131,7 +132,7 @@ export default function ProprietaireDetailPage() {
   // RGPD — anonymize (soft delete)
   const anonymizeOwner = useMutation({
     mutationFn: async () => {
-      const r = await fetch(`/api/owners/${id}/anonymize`, { method: "POST" });
+      const r = await apiFetch(`/api/owners/${id}/anonymize`, { method: "POST" });
       return r.json();
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["owner", id] }),

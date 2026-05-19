@@ -8,6 +8,7 @@ import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 
 import { unwrapResponse as __unwrapResponse } from "../lib/queryClient";
+import { apiFetch } from "@/lib/api-fetch";
 
 interface SearchResult {
   patients: { id: number; nom: string; espece: string | null; race: string | null }[];
@@ -78,7 +79,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
     if (q.length < 2) { setResults(null); setLoading(false); return; }
     setLoading(true);
     try {
-      const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`);
+      const res = await apiFetch(`/api/search?q=${encodeURIComponent(q)}`);
       const data: SearchResult = await __unwrapResponse(res);
       setResults(data);
       setSelected(0);

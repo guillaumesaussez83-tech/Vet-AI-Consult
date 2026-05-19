@@ -13,6 +13,7 @@ import { PorteeForm } from "@/components/PorteeForm";
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import { apiFetch } from "@/lib/api-fetch";
 
 const especeIcon: Record<string, React.ElementType> = {
   chien: Dog, chat: Cat, lapin: Rabbit, oiseau: Bird,
@@ -39,7 +40,7 @@ export default function PatientDetailPage() {
   async function handleGenerateRgpd(ownerId: number, ownerNom: string) {
     setRgpdLoading("generate");
     try {
-      const r = await fetch(`/api/owners/${ownerId}/rgpd/generate`, { method: "POST" });
+      const r = await apiFetch(`/api/owners/${ownerId}/rgpd/generate`, { method: "POST" });
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       const blob = await r.blob();
       const url = URL.createObjectURL(blob);
@@ -62,7 +63,7 @@ export default function PatientDetailPage() {
   async function handleConfirmRgpd(ownerId: number) {
     setRgpdLoading("confirm");
     try {
-      const r = await fetch(`/api/owners/${ownerId}/rgpd/confirm`, { method: "POST" });
+      const r = await apiFetch(`/api/owners/${ownerId}/rgpd/confirm`, { method: "POST" });
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       toast({ title: "Consentement enregistrÃ©", description: "Le consentement RGPD a Ã©tÃ© marquÃ© comme obtenu." });
       queryClient.invalidateQueries({ queryKey: getGetPatientQueryKey(id) });

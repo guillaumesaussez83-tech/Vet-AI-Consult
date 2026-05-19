@@ -4,6 +4,7 @@ import { useParams, Link } from "wouter";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine
 } from "recharts";
+import { apiFetch } from "@/lib/api-fetch";
 
 type Tab = "infos" | "poids" | "medical" | "rappels" | "ordonnances";
 
@@ -41,7 +42,7 @@ export default function PatientDetailPage() {
   const { data: patient, isLoading } = useQuery({
     queryKey: ["patient", id],
     queryFn: async () => {
-      const r = await fetch(`/api/patients/${id}`);
+      const r = await apiFetch(`/api/patients/${id}`);
       const d = await r.json();
       return d.data;
     },
@@ -51,7 +52,7 @@ export default function PatientDetailPage() {
   const { data: weights = [] } = useQuery({
     queryKey: ["weight-history", id],
     queryFn: async () => {
-      const r = await fetch(`/api/weight-history/${id}`);
+      const r = await apiFetch(`/api/weight-history/${id}`);
       const d = await r.json();
       return d.data || [];
     },
@@ -62,7 +63,7 @@ export default function PatientDetailPage() {
   const { data: consultations = [] } = useQuery({
     queryKey: ["patient-consultations", id],
     queryFn: async () => {
-      const r = await fetch(`/api/consultations?patientId=${id}`);
+      const r = await apiFetch(`/api/consultations?patientId=${id}`);
       const d = await r.json();
       return d.data || [];
     },
@@ -73,7 +74,7 @@ export default function PatientDetailPage() {
   const { data: rappels = [] } = useQuery({
     queryKey: ["patient-rappels", id],
     queryFn: async () => {
-      const r = await fetch(`/api/rappels?patientId=${id}`);
+      const r = await apiFetch(`/api/rappels?patientId=${id}`);
       const d = await r.json();
       return d.data || [];
     },
@@ -84,7 +85,7 @@ export default function PatientDetailPage() {
   const { data: ordonnances = [] } = useQuery({
     queryKey: ["patient-ordonnances", id],
     queryFn: async () => {
-      const r = await fetch(`/api/ordonnances?patientId=${id}`);
+      const r = await apiFetch(`/api/ordonnances?patientId=${id}`);
       const d = await r.json();
       return d.data || [];
     },
@@ -94,7 +95,7 @@ export default function PatientDetailPage() {
   // Update patient
   const updatePatient = useMutation({
     mutationFn: async (data: any) => {
-      const r = await fetch(`/api/patients/${id}`, {
+      const r = await apiFetch(`/api/patients/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
@@ -110,7 +111,7 @@ export default function PatientDetailPage() {
   // Add weight
   const addWeight = useMutation({
     mutationFn: async (data: any) => {
-      const r = await fetch("/api/weight-history", {
+      const r = await apiFetch("/api/weight-history", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ patientId: id, ...data }),
@@ -128,7 +129,7 @@ export default function PatientDetailPage() {
   // Delete weight
   const deleteWeight = useMutation({
     mutationFn: async (wid: number) => {
-      await fetch(`/api/weight-history/${wid}`, { method: "DELETE" });
+      await apiFetch(`/api/weight-history/${wid}`, { method: "DELETE" });
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["weight-history", id] }),
   });
