@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter h} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { FileText, ArrowRight, Euro, AlertCircle, CheckCircle, Clock, CreditCard, Smartphone, Banknote, Building2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient, useMutation } from "@tanstack/react-query";
