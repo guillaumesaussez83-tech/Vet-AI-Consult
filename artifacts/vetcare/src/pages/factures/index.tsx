@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter h} from "@/components/ui/dialog";
 import { FileText, ArrowRight, Euro, AlertCircle, CheckCircle, Clock, CreditCard, Smartphone, Banknote, Building2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient, useMutation } from "@tanstack/react-query";
@@ -276,7 +276,7 @@ export default function FacturesPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Facturation</h1>
-          <p className="text-muted-foreground">Gestion des factures, devis et rÃ¨glements</p>
+          <p className="text-muted-foreground">Gestion des factures, devis et règlements</p>
         </div>
         {aRegler.length > 0 && (
           <div className="text-right">
