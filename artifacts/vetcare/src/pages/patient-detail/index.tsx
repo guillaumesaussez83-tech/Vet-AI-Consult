@@ -195,10 +195,10 @@ export default function PatientDetailPage() {
                 )}
               </div>
               <div className="flex gap-3 text-sm text-gray-500 mt-1">
-                <span>{patient.espece} Â· {patient.race}</span>
-                {patient.sexe && <span>Â· {patient.sexe === "M" ? "â Mâle" : "â Femelle"}</span>}
-                {age !== null && <span>Â· {age} ans</span>}
-                {patient.poids && <span>Â· {patient.poids} kg</span>}
+                <span>{patient.espece} · {patient.race}</span>
+                {patient.sexe && <span>· {patient.sexe === "M" ? "â Mâle" : "â Femelle"}</span>}
+                {age !== null && <span>· {age} ans</span>}
+                {patient.poids && <span>· {patient.poids} kg</span>}
               </div>
               {patient.owner_nom && (
                 <div className="text-xs text-gray-400 mt-1">
@@ -244,7 +244,7 @@ export default function PatientDetailPage() {
                   { k: "race", l: "Race" }, { k: "sexe", l: "Sexe" },
                   { k: "date_naissance", l: "Date de naissance", type: "date" },
                   { k: "poids", l: "Poids (kg)", type: "number" },
-                  { k: "couleur", l: "Couleur/robe" }, { k: "puce", l: "NÂ° puce/tatouage" },
+                  { k: "couleur", l: "Couleur/robe" }, { k: "puce", l: "N° puce/tatouage" },
                   { k: "sterilise", l: "Stérilisé(e)" }, { k: "assurance", l: "Assurance" },
                 ].map(({ k, l, type }) => (
                   <div key={k}>
@@ -285,7 +285,7 @@ export default function PatientDetailPage() {
                 ["Date de naissance", patient.date_naissance ? new Date(patient.date_naissance).toLocaleDateString("fr-FR") : null],
                 ["Âge", age !== null ? `${age} ans` : null],
                 ["Poids actuel", patient.poids ? `${patient.poids} kg` : null],
-                ["Couleur/robe", patient.couleur], ["NÂ° puce/tatouage", patient.puce],
+                ["Couleur/robe", patient.couleur], ["N° puce/tatouage", patient.puce],
                 ["Stérilisé(e)", patient.sterilise ? "Oui" : "Non"],
                 ["Assurance", patient.assurance],
               ].map(([label, val]) => (
@@ -453,7 +453,7 @@ export default function PatientDetailPage() {
                       <span className="text-xs font-semibold text-gray-500">
                         {new Date(c.date_heure || c.created_at).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
                       </span>
-                      {c.veterinaire && <span className="text-xs text-blue-600">Â· Dr {c.veterinaire}</span>}
+                      {c.veterinaire && <span className="text-xs text-blue-600">· Dr {c.veterinaire}</span>}
                     </div>
                     <div className="font-semibold text-gray-800">{c.motif}</div>
                     {c.diagnostic && <p className="text-sm text-gray-600 mt-1"><strong>Diagnostic :</strong> {c.diagnostic}</p>}
@@ -493,7 +493,7 @@ export default function PatientDetailPage() {
                       <div className="text-sm text-gray-500 mt-0.5">{r.nom_vaccin}</div>
                       <div className="text-xs text-gray-400 mt-1">
                         Prévu le {dueDate.toLocaleDateString("fr-FR")}
-                        {r.last_date && ` Â· Dernier : ${new Date(r.last_date).toLocaleDateString("fr-FR")}`}
+                        {r.last_date && ` · Dernier : ${new Date(r.last_date).toLocaleDateString("fr-FR")}`}
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
