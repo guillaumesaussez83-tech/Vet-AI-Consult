@@ -17,7 +17,7 @@ const TABS: { id: Tab; label: string }[] = [
 ];
 
 const ESPECES_ICONS: Record<string, string> = {
-  chien: "ð", chat: "ð", nac: "ð", oiseau: "ð¦", reptile: "ð¦",
+  chien: "🐕", chat: "🐈", nac: "🐇", oiseau: "🚜", reptile: "🦎",
 };
 
 // Safe JSON array parser — prevents crash on malformed data
@@ -160,7 +160,7 @@ export default function PatientDetailPage() {
   const weightMax = weightData.length > 0 ? Math.max(...weightData.map((w: any) => w.poids)) : 10;
   const weightPad = (weightMax - weightMin) * 0.15 || 1;
 
-  const icon = ESPECES_ICONS[(patient.espece || "").toLowerCase()] || "ð¾";
+  const icon = ESPECES_ICONS[(patient.espece || "").toLowerCase()] || "🐾";
 
   const vaccinsAVenir = rappels.filter((r: any) => r.statut !== "FAIT" && new Date(r.date_rappel) <= new Date(Date.now() + 60 * 24 * 3600 * 1000));
 
@@ -196,7 +196,7 @@ export default function PatientDetailPage() {
               </div>
               <div className="flex gap-3 text-sm text-gray-500 mt-1">
                 <span>{patient.espece} · {patient.race}</span>
-                {patient.sexe && <span>· {patient.sexe === "M" ? "â Mâle" : "â Femelle"}</span>}
+                {patient.sexe && <span>· {patient.sexe?.toLowerCase() === "mâle" ? "♂ Mâle" : "♀ Femelle"}</span>}
                 {age !== null && <span>· {age} ans</span>}
                 {patient.poids && <span>· {patient.poids} kg</span>}
               </div>
@@ -281,7 +281,7 @@ export default function PatientDetailPage() {
             <div className="grid grid-cols-2 gap-x-8 gap-y-4">
               {[
                 ["Espèce", patient.espece], ["Race", patient.race],
-                ["Sexe", patient.sexe === "M" ? "Mâle" : patient.sexe === "F" ? "Femelle" : patient.sexe],
+                ["Sexe", patient.sexe?.toLowerCase() === "mâle" ? "Mâle" : patient.sexe?.toLowerCase() === "femelle" ? "Femelle" : patient.sexe],
                 ["Date de naissance", patient.date_naissance ? new Date(patient.date_naissance).toLocaleDateString("fr-FR") : null],
                 ["Âge", age !== null ? `${age} ans` : null],
                 ["Poids actuel", patient.poids ? `${patient.poids} kg` : null],
