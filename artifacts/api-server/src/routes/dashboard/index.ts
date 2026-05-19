@@ -132,8 +132,8 @@ router.get("/rappels-vaccins", async (req, res) => {
     const rappels = await db
       .select({
         id: vaccinationsTable.id,
-        nomVaccin: vaccinationsTable.nomVaccin,
-        dateRappel: vaccinationsTable.dateRappel,
+        nomVaccin: vaccinationsTable.vaccineName,
+        dateRappel: vaccinationsTable.nextDueDate,
         patientId: vaccinationsTable.patientId,
         nomPatient: patientsTable.nom,
         espece: patientsTable.espece,
@@ -148,12 +148,12 @@ router.get("/rappels-vaccins", async (req, res) => {
       .where(
         and(
           eq(vaccinationsTable.clinicId, req.clinicId),
-          isNotNull(vaccinationsTable.dateRappel),
-          gte(vaccinationsTable.dateRappel, ago),
-          lte(vaccinationsTable.dateRappel, ahead)
+          isNotNull(vaccinationsTable.nextDueDate),
+          gte(vaccinationsTable.nextDueDate, ago),
+          lte(vaccinationsTable.nextDueDate, ahead)
         )
       )
-      .orderBy(vaccinationsTable.dateRappel)
+      .orderBy(vaccinationsTable.nextDueDate)
       .limit(15);
 
     const todayStr = today.toISOString().split("T")[0];
