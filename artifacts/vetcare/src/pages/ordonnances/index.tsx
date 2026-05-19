@@ -32,40 +32,40 @@ async function fetchOrdonnances(search?: string): Promise<Ordonnance[]> {
   return json.data ?? json;
 }
 
-const DASH_RE = /^[â\-â]+$/;
-const EMPTY_VAL_RE = /^(null|undefined|â|-|â)$/i;
+const DASH_RE = /^[—\-–]+$/;
+const EMPTY_VAL_RE = /^(null|undefined|—|-|–)$/i;
 
 function sanitizeContenu(raw: string): string {
   if (!raw) return "";
   return raw
     .split("\n")
     .map(line => {
-      // For structured dictation lines (parts joined by " â "), filter each segment
-      const parts = line.split(" â ").map(part => {
-        // Strip stray leading dashes (e.g. "â QtÃ© : comprimÃ©" left by split)
-        const t = part.replace(/^[â\-â]+\s*/, "").trim();
+      // For structured dictation lines (parts joined by " — "), filter each segment
+      const parts = line.split(" — ").map(part => {
+        // Strip stray leading dashes (e.g. "— Qté : comprimé" left by split)
+        const t = part.replace(/^[—\-–]+\s*/, "").trim();
         if (!t || DASH_RE.test(t)) return "";
         // Part ends with colon (no value at all, e.g. "Voie :")
         if (/:\s*$/.test(t)) return "";
-        // "Label : â" or "Label : null" â drop
+        // "Label : —" or "Label : null" → drop
         const colonIdx = t.indexOf(" : ");
         if (colonIdx !== -1) {
           const val = t.slice(colonIdx + 3).trim();
           if (!val || EMPTY_VAL_RE.test(val)) return "";
-          // "QtÃ© : comprimÃ©" â unit without a leading number â drop
-          if (/^qtÃ©$/i.test(t.slice(0, colonIdx).trim()) && !/\d/.test(val)) return "";
+          // "Qté : comprimé" — unit without a leading number → drop
+          if (/^qté$/i.test(t.slice(0, colonIdx).trim()) && !/\d/.test(val)) return "";
         }
-        // "pendant â" or "pendant null"
-        if (/^pendant\s+[â\-â]+$/i.test(t) || /^pendant\s+(null|undefined)$/i.test(t)) return "";
+        // "pendant —" or "pendant null"
+        if (/^pendant\s+[—\-–]+$/i.test(t) || /^pendant\s+(null|undefined)$/i.test(t)) return "";
         return t;
       }).filter(Boolean);
 
       // Re-join surviving parts and apply remaining cleanups
-      return parts.join(" â ")
+      return parts.join(" — ")
         .replace(/\bnull\b/gi, "")
         .replace(/\bundefined\b/gi, "")
-        .replace(/(\s*[â\-â]\s*){2,}/g, " â ")
-        .replace(/^[\sâ\-â]+|[\sâ\-â]+$/g, "")
+        .replace(/(\s*[—\-–]\s*){2,}/g, " — ")
+        .replace(/^[\s—\-–]+|[\s—\-–]+$/g, "")
         .replace(/\s{2,}/g, " ")
         .trim();
     })
@@ -96,7 +96,7 @@ export default function OrdonnancesPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Ordonnances</h1>
-          <p className="text-muted-foreground">Historique des prescriptions mÃ©dicales</p>
+          <p className="text-muted-foreground">Historique des prescriptions médicales</p>
         </div>
       </div>
 
@@ -104,7 +104,7 @@ export default function OrdonnancesPage() {
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
           className="pl-9"
-          placeholder="Rechercher par vÃ©tÃ©rinaire, contenu..."
+          placeholder="Rechercher par vétérinaire, contenu..."
           value={search}
           onChange={e => setSearch(e.target.value)}
         />
@@ -120,7 +120,7 @@ export default function OrdonnancesPage() {
             <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-30" />
             <p className="font-medium text-muted-foreground">Aucune ordonnance</p>
             <p className="text-sm text-muted-foreground mt-1">
-              Les ordonnances gÃ©nÃ©rÃ©es depuis les consultations apparaissent ici.
+              Les ordonnances générées depuis les consultations apparaissent ici.
             </p>
           </CardContent>
         </Card>

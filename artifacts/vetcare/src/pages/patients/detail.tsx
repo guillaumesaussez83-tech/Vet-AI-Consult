@@ -51,10 +51,10 @@ export default function PatientDetailPage() {
       a.click();
       a.remove();
       URL.revokeObjectURL(url);
-      toast({ title: "Formulaire RGPD gÃ©nÃ©rÃ©", description: "Le PDF a Ã©tÃ© tÃ©lÃ©chargÃ© pour impression et signature." });
+      toast({ title: "Formulaire RGPD généré", description: "Le PDF a été téléchargé pour impression et signature." });
       queryClient.invalidateQueries({ queryKey: getGetPatientQueryKey(id) });
     } catch (e) {
-      toast({ title: "Erreur", description: "Impossible de gÃ©nÃ©rer le formulaire RGPD.", variant: "destructive" });
+      toast({ title: "Erreur", description: "Impossible de générer le formulaire RGPD.", variant: "destructive" });
     } finally {
       setRgpdLoading(null);
     }
@@ -65,7 +65,7 @@ export default function PatientDetailPage() {
     try {
       const r = await apiFetch(`/api/owners/${ownerId}/rgpd/confirm`, { method: "POST" });
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
-      toast({ title: "Consentement enregistrÃ©", description: "Le consentement RGPD a Ã©tÃ© marquÃ© comme obtenu." });
+      toast({ title: "Consentement enregistré", description: "Le consentement RGPD a été marqué comme obtenu." });
       queryClient.invalidateQueries({ queryKey: getGetPatientQueryKey(id) });
       queryClient.invalidateQueries({ queryKey: ["/api/patients"] });
     } catch (e) {
@@ -83,7 +83,7 @@ export default function PatientDetailPage() {
     </div>
   );
 
-  if (!patient) return <div className="text-center py-16 text-muted-foreground">Patient non trouvÃ©</div>;
+  if (!patient) return <div className="text-center py-16 text-muted-foreground">Patient non trouvé</div>;
 
   const Icon = especeIcon[patient.espece] ?? Dog;
   const p = patient as any;
@@ -119,7 +119,7 @@ export default function PatientDetailPage() {
               <p className="text-muted-foreground text-sm mt-0.5">
                 {patient.race || patient.espece} â¢ {patient.sexe}
                 {patient.poids && ` â¢ ${patient.poids} kg`}
-                {patient.dateNaissance && ` â¢ NÃ©(e) le ${formatDateFR(patient.dateNaissance)}`}
+                {patient.dateNaissance && ` â¢ Né(e) le ${formatDateFR(patient.dateNaissance)}`}
               </p>
             </div>
           </div>
@@ -140,7 +140,7 @@ export default function PatientDetailPage() {
         </div>
       </div>
 
-      {/* Alertes mÃ©dicales */}
+      {/* Alertes médicales */}
       {(patient.allergies || patient.antecedents) && (
         <div className="grid gap-3 md:grid-cols-2">
           {patient.allergies && (
@@ -156,7 +156,7 @@ export default function PatientDetailPage() {
             <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3">
               <span className="text-amber-600 font-bold text-sm mt-0.5">ð</span>
               <div>
-                <p className="text-xs font-semibold text-amber-700 uppercase tracking-wide">AntÃ©cÃ©dents</p>
+                <p className="text-xs font-semibold text-amber-700 uppercase tracking-wide">Antécédents</p>
                 <p className="text-sm text-amber-800 mt-0.5">{patient.antecedents}</p>
               </div>
             </div>
@@ -167,7 +167,7 @@ export default function PatientDetailPage() {
       {/* Tabs */}
       <div className="flex gap-1 border-b">
         {([
-          { id: "timeline", label: "Timeline mÃ©dicale" },
+          { id: "timeline", label: "Timeline médicale" },
           { id: "infos", label: "Informations" },
         ] as { id: Tab; label: string }[]).map(tab => (
           <button
@@ -191,7 +191,7 @@ export default function PatientDetailPage() {
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-base flex items-center gap-2">
-                ð Ãvolution du poids
+                ð Évolution du poids
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -225,7 +225,7 @@ export default function PatientDetailPage() {
             </CardHeader>
             <CardContent className="space-y-3 text-sm">
               <div className="grid grid-cols-2 gap-y-2 gap-x-4">
-                <span className="text-muted-foreground">EspÃ¨ce</span>
+                <span className="text-muted-foreground">Espèce</span>
                 <span className="capitalize">{patient.espece}</span>
                 {patient.race && <>
                   <span className="text-muted-foreground">Race</span>
@@ -234,7 +234,7 @@ export default function PatientDetailPage() {
                 <span className="text-muted-foreground">Sexe</span>
                 <span>
                   {patient.sexe}
-                  {patient.sterilise && <Badge variant="secondary" className="ml-2 text-xs">StÃ©rilisÃ©(e)</Badge>}
+                  {patient.sterilise && <Badge variant="secondary" className="ml-2 text-xs">Stérilisé(e)</Badge>}
                 </span>
                 {patient.dateNaissance && <>
                   <span className="text-muted-foreground">Naissance</span>
@@ -286,14 +286,14 @@ export default function PatientDetailPage() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center justify-between">
-                <span>PropriÃ©taire</span>
+                <span>Propriétaire</span>
                 {patient.owner && ((patient.owner as any).rgpdAccepted ? (
                   <Badge variant="secondary" className="gap-1 bg-green-100 text-green-700 hover:bg-green-100">
-                    <ShieldCheck className="h-3 w-3" /> RGPD signÃ©
+                    <ShieldCheck className="h-3 w-3" /> RGPD signé
                   </Badge>
                 ) : (
                   <Badge variant="secondary" className="gap-1 bg-amber-100 text-amber-800 hover:bg-amber-100">
-                    <ShieldAlert className="h-3 w-3" /> RGPD Ã  recueillir
+                    <ShieldAlert className="h-3 w-3" /> RGPD à recueillir
                   </Badge>
                 ))}
               </CardTitle>
@@ -332,7 +332,7 @@ export default function PatientDetailPage() {
                     ) : (
                       <p className="text-xs text-amber-700 flex items-center gap-1.5">
                         <ShieldAlert className="h-3.5 w-3.5" />
-                        Non recueilli â Ã  imprimer et faire signer
+                        Non recueilli â à imprimer et faire signer
                       </p>
                     )}
                     <div className="flex flex-wrap gap-2 pt-1">
@@ -343,9 +343,9 @@ export default function PatientDetailPage() {
                         disabled={rgpdLoading !== null}
                       >
                         {rgpdLoading === "generate" ? (
-                          <><Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />GÃ©nÃ©rationâ¦</>
+                          <><Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />Générationâ¦</>
                         ) : (
-                          <><Download className="mr-2 h-3.5 w-3.5" />GÃ©nÃ©rer formulaire RGPD</>
+                          <><Download className="mr-2 h-3.5 w-3.5" />Générer formulaire RGPD</>
                         )}
                       </Button>
                       {!(patient.owner as any).rgpdAccepted && (
@@ -365,7 +365,7 @@ export default function PatientDetailPage() {
                   </div>
                 </>
               ) : (
-                <p className="text-muted-foreground">Aucun propriÃ©taire</p>
+                <p className="text-muted-foreground">Aucun propriétaire</p>
               )}
             </CardContent>
           </Card>
@@ -388,10 +388,10 @@ export default function PatientDetailPage() {
             )}
           </Card>
 
- {/* AccÃ¨s rapides */}
+ {/* Accès rapides */}
           <Card className="md:col-span-2">
             <CardHeader>
-              <CardTitle className="text-base">AccÃ¨s rapides</CardTitle>
+              <CardTitle className="text-base">Accès rapides</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">

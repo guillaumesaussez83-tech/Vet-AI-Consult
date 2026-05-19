@@ -16,8 +16,8 @@ import { formatDateFR } from "@/lib/utils";
 const MODES_PAIEMENT = [
   { value: "carte_bancaire", label: "Carte bancaire", icon: CreditCard },
   { value: "carte_sans_contact", label: "Sans contact (NFC)", icon: Smartphone },
-  { value: "especes", label: "EspÃ¨ces", icon: Banknote },
-  { value: "cheque", label: "ChÃ¨que", icon: FileText },
+  { value: "especes", label: "Espèces", icon: Banknote },
+  { value: "cheque", label: "Chèque", icon: FileText },
   { value: "virement", label: "Virement", icon: Building2 },
   { value: "autre", label: "Autre", icon: Euro },
 ];
@@ -48,8 +48,8 @@ function EmptyState({ icon: Icon, message, sub }: { icon: any; message: string; 
 function FactureCard({ f }: { f: any }) {
   const config: Record<string, { label: string; className: string }> = {
     en_attente: { label: "En attente", className: "text-amber-600 bg-amber-50 border-amber-200" },
-    payee: { label: "PayÃ©e", className: "text-green-600 bg-green-50 border-green-200" },
-    annulee: { label: "AnnulÃ©e", className: "text-red-600 bg-red-50 border-red-200" },
+    payee: { label: "Payée", className: "text-green-600 bg-green-50 border-green-200" },
+    annulee: { label: "Annulée", className: "text-red-600 bg-red-50 border-red-200" },
   };
   const s = config[f.statut] ?? { label: f.statut, className: "" };
   return (
@@ -72,7 +72,7 @@ function FactureCard({ f }: { f: any }) {
             </div>
             <div className="flex items-center gap-4">
               <div className="text-right">
-                <div className="font-semibold">{f.montantTTC?.toFixed(2)} â¬</div>
+                <div className="font-semibold">{f.montantTTC?.toFixed(2)} €</div>
                 <div className="text-xs text-muted-foreground">TTC</div>
               </div>
               {f.modePaiement && (
@@ -153,11 +153,11 @@ function EncaisserDialog({ facture, open, onClose }: { facture: any; open: boole
 
   function handleEncaisser() {
     if (!mode) {
-      toast({ title: "SÃ©lectionnez un mode de paiement", variant: "destructive" });
+      toast({ title: "Sélectionnez un mode de paiement", variant: "destructive" });
       return;
     }
     if (isEspeces && (!montantRecu || parseFloat(montantRecu) < montantTTC)) {
-      toast({ title: "Montant reÃ§u insuffisant", variant: "destructive" });
+      toast({ title: "Montant reçu insuffisant", variant: "destructive" });
       return;
     }
     const payload: any = {
@@ -171,9 +171,9 @@ function EncaisserDialog({ facture, open, onClose }: { facture: any; open: boole
       onSuccess: () => {
         const modeLabel = MODES_PAIEMENT.find(m => m.value === mode)?.label ?? mode;
         const renduStr = renduMonnaie != null && renduMonnaie > 0
-          ? ` â Rendu : ${renduMonnaie.toFixed(2)} â¬`
+          ? ` â Rendu : ${renduMonnaie.toFixed(2)} €`
           : "";
-        toast({ title: "Facture encaissÃ©e", description: `${modeLabel}${renduStr}` });
+        toast({ title: "Facture encaissée", description: `${modeLabel}${renduStr}` });
         qc.invalidateQueries({ queryKey: ["factures"] });
         onClose();
       },
@@ -192,8 +192,8 @@ function EncaisserDialog({ facture, open, onClose }: { facture: any; open: boole
         </DialogHeader>
         <div className="space-y-4 py-2">
           <div className="bg-muted/30 rounded-lg p-4 text-center">
-            <p className="text-sm text-muted-foreground mb-1">Montant TTC Ã  encaisser</p>
-            <p className="text-3xl font-bold text-primary">{montantTTC.toFixed(2)} â¬</p>
+            <p className="text-sm text-muted-foreground mb-1">Montant TTC à encaisser</p>
+            <p className="text-3xl font-bold text-primary">{montantTTC.toFixed(2)} €</p>
           </div>
           <div className="space-y-2">
             <label className="text-sm font-medium">Mode de paiement</label>
@@ -220,7 +220,7 @@ function EncaisserDialog({ facture, open, onClose }: { facture: any; open: boole
           </div>
           {isEspeces && (
             <div className="space-y-2">
-              <label className="text-sm font-medium">Montant reÃ§u (â¬)</label>
+              <label className="text-sm font-medium">Montant reçu (€)</label>
               <input
                 type="number"
                 step="0.01"
@@ -235,7 +235,7 @@ function EncaisserDialog({ facture, open, onClose }: { facture: any; open: boole
                   renduMonnaie === 0 ? "bg-green-50 text-green-700" : "bg-amber-50 text-amber-700"
                 }`}>
                   <span>Rendu monnaie</span>
-                  <span>{renduMonnaie.toFixed(2)} â¬</span>
+                  <span>{renduMonnaie.toFixed(2)} €</span>
                 </div>
               )}
             </div>
@@ -281,7 +281,7 @@ export default function FacturesPage() {
         {aRegler.length > 0 && (
           <div className="text-right">
             <div className="text-sm text-muted-foreground">A encaisser</div>
-            <div className="text-2xl font-bold text-amber-600">{totalARegler.toFixed(2)} â¬</div>
+            <div className="text-2xl font-bold text-amber-600">{totalARegler.toFixed(2)} €</div>
           </div>
         )}
       </div>
@@ -310,7 +310,7 @@ export default function FacturesPage() {
 
         <TabsContent value="a-facturer" className="mt-4">
           {isLoading ? <SkeletonList /> : aFacturer.length === 0 ? (
-            <EmptyState icon={CheckCircle} message="Tout est facture" sub="Toutes les consultations terminÃ©es ont une facture" />
+            <EmptyState icon={CheckCircle} message="Tout est facture" sub="Toutes les consultations terminées ont une facture" />
           ) : (
             <div className="space-y-3">
               {aFacturer.map((c: any) => <ConsultationSansFactureCard key={c.id} c={c} />)}
