@@ -1,17 +1,17 @@
 import { Router } from "express";
-import { requireAuth } from "@clerk/express";
+import { requireClinicId, getClinicId } from "../middleware/requireClinicId";
 import { db } from "@workspace/db";
 import { sql } from "drizzle-orm";
 
 const router = Router();
-router.use(requireAuth());
+router.use(requireClinicId);
 
 // GET /api/weight-history/:patientId
 router.get("/:patientId", async (req: any, res) => {
   try {
-      const patientId = parseInt(req.params.patientId);
-  if (isNaN(patientId)) return res.status(400).json({ error: "patientId invalide" });
-  const clinicId = req.auth?.sessionClaims?.clinicId as string;
+    const patientId = parseInt(req.params.patientId);
+    if (isNaN(patientId)) return res.status(400).json({ error: "patientId invalide" });
+    const clinicId = getClinicId(req);
     const rows = await db.execute(sql`
       SELECT wh.*, c.motif as consultation_motif
       FROM weight_history wh
@@ -28,7 +28,7 @@ router.get("/:patientId", async (req: any, res) => {
 // POST /api/weight-history
 router.post("/", async (req: any, res) => {
   try {
-    const clinicId = req.auth?.sessionClaims?.clinicId as string;
+    const clinicId = getClinicId(req);
     const { patientId, weight, measuredAt, consultationId, notes } = req.body;
     if (!patientId || !weight) return res.status(400).json({ success: false, error: "patientId et weight requis" });
 
@@ -39,7 +39,7 @@ router.post("/", async (req: any, res) => {
       RETURNING id
     `);
 
-    // Mettre à jour aussi la colonne poids courante sur le patient
+    // Mettre a jour aussi la colonne poids courante sur le patient
     await db.execute(sql`
       UPDATE patients SET poids = ${weight} WHERE id = ${patientId} AND clinic_id = ${clinicId}
     `);
@@ -53,7 +53,7 @@ router.post("/", async (req: any, res) => {
 // DELETE /api/weight-history/:id
 router.delete("/:id", async (req: any, res) => {
   try {
-    const clinicId = req.auth?.sessionClaims?.clinicId as string;
+    const clinicId = getClinicId(req);
     await db.execute(sql`
       DELETE FROM weight_history WHERE id = ${req.params.id} AND clinic_id = ${clinicId}
     `);
