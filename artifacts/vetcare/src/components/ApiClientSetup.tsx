@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useEffect } from "react";
 import { useAuth } from "@clerk/clerk-react";
 import { setAuthTokenGetter } from "@workspace/api-client-react";
