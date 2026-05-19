@@ -191,6 +191,68 @@ const MIGRATIONS: Migration[] = [
       CREATE INDEX IF NOT EXISTS idx_communications_clinic ON communications (clinic_id);
     `,
   },
+  {
+    name: "sprint7-weight-sms-letters-recurring",
+    sql: `
+CREATE TABLE IF NOT EXISTS weight_history (
+  id SERIAL PRIMARY KEY,
+  clinic_id TEXT NOT NULL,
+  patient_id INTEGER NOT NULL REFERENCES patients(id) ON DELETE CASCADE,
+  weight REAL NOT NULL,
+  measured_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  consultation_id INTEGER,
+  notes TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE TABLE IF NOT EXISTS sms_log (
+  id SERIAL PRIMARY KEY,
+  clinic_id TEXT NOT NULL,
+  rdv_id INTEGER REFERENCES rendez_vous(id) ON DELETE SET NULL,
+  owner_id INTEGER REFERENCES owners(id) ON DELETE SET NULL,
+  phone TEXT NOT NULL,
+  message TEXT NOT NULL,
+  type TEXT NOT NULL DEFAULT 'CUSTOM',
+  status TEXT NOT NULL DEFAULT 'PENDING',
+  twilio_sid TEXT,
+  error_message TEXT,
+  sent_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE TABLE IF NOT EXISTS client_letters (
+  id SERIAL PRIMARY KEY,
+  clinic_id TEXT NOT NULL,
+  owner_id INTEGER NOT NULL REFERENCES owners(id) ON DELETE CASCADE,
+  patient_id INTEGER REFERENCES patients(id) ON DELETE SET NULL,
+  type TEXT NOT NULL DEFAULT 'AUTRE',
+  subject TEXT NOT NULL,
+  content TEXT NOT NULL,
+  sent_at TIMESTAMPTZ,
+  created_by TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE TABLE IF NOT EXISTS recurring_appointments (
+  id SERIAL PRIMARY KEY,
+  clinic_id TEXT NOT NULL,
+  patient_id INTEGER REFERENCES patients(id),
+  owner_id INTEGER REFERENCES owners(id),
+  frequency TEXT NOT NULL DEFAULT 'MONTHLY',
+  type_rdv TEXT NOT NULL DEFAULT 'CONSULTATION',
+  duree_minutes INTEGER NOT NULL DEFAULT 30,
+  day_of_week INTEGER,
+  time_of_day TEXT NOT NULL DEFAULT '09:00',
+  start_date TIMESTAMPTZ,
+  end_date TIMESTAMPTZ,
+  active BOOLEAN NOT NULL DEFAULT true,
+  notes TEXT,
+  last_generated_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_weight_history_patient ON weight_history(patient_id, measured_at);
+CREATE INDEX IF NOT EXISTS idx_sms_log_clinic ON sms_log(clinic_id);
+CREATE INDEX IF NOT EXISTS idx_recurring_clinic ON recurring_appointments(clinic_id, active);
+`,
+  },
 ];
 
 export async function runMigrations(db: AnyDb, logger: Logger): Promise<void> {
