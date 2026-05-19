@@ -35,6 +35,7 @@ import { VoiceInput } from "@/components/VoiceInput";
 import { DoseCalculator } from "@/components/DoseCalculator";
 
 import { unwrapResponse as __unwrapEnvelope } from "../../lib/queryClient";
+import { apiFetch } from "@/lib/api-fetch";
 
 type ActeLine = {
   acteId: number;
@@ -60,7 +61,7 @@ export default function ConsultationDetailPage() {
   const { data: factureExistante } = useQuery({
     queryKey: ["facture-by-consultation", id],
     queryFn: async () => {
-      const res = await fetch(`/api/factures/by-consultation/${id}`);
+      const res = await apiFetch(`/api/factures/by-consultation/${id}`);
       if (!res.ok) return null;
       const json = await res.json();
       return json?.data ?? null;
@@ -622,7 +623,7 @@ function EtapeOrdonnanceActes({
     setDecrementeStockResult(null);
     setDecrementeStockOpen(true);
     try {
-      const res = await fetch("/api/stock/decremente-ordonnance", {
+      const res = await apiFetch("/api/stock/decremente-ordonnance", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ordonnanceText, consultationId: consultation.id }),
@@ -640,7 +641,7 @@ function EtapeOrdonnanceActes({
 
   const handleDicteeConfirmed = async (prescriptions: PrescriptionConfirmee[], ordonnanceTexte: string) => {
     try {
-      const res = await fetch("/api/ai/confirmer-dictee-ordonnance", {
+      const res = await apiFetch("/api/ai/confirmer-dictee-ordonnance", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -666,7 +667,7 @@ function EtapeOrdonnanceActes({
   async function handleCreateOrdonnanceIA() {
     setCreatingOrdonnanceIA(true);
     try {
-      const res = await fetch("/api/ordonnances/ia/generer", {
+      const res = await apiFetch("/api/ordonnances/ia/generer", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ consultationId: consultation.id }),
@@ -692,7 +693,7 @@ function EtapeOrdonnanceActes({
 
   const handleGenererFactureVoix = async (transcript: string) => {
     setVoixPreview(null);
-    const res = await fetch("/api/ai/generer-facture-voix", {
+    const res = await apiFetch("/api/ai/generer-facture-voix", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ transcript }),
@@ -723,7 +724,7 @@ function EtapeOrdonnanceActes({
     if (!consultation.facture?.id) return;
     setIsDeletingFacture(true);
     try {
-      const res = await fetch(`/api/factures/${consultation.facture.id}`, { method: "DELETE" });
+      const res = await apiFetch(`/api/factures/${consultation.facture.id}`, { method: "DELETE" });
       if (!res.ok) throw new Error();
       queryClient.invalidateQueries({ queryKey: getGetConsultationQueryKey(consultation.id) });
       queryClient.invalidateQueries({ queryKey: getListFacturesQueryKey() });
@@ -1218,7 +1219,7 @@ function EtapeOrdonnanceActes({
                 try {
                   const consultationId = consultation?.id;
                   if (!consultationId) throw new Error("Consultation introuvable");
-                  const res = await fetch(`/api/consultations/${consultationId}/actes`, {
+                  const res = await apiFetch(`/api/consultations/${consultationId}/actes`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
@@ -1269,14 +1270,14 @@ function RappelsPostConsultation({ consultationId, patientId }: { consultationId
 
   const { data: rappels = [], isLoading } = useQuery({
     queryKey: ["rappels-consultation", consultationId],
-    queryFn: () => fetch(`/api/rappels?consultationId=${consultationId}`).then(__unwrapEnvelope),
+    queryFn: () => apiFetch(`/api/rappels?consultationId=${consultationId}`).then(__unwrapEnvelope),
     enabled: !!consultationId,
   });
 
   const createRappel = async (label: string, joursDelai: number) => {
     setCreating(label);
     try {
-      const res = await fetch("/api/rappels", {
+      const res = await apiFetch("/api/rappels", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ consultationId, patientId, label, joursDelai }),
@@ -1293,7 +1294,7 @@ function RappelsPostConsultation({ consultationId, patientId }: { consultationId
   };
 
   const deleteRappel = async (id: number) => {
-    await fetch(`/api/rappels/${id}`, { method: "DELETE" });
+    await apiFetch(`/api/rappels/${id}`, { method: "DELETE" });
     queryClient.invalidateQueries({ queryKey: ["rappels-consultation", consultationId] });
   };
 
