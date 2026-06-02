@@ -263,7 +263,7 @@ router.post("/:id/rgpd/generate", async (req, res) => {
     let storedUrl: string | null = null;
     try {
       const storage = new ObjectStorageService();
-      const uploadURL = await storage.getObjectEntityUploadURL();
+      const uploadURL = await storage.getObjectEntityUploadURL({ clinicId: req.clinicId, ownerUserId: String(owner.id) });
       const uploadRes = await fetch(uploadURL, {
         method: "PUT",
         headers: { "Content-Type": "application/pdf" },
