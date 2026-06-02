@@ -8,6 +8,8 @@ import { buildExamenPrompt } from "./ai/prompts/examen";
 import { buildDiagnosticPrompt } from "./ai/prompts/diagnostic";
 import { buildFacturationPrompt } from "./ai/prompts/facturation";
 import { buildResumeClientPrompt } from "./ai/prompts/communication";
+import * as Sentry from "@sentry/node";
+import { createError } from "../middleware/errorHandler";
 
 export interface DiagnosticParams {
   espece: string;
@@ -165,7 +167,10 @@ export async function diagnosticEnrichi(
         } else if (["image/jpeg", "image/png", "image/gif", "image/webp"].includes(contentType)) {
           contentBlocks.push({ type: "image", source: { type: "base64", media_type: contentType, data: base64 } });
         }
-      } catch { /* fichier ignore silencieusement */ }
+      } catch (err) {
+        Sentry.captureException(err, { tags: { feature: "diagnostic_enrichi", op: "object_read" }, extra: { objPath, clinicId, consultationId } });
+        throw createError(502, "Piece jointe illisible (" + objPath + ")", "OBJECT_READ_FAILED");
+      }
     }
   }
 
@@ -218,4 +223,4 @@ export async function genererFactureVoix(
   const totalHT = lignesCorrigees.reduce((s, l) => s + l.montantHT, 0);
   const totalTVA = totalHT * TVA_RATE_MULTIPLIER;
   return { ...result, lignes: lignesCorrigees, totalHT, totalTVA, totalTTC: totalHT + totalTVA };
-    }
+}
