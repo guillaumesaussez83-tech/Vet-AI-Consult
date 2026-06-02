@@ -87,7 +87,8 @@ router.get("/", async (req, res) => {
       if (!c.veterinaire) return;
       const f = facturesByConsultation.get(c.id);
       if (f) {
-        parVeterinaire[c.veterinaire].ca += f.montantTTC ?? 0;
+        const bucket = parVeterinaire[c.veterinaire];
+        if (bucket) bucket.ca += f.montantTTC ?? 0;
       }
     });
 

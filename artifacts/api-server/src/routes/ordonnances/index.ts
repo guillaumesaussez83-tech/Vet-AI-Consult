@@ -404,7 +404,7 @@ RÃÂÃÂ©ponds en JSON strict (sans markdown) :
 
     const response = await anthropic.messages.create({
       model: AI_MODEL,
-      max_tokens: AI_MAX_TOKENS,
+      max_tokens: AI_MAX_TOKENS.long,
       messages: [{ role: "user", content: prompt }],
     });
     const raw =
