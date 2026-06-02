@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { AI_MODEL, TVA_RATE_MULTIPLIER } from "./constants";
 import { searchVetKnowledge, formatRagContext } from "./vetKnowledgeService";
 import type { ObjectStorageService } from "./objectStorage";
@@ -9,6 +8,8 @@ import { buildExamenPrompt } from "./ai/prompts/examen";
 import { buildDiagnosticPrompt } from "./ai/prompts/diagnostic";
 import { buildFacturationPrompt } from "./ai/prompts/facturation";
 import { buildResumeClientPrompt } from "./ai/prompts/communication";
+import * as Sentry from "@sentry/node";
+import { createError } from "../middleware/errorHandler";
 
 export interface DiagnosticParams {
   espece: string;
@@ -71,6 +72,11 @@ export interface ActeRef {
   tvaRate: number;
   unite?: string | null;
 }
+
+type AnthropicContentBlock =
+  | { type: "text"; text: string }
+  | { type: "image"; source: { type: "base64"; media_type: string; data: string } }
+  | { type: "document"; source: { type: "base64"; media_type: "application/pdf"; data: string } };
 
 function parseDiagnosticResult(text: string): DiagnosticResult {
   const jsonMatch = text.match(/\{[\s\S]*\}/);
@@ -145,8 +151,8 @@ export async function diagnosticEnrichi(
   const ragContext = formatRagContext(ragResults);
   const { objectPaths } = params;
 
-  const textBlock = { type: "text" as const, text: buildDiagnosticPrompt(params, ragContext) };
-  const contentBlocks: unknown[] = [textBlock];
+  const textBlock = { type: "text", text: buildDiagnosticPrompt(params, ragContext) } as AnthropicContentBlock;
+  const contentBlocks: AnthropicContentBlock[] = [textBlock];
 
   if (Array.isArray(objectPaths) && objectPaths.length > 0) {
     for (const objPath of objectPaths) {
@@ -161,7 +167,10 @@ export async function diagnosticEnrichi(
         } else if (["image/jpeg", "image/png", "image/gif", "image/webp"].includes(contentType)) {
           contentBlocks.push({ type: "image", source: { type: "base64", media_type: contentType, data: base64 } });
         }
-      } catch { /* fichier ignore silencieusement */ }
+      } catch (err) {
+        Sentry.captureException(err, { tags: { feature: "diagnostic_enrichi", op: "object_read" }, extra: { objPath, clinicId, consultationId } });
+        throw createError(502, "Piece jointe illisible (" + objPath + ")", "OBJECT_READ_FAILED");
+      }
     }
   }
 
@@ -205,8 +214,8 @@ export async function genererFactureVoix(
   if (!jsonMatch) throw new Error("Aucun JSON trouve dans la reponse");
   const result = JSON.parse(jsonMatch[0]) as FactureVoixResult;
 
-  const actesPrices = new Map(actes.map(a => [a.id, a.prixDefaut]));
-  const lignesCorrigees: LigneFacture[] = (result.lignes ?? []).map(l => {
+  const actesPrices = new Map<number, number>(actes.map(a => [a.id, a.prixDefaut]));
+  const lignesCorrigees: LigneFacture[] = (result.lignes ?? []).map((l): LigneFacture => {
     const prix = l.acteId != null && actesPrices.has(l.acteId)
       ? (actesPrices.get(l.acteId) ?? l.prixUnitaire) : (l.prixUnitaire ?? 0);
     return { ...l, prixUnitaire: prix, montantHT: prix * (l.quantite ?? 1) };
