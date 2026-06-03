@@ -1,7 +1,10 @@
+import { Agent } from "node:https";
 import OpenAI from "openai";
 import { GPT_MODEL, GPT_MAX_TOKENS } from "../constants";
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const keepAliveAgent = new Agent({ keepAlive: true, keepAliveMsecs: 30000, maxSockets: 50 });
+
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY, httpAgent: keepAliveAgent });
 
 export interface AIResponse {
   text: string;
