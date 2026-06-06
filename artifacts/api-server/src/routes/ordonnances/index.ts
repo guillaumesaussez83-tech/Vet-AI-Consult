@@ -21,10 +21,10 @@ import { CreateOrdonnanceSchema } from "../../schemas";
 
 const router = Router();
 
-// ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ
-// HELPER : dÃÂÃÂ©crÃÂÃÂ©menter le stock depuis le texte d'une ordonnance
-// Fire-and-forget ÃÂ¢ÃÂÃÂ ne bloque jamais la rÃÂÃÂ©ponse HTTP.
-// ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ
+// ─────────────────────────────────────────────────────────
+// HELPER : décrémenter le stock depuis le texte d'une ordonnance
+// Fire-and-forget — ne bloque jamais la réponse HTTP.
+// ─────────────────────────────────────────────────────────
 async function decrementeStockDepuisOrdonnance(
   clinicId: string,
   consultationId: number,
@@ -32,20 +32,20 @@ async function decrementeStockDepuisOrdonnance(
   logFn: (msg: string, data?: unknown) => void,
 ): Promise<void> {
   try {
-    const parsePrompt = `Analyse cette ordonnance vÃÂÃÂ©tÃÂÃÂ©rinaire et extrais UNIQUEMENT la liste des mÃÂÃÂ©dicaments/produits avec leurs quantitÃÂÃÂ©s.
+    const parsePrompt = `Analyse cette ordonnance vétérinaire et extrais UNIQUEMENT la liste des médicaments/produits avec leurs quantités.
 
 ORDONNANCE :
 ${contenu}
 
-RÃÂÃÂ©ponds UNIQUEMENT en JSON valide, sans texte autour, format exact :
+Réponds UNIQUEMENT en JSON valide, sans texte autour, format exact :
 [ { "nom": "Meloxicam", "quantite": 14 }, { "nom": "Amoxicilline 500mg", "quantite": 30 } ]
 
-RÃÂÃÂ¨gles :
-- "nom" = DCI ou nom commercial exact du mÃÂÃÂ©dicament
-- "quantite" = nombre d'unitÃÂÃÂ©s ÃÂÃÂ  dÃÂÃÂ©livrer
-- Si quantitÃÂÃÂ© non prÃÂÃÂ©cisÃÂÃÂ©e, mettre 1
-- Ignorer les vitamines, supplÃÂÃÂ©ments, conseils de soins
-- Si aucun mÃÂÃÂ©dicament trouvÃÂÃÂ©, retourner []`;
+Règles :
+- "nom" = DCI ou nom commercial exact du médicament
+- "quantite" = nombre d'unités à délivrer
+- Si quantité non précisée, mettre 1
+- Ignorer les vitamines, suppléments, conseils de soins
+- Si aucun médicament trouvé, retourner []`;
 
     const aiResp = await anthropic.messages.create({
       model: AI_MODEL,
@@ -64,10 +64,10 @@ RÃÂÃÂ¨gles :
 
     const resultats = await decrementerConsultationFEFO(clinicId, consultationId, parsed);
     const decremented = resultats.filter((r) => !r.notFound).length;
-    logFn(`Stock dÃÂÃÂ©crÃÂÃÂ©mentÃÂÃÂ© depuis ordonnance: ${decremented}/${parsed.length} produits (FEFO)`);
+    logFn(`Stock décrémenté depuis ordonnance: ${decremented}/${parsed.length} produits (FEFO)`);
   } catch (err) {
-    // Non-bloquant ÃÂ¢ÃÂÃÂ on log uniquement
-    logFn("DÃÂÃÂ©crÃÂÃÂ©mentation stock depuis ordonnance ignorÃÂÃÂ©e (non bloquante): " + String(err));
+    // Non-bloquant — on log uniquement
+    logFn("Décrémentation stock depuis ordonnance ignorée (non bloquante): " + String(err));
   }
 }
 
@@ -127,7 +127,7 @@ router.get("/:id", async (req, res) => {
           eq(ordonnancesTable.id, id),
         ),
       );
-    if (!row) return res.status(404).json({ error: "Ordonnance non trouvÃÂÃÂ©e" });
+    if (!row) return res.status(404).json({ error: "Ordonnance non trouvée" });
     return res.json({
       ...row,
       createdAt: row.createdAt.toISOString(),
@@ -200,7 +200,7 @@ router.post("/", validate(CreateOrdonnanceSchema), async (req, res) => {
       })
       .returning();
 
-    // DÃÂÃÂ©crÃÂÃÂ©menter le stock automatiquement (FEFO) ÃÂ¢ÃÂÃÂ fire and forget
+    // Décrémenter le stock automatiquement (FEFO) — fire and forget
     setImmediate(() =>
       void decrementeStockDepuisOrdonnance(
         req.clinicId,
@@ -242,7 +242,7 @@ router.patch("/:id", async (req, res) => {
         ),
       )
       .returning();
-    if (!row) return res.status(404).json({ error: "Ordonnance non trouvÃÂÃÂ©e" });
+    if (!row) return res.status(404).json({ error: "Ordonnance non trouvée" });
     return res.json({
       ...row,
       createdAt: row.createdAt.toISOString(),
@@ -268,7 +268,7 @@ router.delete("/:id", async (req, res) => {
       )
       .returning();
     if (!deleted)
-      return res.status(404).json({ error: "Ordonnance non trouvÃÂÃÂ©e" });
+      return res.status(404).json({ error: "Ordonnance non trouvée" });
     return res.json({ success: true });
   } catch (err) {
     req.log.error(err);
@@ -319,7 +319,7 @@ router.post("/ia/generer", validate(z.object({ consultationId: z.number().int().
         ),
       );
     if (!consultation)
-      return res.status(404).json({ error: "Consultation non trouvÃÂÃÂ©e" });
+      return res.status(404).json({ error: "Consultation non trouvée" });
 
     const actes = await db
       .select({
@@ -369,38 +369,38 @@ router.post("/ia/generer", validate(z.object({ consultationId: z.number().int().
         .join("\n") ||
       actes.map((a) => `- ${a.nom} (x${a.quantite})`).join("\n");
 
-    const prompt = `Tu es un vÃÂÃÂ©tÃÂÃÂ©rinaire expert. GÃÂÃÂ©nÃÂÃÂ¨re une ordonnance vÃÂÃÂ©tÃÂÃÂ©rinaire professionnelle en franÃÂÃÂ§ais pour la consultation suivante.
+    const prompt = `Tu es un vétérinaire expert. Génère une ordonnance vétérinaire professionnelle en français pour la consultation suivante.
 
 PATIENT :
 - Nom : ${nomPatient}
-- EspÃÂÃÂ¨ce : ${espece} ${race ? `(${race})` : ""}
+- Espèce : ${espece} ${race ? `(${race})` : ""}
 - Age : ${ageStr}
-- Poids : ${poids ? `${poids} kg` : "non renseignÃÂÃÂ©"}
-- PropriÃÂÃÂ©taire : ${proprietaire || "non renseignÃÂÃÂ©"}
+- Poids : ${poids ? `${poids} kg` : "non renseigné"}
+- Propriétaire : ${proprietaire || "non renseigné"}
 ${allergies ? `- Allergies connues : ${allergies}` : ""}
-${antecedents ? `- AntÃÂÃÂ©cÃÂÃÂ©dents : ${antecedents}` : ""}
+${antecedents ? `- Antécédents : ${antecedents}` : ""}
 
 CONSULTATION DU ${consultation.date} :
-${consultation.anamnese ? `Motif / AnamnÃÂÃÂ¨se : ${consultation.anamnese}` : ""}
+${consultation.anamnese ? `Motif / Anamnèse : ${consultation.anamnese}` : ""}
 ${consultation.examenClinique ? `Examen clinique : ${consultation.examenClinique}` : ""}
-${consultation.temperature ? `TempÃÂÃÂ©rature : ${consultation.temperature}ÃÂÃÂ°C` : ""}
-Diagnostic : ${consultation.diagnostic ?? consultation.diagnosticIA ?? "non spÃÂÃÂ©cifiÃÂÃÂ©"}
+${consultation.temperature ? `Température : ${consultation.temperature}°C` : ""}
+Diagnostic : ${consultation.diagnostic ?? consultation.diagnosticIA ?? "non spécifié"}
 ${consultation.ordonnance ? `Ordonnance saisie manuellement : ${consultation.ordonnance}` : ""}
 
-ACTES / MÃÂÃÂDICAMENTS PRESCRITS :
-${medicaments || "Aucun acte enregistrÃÂÃÂ©"}
+ACTES / MÉDICAMENTS PRESCRITS :
+${medicaments || "Aucun acte enregistré"}
 
 INSTRUCTIONS :
-1. GÃÂÃÂ©nÃÂÃÂ¨re le contenu complet de l'ordonnance (section CONTENU) incluant :
-   - Liste de chaque mÃÂÃÂ©dicament avec : posologie prÃÂÃÂ©cise (dose/kg si pertinent), frÃÂÃÂ©quence, durÃÂÃÂ©e du traitement, voie d'administration
-   - Conditions de conservation si nÃÂÃÂ©cessaire
-   - PrÃÂÃÂ©cautions particuliÃÂÃÂ¨res (ÃÂÃÂ©viter ensoleillement, jeÃÂÃÂ»ne, etc.)
-2. GÃÂÃÂ©nÃÂÃÂ¨re les instructions simplifiÃÂÃÂ©es pour le propriÃÂÃÂ©taire (section INSTRUCTIONS_CLIENT) :
-   language clair, sans jargon mÃÂÃÂ©dical
-3. Sois prÃÂÃÂ©cis, professionnel et adaptÃÂÃÂ© ÃÂÃÂ  l'espÃÂÃÂ¨ce animale
+1. Génère le contenu complet de l'ordonnance (section CONTENU) incluant :
+   - Liste de chaque médicament avec : posologie précise (dose/kg si pertinent), fréquence, durée du traitement, voie d'administration
+   - Conditions de conservation si nécessaire
+   - Précautions particulières (éviter ensoleillement, jeûne, etc.)
+2. Génère les instructions simplifiées pour le propriétaire (section INSTRUCTIONS_CLIENT) :
+   language clair, sans jargon médical
+3. Sois précis, professionnel et adapté à l'espèce animale
 
-RÃÂÃÂ©ponds en JSON strict (sans markdown) :
-{ "contenu": "texte complet de l'ordonnance mÃÂÃÂ©dicale", "instructionsClient": "texte simplifiÃÂÃÂ© pour le propriÃÂÃÂ©taire" }`;
+Réponds en JSON strict (sans markdown) :
+{ "contenu": "texte complet de l'ordonnance médicale", "instructionsClient": "texte simplifié pour le propriétaire" }`;
 
     const response = await anthropic.messages.create({
       model: AI_MODEL,
@@ -452,7 +452,7 @@ RÃÂÃÂ©ponds en JSON strict (sans markdown) :
       })
       .returning();
 
-    // DÃÂÃÂ©crÃÂÃÂ©menter le stock automatiquement (FEFO) ÃÂ¢ÃÂÃÂ fire and forget
+    // Décrémenter le stock automatiquement (FEFO) — fire and forget
     setImmediate(() =>
       void decrementeStockDepuisOrdonnance(
         req.clinicId,
@@ -469,7 +469,7 @@ RÃÂÃÂ©ponds en JSON strict (sans markdown) :
     });
   } catch (err) {
     req.log.error(err);
-    return res.status(500).json({ error: "Erreur lors de la gÃÂÃÂ©nÃÂÃÂ©ration IA" });
+    return res.status(500).json({ error: "Erreur lors de la génération IA" });
   }
 });
 
