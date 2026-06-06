@@ -29,7 +29,7 @@ export type AITask =
   | "resume_client"
   | "commande_stock";
 
-/** Tasks routed to Claude Sonnet ÃÂ¢ÃÂÃÂ high clinical value */
+/** Tasks routed to Claude Sonnet — high clinical value */
 const CLAUDE_TASKS = new Set<AITask>(["diagnostic_differentiel", "drug_interactions"]);
 
 export interface RunAITaskOptions {
@@ -41,8 +41,8 @@ export interface RunAITaskOptions {
 
 /**
  * Main AI router.
- * - Claude Sonnet  ÃÂ¢ÃÂÃÂ diagnostic_differentiel, drug_interactions
- * - GPT-4o-mini   ÃÂ¢ÃÂÃÂ everything else (anamnese, examen, facturation, resume_client, commande_stock)
+ * - Claude Sonnet  → diagnostic_differentiel, drug_interactions
+ * - GPT-4o-mini   → everything else (anamnese, examen, facturation, resume_client, commande_stock)
  * Logs cost + latency to ai_usage_logs for every call.
  */
 export async function runAITask(

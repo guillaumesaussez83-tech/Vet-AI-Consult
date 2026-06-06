@@ -10,8 +10,8 @@ const router = Router();
 // ── Enforce clinic isolation on all comptabilite routes
 router.use(requireClinicId);
 
-// âââ GET /api/comptabilite/dashboard ââââââââââââââââââââââââââââââââââââââââ
-// KPIs financiers : CA HT, TVA collectÃ©e, impayÃ©s, nb factures + courbe mensuelle
+// ─── GET /api/comptabilite/dashboard ────────────────────────────────────────
+// KPIs financiers : CA HT, TVA collectée, impayés, nb factures + courbe mensuelle
 router.get("/dashboard", requireAuth(), async (req: Request, res: Response) => {
   try {
     const { userId } = getAuth(req);
@@ -22,7 +22,7 @@ router.get("/dashboard", requireAuth(), async (req: Request, res: Response) => {
   const dateFrom = from ? String(from) : new Date(new Date().getFullYear(), 0, 1).toISOString().slice(0, 10);
     const dateTo = to ? String(to) : new Date().toISOString().slice(0, 10);
 
-    // KPIs globaux sur la pÃ©riode
+    // KPIs globaux sur la période
     const kpis = await db.execute(sql`
       SELECT
         COALESCE(SUM(CASE WHEN document_type = 'FACTURE' AND status NOT IN ('ANNULE','BROUILLON') THEN total_ht ELSE 0 END), 0)::numeric AS ca_ht,
@@ -52,7 +52,7 @@ router.get("/dashboard", requireAuth(), async (req: Request, res: Response) => {
       ORDER BY DATE_TRUNC('month', invoice_date)
     `);
 
-    // RÃ©partition par mode de rÃ¨glement
+    // Répartition par mode de règlement
     const byPaymentMethod = await db.execute(sql`
       SELECT
         COALESCE(payment_method, 'NON_DEFINI') AS methode,
@@ -78,8 +78,8 @@ router.get("/dashboard", requireAuth(), async (req: Request, res: Response) => {
   }
 });
 
-// âââ GET /api/comptabilite/export-fec ââââââââââââââââââââââââââââââââââââââââ
-// Export Fichier des Ãcritures Comptables (format DGFiP â TVA sur encaissements)
+// ─── GET /api/comptabilite/export-fec ────────────────────────────────────────
+// Export Fichier des Écritures Comptables (format DGFiP — TVA sur encaissements)
 router.get("/export-fec", requireAuth(), async (req: Request, res: Response) => {
   try {
     const { from, to } = req.query;
@@ -88,7 +88,7 @@ router.get("/export-fec", requireAuth(), async (req: Request, res: Response) => 
   const dateFrom = from ? String(from) : new Date(new Date().getFullYear(), 0, 1).toISOString().slice(0, 10);
     const dateTo = to ? String(to) : new Date().toISOString().slice(0, 10);
 
-    // Factures sur la pÃ©riode (journal VTE)
+    // Factures sur la période (journal VTE)
     const factures = await db.execute(sql`
       SELECT
         i.invoice_number,
@@ -106,7 +106,7 @@ router.get("/export-fec", requireAuth(), async (req: Request, res: Response) => 
       ORDER BY i.invoice_date, i.invoice_number
     `);
 
-    // Encaissements sur la pÃ©riode (journal BQ)
+    // Encaissements sur la période (journal BQ)
     const encaissements = await db.execute(sql`
       SELECT
         e.id,
@@ -122,7 +122,7 @@ router.get("/export-fec", requireAuth(), async (req: Request, res: Response) => 
       ORDER BY e.payment_date
     `);
 
-    // GÃ©nÃ©ration FEC (format DGFiP â sÃ©parateur TAB, encodage UTF-8)
+    // Génération FEC (format DGFiP — séparateur TAB, encodage UTF-8)
     const fmtDate = (d: string | Date) => String(d).slice(0, 10).replace(/-/g, "");
     const fmtAmt = (n: number | string) => Number(n).toFixed(2).replace(".", ",");
 
@@ -137,7 +137,7 @@ router.get("/export-fec", requireAuth(), async (req: Request, res: Response) => 
     const lines: string[] = [header];
     let ecritureCounter = 1;
 
-    // Journal VTE â une facture = 3 lignes (client debit / prestation credit / TVA credit)
+    // Journal VTE — une facture = 3 lignes (client debit / prestation credit / TVA credit)
     for (const f of factures.rows as any[]) {
       const num = String(ecritureCounter++).padStart(6, "0");
       const d = fmtDate(f.invoice_date);
@@ -146,29 +146,29 @@ router.get("/export-fec", requireAuth(), async (req: Request, res: Response) => 
       const tva = Number(f.total_tva);
       const ttc = Number(f.total_ttc);
 
-      // Ligne 1 â DÃ©bit Client 411000
+      // Ligne 1 — Débit Client 411000
       lines.push(["VTE","Ventes","VTE" + num, d, "411000","Clients",
         f.invoice_number, f.owner_name, f.invoice_number, d, lib,
         fmtAmt(ttc), "0,00", "", "", d, "", ""].join("\t"));
 
-      // Ligne 2 â CrÃ©dit Prestations 706000
+      // Ligne 2 — Crédit Prestations 706000
       lines.push(["VTE","Ventes","VTE" + num, d, "706000","Prestations de services",
         "", "", f.invoice_number, d, lib,
         "0,00", fmtAmt(ht), "", "", d, "", ""].join("\t"));
 
-      // Ligne 3 â CrÃ©dit TVA collectÃ©e 445710 (si TVA > 0)
+      // Ligne 3 — Crédit TVA collectée 445710 (si TVA > 0)
       if (tva > 0) {
-        lines.push(["VTE","Ventes","VTE" + num, d, "445710","TVA collectÃ©e",
+        lines.push(["VTE","Ventes","VTE" + num, d, "445710","TVA collectée",
           "", "", f.invoice_number, d, lib,
           "0,00", fmtAmt(tva), "", "", d, "", ""].join("\t"));
       }
     }
 
-    // Journal BQ â un encaissement = 2 lignes (banque debit / client credit)
+    // Journal BQ — un encaissement = 2 lignes (banque debit / client credit)
     for (const e of encaissements.rows as any[]) {
       const num = String(ecritureCounter++).padStart(6, "0");
       const d = fmtDate(e.payment_date);
-      const lib = `RÃ¨gl ${e.invoice_number || e.reference || ""}`;
+      const lib = `Règl ${e.invoice_number || e.reference || ""}`;
       const amt = Number(e.amount);
       const refPiece = e.invoice_number || `ENC-${e.id}`;
 
@@ -191,7 +191,7 @@ router.get("/export-fec", requireAuth(), async (req: Request, res: Response) => 
   }
 });
 
-// âââ GET /api/comptabilite/journal-caisse âââââââââââââââââââââââââââââââââââââ
+// ─── GET /api/comptabilite/journal-caisse ─────────────────────────────────────
 // Journal de caisse journalier
 router.get("/journal-caisse", requireAuth(), async (req: Request, res: Response) => {
   try {
@@ -243,8 +243,8 @@ router.get("/journal-caisse", requireAuth(), async (req: Request, res: Response)
   }
 });
 
-// âââ GET /api/comptabilite/impayes ââââââââââââââââââââââââââââââââââââââââââââ
-// Liste des factures impayÃ©es avec aging buckets
+// ─── GET /api/comptabilite/impayes ────────────────────────────────────────────
+// Liste des factures impayées avec aging buckets
 router.get("/impayes", requireAuth(), async (req: Request, res: Response) => {
   try {
     const clinicId = (req as any).clinicId;
@@ -268,7 +268,7 @@ router.get("/impayes", requireAuth(), async (req: Request, res: Response) => {
         COALESCE(o.last_name || ' ' || o.first_name, 'Inconnu') AS owner_name,
         o.email AS owner_email,
         o.phone_mobile AS owner_phone,
-        -- DerniÃ¨re relance
+        -- Dernière relance
         (SELECT MAX(r.sent_at) FROM relances r WHERE r.invoice_id = i.id) AS derniere_relance,
         (SELECT COUNT(*)::int FROM relances r WHERE r.invoice_id = i.id) AS nb_relances
       FROM invoices i
@@ -280,7 +280,7 @@ router.get("/impayes", requireAuth(), async (req: Request, res: Response) => {
       ORDER BY jours_retard DESC, i.invoice_date
     `);
 
-    // RÃ©sumÃ© par bucket
+    // Résumé par bucket
     const buckets = { "0-30": 0, "31-60": 0, "61-90": 0, "90+": 0 };
     let totalImpayes = 0;
     for (const row of impayes.rows as any[]) {
@@ -301,8 +301,8 @@ router.get("/impayes", requireAuth(), async (req: Request, res: Response) => {
   }
 });
 
-// âââ POST /api/comptabilite/relances âââââââââââââââââââââââââââââââââââââââââ
-// Enregistrer une relance manuelle (email envoyÃ© cÃ´tÃ© client)
+// ─── POST /api/comptabilite/relances ─────────────────────────────────────────
+// Enregistrer une relance manuelle (email envoyé côté client)
 router.post("/relances", requireAuth(), async (req: Request, res: Response) => {
   try {
     const { userId } = getAuth(req);
@@ -312,13 +312,13 @@ router.post("/relances", requireAuth(), async (req: Request, res: Response) => {
 
     if (!invoiceId) return res.status(400).json({ error: "invoiceId requis" });
 
-    // VÃ©rifier que la facture appartient Ã  la clinique
+    // Vérifier que la facture appartient à la clinique
     const check = await db.execute(sql`
       SELECT id FROM invoices
       WHERE id = ${invoiceId} AND clinic_id = ${clinicId}
       LIMIT 1
     `);
-    if (!check.rows.length) return res.status(404).json({ error: "Facture non trouvÃ©e" });
+    if (!check.rows.length) return res.status(404).json({ error: "Facture non trouvée" });
 
     const [row] = await db.execute(sql`
       INSERT INTO relances (clinic_id, invoice_id, sent_by, channel, recipient_email, recipient_name, message, status)

@@ -104,10 +104,10 @@ router.get("/", async (req, res) => {
 router.post("/", validate(CreatePatientSchema), async (req, res) => {
   try {
     const body = CreatePatientBody.safeParse(req.body);
-    if (!body.success) return res.status(400).json({ error: "DonnÃÂÃÂ©es invalides" });
+    if (!body.success) return res.status(400).json({ error: "Données invalides" });
     const [own] = await db.select({ id: ownersTable.id }).from(ownersTable)
       .where(and(eq(ownersTable.clinicId, req.clinicId), eq(ownersTable.id, body.data.ownerId)));
-    if (!own) return res.status(400).json({ error: "PropriÃÂÃÂ©taire introuvable" });
+    if (!own) return res.status(400).json({ error: "Propriétaire introuvable" });
     const [patient] = await db.insert(patientsTable).values({ ...body.data, clinicId: req.clinicId }).returning();
     return res.status(201).json({ ...patient, createdAt: patient.createdAt.toISOString() });
   } catch (err) {
@@ -156,7 +156,7 @@ router.get("/:id", async (req, res) => {
       .from(patientsTable)
       .leftJoin(ownersTable, eq(patientsTable.ownerId, ownersTable.id))
       .where(and(eq(patientsTable.clinicId, req.clinicId), eq(patientsTable.id, params.data.id)));
-    if (!patient) return res.status(404).json({ error: "Patient non trouvÃÂÃÂ©" });
+    if (!patient) return res.status(404).json({ error: "Patient non trouvé" });
     return res.json({
       ...patient,
       createdAt: patient.createdAt.toISOString(),
@@ -173,9 +173,9 @@ router.patch("/:id", async (req, res) => {
     const params = UpdatePatientParams.safeParse({ id: Number(req.params.id) });
     if (!params.success) return res.status(400).json({ error: "ID invalide" });
     const body = UpdatePatientBody.safeParse(req.body);
-    if (!body.success) return res.status(400).json({ error: "DonnÃÂÃÂ©es invalides" });
+    if (!body.success) return res.status(400).json({ error: "Données invalides" });
     const [patient] = await db.update(patientsTable).set(body.data).where(and(eq(patientsTable.clinicId, req.clinicId), eq(patientsTable.id, params.data.id))).returning();
-    if (!patient) return res.status(404).json({ error: "Patient non trouvÃÂÃÂ©" });
+    if (!patient) return res.status(404).json({ error: "Patient non trouvé" });
     return res.json({ ...patient, createdAt: patient.createdAt.toISOString() });
   } catch (err) {
     req.log.error(err);
@@ -188,8 +188,8 @@ router.delete("/:id", async (req, res) => {
     const params = DeletePatientParams.safeParse({ id: Number(req.params.id) });
     if (!params.success) return res.status(400).json({ error: "ID invalide" });
 
-    // VÃÂÃÂ©rifier l'absence de consultations liÃÂÃÂ©es avant suppression
-    // (ÃÂÃÂ©vite une erreur FK PostgreSQL opaque et protÃÂÃÂ¨ge les donnÃÂÃÂ©es mÃÂÃÂ©dicales)
+    // Vérifier l'absence de consultations liées avant suppression
+    // (évite une erreur FK PostgreSQL opaque et protège les données médicales)
     const [linked] = await db
       .select({ id: consultationsTable.id })
       .from(consultationsTable)
@@ -201,7 +201,7 @@ router.delete("/:id", async (req, res) => {
 
     if (linked) {
       return res.status(409).json({
-        error: "Ce patient possÃÂÃÂ¨de des consultations. Supprimez d'abord toutes ses consultations avant de supprimer le patient.",
+        error: "Ce patient possède des consultations. Supprimez d'abord toutes ses consultations avant de supprimer le patient.",
       });
     }
 
