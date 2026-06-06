@@ -23,7 +23,7 @@ router.get("/", async (req, res) => {
 router.post("/", async (req, res) => {
   try {
     const body = CreateActeBody.safeParse(req.body);
-    if (!body.success) return res.status(400).json({ error: "DonnÃ©es invalides" });
+    if (!body.success) return res.status(400).json({ error: "Données invalides" });
 
     const [acte] = await db.insert(actesTable).values({ ...body.data, clinicId: req.clinicId }).returning();
     return res.status(201).json(acte);
@@ -39,13 +39,13 @@ router.patch("/:id", async (req, res) => {
     if (!params.success) return res.status(400).json({ error: "ID invalide" });
 
     const body = UpdateActeBody.safeParse(req.body);
-    if (!body.success) return res.status(400).json({ error: "DonnÃ©es invalides" });
+    if (!body.success) return res.status(400).json({ error: "Données invalides" });
 
     const [acte] = await db.update(actesTable).set(body.data).where(and(
       eq(actesTable.id, params.data.id),
       eq(actesTable.clinicId, req.clinicId),
     )).returning();
-    if (!acte) return res.status(404).json({ error: "Acte non trouvÃ©" });
+    if (!acte) return res.status(404).json({ error: "Acte non trouvé" });
 
     return res.json(acte);
   } catch (err) {
