@@ -18,6 +18,7 @@ import {
   reformulerAnamnese,
   structurerExamenClinique,
   diagnosticDifferentiel,
+  diagnosticDifferentielStream,
   diagnosticEnrichi,
   resumeClient,
   genererFactureVoix,
@@ -36,6 +37,43 @@ router.post("/diagnostic", async (req, res) => {
   } catch (err) {
     req.log.error(err);
     return res.status(500).json({ error: "Erreur lors de la gÃÂ©nÃÂ©ration du diagnostic IA" });
+  }
+});
+
+// Variante STREAMEE (SSE) du diagnostic : la prose s'affiche au fil de l'eau,
+// les cartes structurees arrivent dans l'event final `result`.
+// res.write/res.end bypassent responseWrapper (qui ne patche que res.json).
+router.post("/diagnostic-stream", async (req, res) => {
+  const body = GetDiagnosticIABody.safeParse(req.body);
+  if (!body.success) return res.status(400).json({ error: "Donnees invalides" });
+
+  res.setHeader("Content-Type", "text/event-stream; charset=utf-8");
+  res.setHeader("Cache-Control", "no-cache, no-transform");
+  res.setHeader("Connection", "keep-alive");
+  res.setHeader("X-Accel-Buffering", "no"); // desactive le buffering proxy (nginx/Railway)
+  if (typeof res.flushHeaders === "function") res.flushHeaders();
+
+  let closed = false;
+  req.on("close", () => { closed = true; });
+
+  const send = (event, data) => {
+    if (closed) return;
+    res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+  };
+
+  try {
+    const result = await diagnosticDifferentielStream(
+      body.data,
+      (chunk) => send("delta", { text: chunk }),
+      req.clinicId,
+    );
+    send("result", result);
+    send("done", {});
+  } catch (err) {
+    req.log.error(err);
+    send("error", { error: "Erreur lors de la generation du diagnostic IA" });
+  } finally {
+    if (!closed) res.end();
   }
 });
 

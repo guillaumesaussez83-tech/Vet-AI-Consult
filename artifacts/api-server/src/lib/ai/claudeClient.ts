@@ -26,6 +26,44 @@ export async function callClaude(
   };
 }
 
+/**
+ * Variante streamée de callClaude. Émet chaque fragment de texte via `onDelta`
+ * dès son arrivée (architecture SSE en amont), et renvoie le texte complet + l'usage
+ * une fois le flux terminé (usage capté dans les events message_start / message_delta).
+ */
+export async function callClaudeStream(
+  prompt: string,
+  maxTokens: "long" | "short",
+  onDelta: (text: string) => void,
+): Promise<AIResponse> {
+  const stream = await anthropic.messages.create({
+    model: AI_MODEL,
+    max_tokens: AI_MAX_TOKENS[maxTokens],
+    messages: [{ role: "user", content: prompt }],
+    stream: true,
+  });
+
+  let text = "";
+  let inputTokens = 0;
+  let outputTokens = 0;
+
+  for await (const event of stream) {
+    if (event.type === "message_start") {
+      inputTokens = event.message.usage.input_tokens;
+    } else if (event.type === "content_block_delta" && event.delta.type === "text_delta") {
+      text += event.delta.text;
+      onDelta(event.delta.text);
+    } else if (event.type === "message_delta") {
+      outputTokens = event.usage.output_tokens;
+    }
+  }
+
+  return {
+    text: text.trim(),
+    usage: { inputTokens, outputTokens },
+  };
+}
+
 export async function callClaudeMultimodal(
   contentBlocks: unknown[],
   maxTokens: "long" | "short" = "long",

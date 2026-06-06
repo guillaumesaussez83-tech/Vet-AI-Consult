@@ -2,11 +2,11 @@
 import { AI_MODEL, TVA_RATE_MULTIPLIER } from "./constants";
 import { searchVetKnowledge, formatRagContext } from "./vetKnowledgeService";
 import type { ObjectStorageService } from "./objectStorage";
-import { runAITask, callClaudeMultimodal } from "./ai/aiRouter";
+import { runAITask, runAITaskStream, callClaudeMultimodal } from "./ai/aiRouter";
 import { logAIUsage } from "./ai/aiMetrics";
 import { buildAnamnesePrompt } from "./ai/prompts/anamnese";
 import { buildExamenPrompt } from "./ai/prompts/examen";
-import { buildDiagnosticPrompt } from "./ai/prompts/diagnostic";
+import { buildDiagnosticPrompt, buildDiagnosticStreamPrompt } from "./ai/prompts/diagnostic";
 import { buildFacturationPrompt } from "./ai/prompts/facturation";
 import { buildResumeClientPrompt } from "./ai/prompts/communication";
 
@@ -132,6 +132,62 @@ export async function diagnosticDifferentiel(
     maxTokens: "long",
   });
   try { return parseDiagnosticResult(text); } catch { return fallbackDiagnostic(text); }
+}
+
+// v2 - Diagnostic differentiel STREAMÉ -> Claude Sonnet
+// Émet la prose (analyse clinique) au fil de l'eau via `emitProse`, puis renvoie
+// le DiagnosticResult complet (cartes structurées) une fois le JSON final parsé.
+const DIAG_STREAM_SEP = "---JSON---";
+export async function diagnosticDifferentielStream(
+  params: DiagnosticParams,
+  emitProse: (chunk: string) => void,
+  clinicId = "default",
+  consultationId?: number,
+): Promise<DiagnosticResult> {
+  const ragResults = await searchVetKnowledge(buildRagQuery(params));
+  const ragContext = formatRagContext(ragResults);
+  const prompt = buildDiagnosticStreamPrompt(params, ragContext);
+
+  let acc = "";
+  let emittedLen = 0;
+  let sepReached = false;
+
+  await runAITaskStream(
+    "diagnostic_differentiel",
+    prompt,
+    { clinicId, consultationId, maxTokens: "long" },
+    (delta) => {
+      acc += delta;
+      if (sepReached) return;
+      const idx = acc.indexOf(DIAG_STREAM_SEP);
+      if (idx === -1) {
+        // Retient une marge de la taille du séparateur pour ne pas émettre un "---JSON---" coupé en deux.
+        const safeEnd = Math.max(emittedLen, acc.length - DIAG_STREAM_SEP.length);
+        if (safeEnd > emittedLen) {
+          emitProse(acc.slice(emittedLen, safeEnd));
+          emittedLen = safeEnd;
+        }
+      } else {
+        if (idx > emittedLen) emitProse(acc.slice(emittedLen, idx));
+        emittedLen = idx;
+        sepReached = true;
+      }
+    },
+  );
+
+  // Si le modèle n'a pas produit le séparateur, on émet le reliquat de prose retenu.
+  if (!sepReached && emittedLen < acc.length) emitProse(acc.slice(emittedLen));
+
+  const sepIdx = acc.indexOf(DIAG_STREAM_SEP);
+  const prose = (sepIdx === -1 ? acc : acc.slice(0, sepIdx)).trim();
+  const jsonPart = sepIdx === -1 ? "" : acc.slice(sepIdx + DIAG_STREAM_SEP.length);
+
+  try {
+    const parsed = parseDiagnosticResult(jsonPart);
+    return { ...parsed, texteComplet: prose };
+  } catch {
+    return { ...fallbackDiagnostic(prose), texteComplet: prose };
+  }
 }
 
 // v2 - Diagnostic enrichi avec pieces jointes -> Claude Sonnet (multimodal direct)
