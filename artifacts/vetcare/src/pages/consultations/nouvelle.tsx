@@ -60,6 +60,7 @@ export default function NouvelleConsultationPage() {
   const updateConsultation = useUpdateConsultation();
   const { data: patients } = useListPatients();
   const [isDiagnosticLoading, setIsDiagnosticLoading] = useState(false);
+  const [streamingText, setStreamingText] = useState("");
 
   const preSelectedPatientId = new URLSearchParams(search).get("patientId") ?? "";
   const [etape, setEtape] = useState(1);
@@ -114,37 +115,83 @@ export default function NouvelleConsultationPage() {
       return;
     }
     setIsDiagnosticLoading(true);
+    setStreamingText("");
+    setStep4Result(null);
+    const body = {
+      espece: selectedPatient.espece,
+      race: selectedPatient.race ?? null,
+      age: null,
+      poids: step3.poids ? parseFloat(step3.poids) : (selectedPatient.poids ?? null),
+      sexe: selectedPatient.sexe,
+      sterilise: selectedPatient.sterilise ?? false,
+      anamnese: step2.anamnese,
+      examenClinique: step3.examenClinique,
+      examensComplementaires: step3.examensComplementaires || null,
+      antecedents: selectedPatient.antecedents ?? null,
+      allergies: selectedPatient.allergies ?? null,
+      objectPaths: uploadedFiles.map(f => f.objectPath),
+    };
     try {
-      const endpoint =
-        uploadedFiles.length > 0 ? "/api/ai/diagnostic-enrichi" : "/api/ai/diagnostic";
-      const body = {
-        espece: selectedPatient.espece,
-        race: selectedPatient.race ?? null,
-        age: null,
-        poids: step3.poids ? parseFloat(step3.poids) : (selectedPatient.poids ?? null),
-        sexe: selectedPatient.sexe,
-        sterilise: selectedPatient.sterilise ?? false,
-        anamnese: step2.anamnese,
-        examenClinique: step3.examenClinique,
-        examensComplementaires: step3.examensComplementaires || null,
-        antecedents: selectedPatient.antecedents ?? null,
-        allergies: selectedPatient.allergies ?? null,
-        objectPaths: uploadedFiles.map(f => f.objectPath),
-      };
-      const response = await authFetch(endpoint, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      if (!response.ok) throw new Error();
-      const json = await response.json();
-      const res = json.data ?? json;
-      setStep4Result({
-        diagnostics: res.diagnostics as DiagnosticItem[],
-        urgence: res.urgence,
-        recommandations: res.recommandations,
-      });
-      setStep4(f => ({ ...f, diagnosticIA: res.texteComplet }));
+      if (uploadedFiles.length > 0) {
+        // Pièces jointes (multimodal) : chemin non streamé existant.
+        const response = await authFetch("/api/ai/diagnostic-enrichi", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        if (!response.ok) throw new Error();
+        const json = await response.json();
+        const res = json.data ?? json;
+        setStep4Result({
+          diagnostics: res.diagnostics as DiagnosticItem[],
+          urgence: res.urgence,
+          recommandations: res.recommandations,
+        });
+        setStep4(f => ({ ...f, diagnosticIA: res.texteComplet }));
+      } else {
+        // Streaming SSE : la prose s'affiche au fil de l'eau, les cartes à la fin.
+        const response = await authFetch("/api/ai/diagnostic-stream", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        if (!response.ok || !response.body) throw new Error();
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+        let prose = "";
+        let gotResult = false;
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          let sepIdx: number;
+          while ((sepIdx = buffer.indexOf("\n\n")) !== -1) {
+            const rawEvent = buffer.slice(0, sepIdx);
+            buffer = buffer.slice(sepIdx + 2);
+            const evtMatch = rawEvent.match(/^event: (.*)$/m);
+            const dataMatch = rawEvent.match(/^data: (.*)$/m);
+            if (!dataMatch) continue;
+            const evt = evtMatch?.[1] ?? "message";
+            const data = JSON.parse(dataMatch[1]);
+            if (evt === "delta") {
+              prose += data.text;
+              setStreamingText(prose);
+            } else if (evt === "result") {
+              gotResult = true;
+              setStep4Result({
+                diagnostics: data.diagnostics as DiagnosticItem[],
+                urgence: data.urgence,
+                recommandations: data.recommandations,
+              });
+              setStep4(f => ({ ...f, diagnosticIA: data.texteComplet ?? prose }));
+            } else if (evt === "error") {
+              throw new Error(data.error);
+            }
+          }
+        }
+        if (!gotResult) throw new Error();
+      }
     } catch {
       toast({ title: "Erreur lors de la génération du diagnostic IA", variant: "destructive" });
     } finally {
@@ -372,6 +419,15 @@ export default function NouvelleConsultationPage() {
                 </>
               )}
             </Button>
+
+            {(isDiagnosticLoading || streamingText) && (
+              <div className="text-sm whitespace-pre-wrap leading-relaxed bg-violet-50/50 rounded-lg p-3 border border-violet-100">
+                {streamingText}
+                {isDiagnosticLoading && (
+                  <span className="ml-0.5 inline-block animate-pulse">▋</span>
+                )}
+              </div>
+            )}
 
             {step4Result && (
               <div className="space-y-3">
