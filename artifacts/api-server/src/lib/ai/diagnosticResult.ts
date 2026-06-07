@@ -57,3 +57,17 @@ export function fallbackDiagnostic(text: string): DiagnosticResult {
     urgenceVitaleDetectee: false,
   };
 }
+
+/**
+ * Niveau le plus grave parmi des urgences ("alerte forte" > "alerte").
+ * Renvoie null si aucune. Utilise pour le resume d'audit (metadata.niveauMax).
+ */
+export function niveauMaxUrgences(
+  urgences: UrgenceVitaleItem[] | null | undefined,
+): string | null {
+  if (!Array.isArray(urgences) || urgences.length === 0) return null;
+  const forte = urgences.some((u) =>
+    String(u?.niveau ?? "").toLowerCase().includes("forte"),
+  );
+  return forte ? "alerte forte" : "alerte";
+}
