@@ -20,6 +20,7 @@ import {
   ListConsultationsQueryParams,
   GenerateOrdonnanceParams,
   GenerateFactureParams,
+  GetDiagnosticIABody,
 } from "@workspace/api-zod";
 import { eq, and, inArray, desc } from "drizzle-orm";
 import { anthropic } from "@workspace/integrations-anthropic-ai";
@@ -28,6 +29,11 @@ import { nextInvoiceNumber, computeInvoiceTotals } from "../../lib/numbering";
 import { fail, ok } from "../../lib/response";
 import { validate } from "../../middlewares/validate";
 import { CreateConsultationSchema } from "../../schemas";
+import { getAuth } from "@clerk/express";
+import { logAuditEvent } from "../../middleware/auditLogger";
+import { diagnosticDifferentiel } from "../../lib/aiService";
+import { niveauMaxUrgences } from "../../lib/ai/diagnosticResult";
+import { aiLimiter } from "../../middlewares/rateLimiter";
 
 const router = Router();
 
@@ -50,6 +56,11 @@ async function getConsultationWithDetails(id: number, clinicId: string) {
       poids: consultationsTable.poids,
       temperature: consultationsTable.temperature,
       createdAt: consultationsTable.createdAt,
+      urgencesVitales: consultationsTable.urgencesVitales,
+      urgenceVitaleDetectee: consultationsTable.urgenceVitaleDetectee,
+      urgenceAcquitteePar: consultationsTable.urgenceAcquitteePar,
+      urgenceAcquitteeParNom: consultationsTable.urgenceAcquitteeParNom,
+      urgenceAcquitteeLe: consultationsTable.urgenceAcquitteeLe,
       patient: {
         id: patientsTable.id,
         nom: patientsTable.nom,
@@ -538,6 +549,132 @@ router.post("/:id/facture", async (req, res) => {
   } catch (err) {
     req.log.error({ err }, "POST /consultations/:id/facture failed");
     return res.status(500).json(fail("INTERNAL", "Erreur lors de la génération de la facture"));
+  }
+});
+
+
+// ============================================================================
+//  POST /:id/diagnostic-ia — diagnostic IA SERVEUR-AUTORITAIRE.
+//  Calcule le diagnostic (avec consultationId), persiste les urgences vitales
+//  detectees (donnee stockee = ce que le serveur a calcule, jamais relaye par le
+//  client), et trace la DETECTION dans l'audit-log immuable. Les colonnes sur la
+//  consultation = etat/affichage ; la PREUVE vit dans audit_logs (append-only).
+// ============================================================================
+router.post("/:id/diagnostic-ia", aiLimiter, async (req, res) => {
+  try {
+    const params = UpdateConsultationParams.safeParse({ id: Number(req.params.id) });
+    if (!params.success) return res.status(400).json(fail("INVALID_ID", "ID invalide"));
+
+    const body = GetDiagnosticIABody.safeParse(req.body);
+    if (!body.success) {
+      return res
+        .status(400)
+        .json(fail("VALIDATION_ERROR", "Données invalides", body.error.flatten().fieldErrors));
+    }
+
+    const [exists] = await db
+      .select({ id: consultationsTable.id })
+      .from(consultationsTable)
+      .where(and(eq(consultationsTable.clinicId, req.clinicId), eq(consultationsTable.id, params.data.id)));
+    if (!exists) return res.status(404).json(fail("NOT_FOUND", "Consultation non trouvée"));
+
+    const result = await diagnosticDifferentiel(body.data, req.clinicId, params.data.id);
+
+    const urgences = Array.isArray(result.urgencesVitales) ? result.urgencesVitales : [];
+    const detectee = result.urgenceVitaleDetectee === true;
+
+    // Persistance serveur-autoritaire (etat/affichage). Reset de l'acquittement a
+    // CHAQUE generation : une nouvelle/differente alerte DOIT forcer une nouvelle
+    // prise de connaissance (sinon une urgence differente passerait silencieuse).
+    // L'audit-log conserve toutes les traces precedentes.
+    await db
+      .update(consultationsTable)
+      .set({
+        urgencesVitales: urgences,
+        urgenceVitaleDetectee: detectee,
+        urgenceAcquitteePar: null,
+        urgenceAcquitteeParNom: null,
+        urgenceAcquitteeLe: null,
+      })
+      .where(and(eq(consultationsTable.clinicId, req.clinicId), eq(consultationsTable.id, params.data.id)));
+
+    // Trace immuable de la DETECTION (preuve que le systeme A signale).
+    if (detectee && urgences.length > 0) {
+      await logAuditEvent(req, {
+        action: "DETECTION_URGENCE_VITALE",
+        resourceType: "consultation",
+        resourceId: String(params.data.id),
+        metadata: { urgencesVitales: urgences, niveauMax: niveauMaxUrgences(urgences) },
+      });
+    }
+
+    return res.json(result);
+  } catch (err) {
+    req.log.error({ err }, "POST /consultations/:id/diagnostic-ia failed");
+    return res.status(500).json(fail("INTERNAL", "Erreur lors de la génération du diagnostic IA"));
+  }
+});
+
+// ============================================================================
+//  POST /:id/acquitter-urgence — accuse de reception d'une urgence vitale.
+//  Stampe l'acquitteur (userId Clerk SERVEUR, non falsifiable) + nom + now(), et
+//  ecrit une entree audit-log immuable. Re-acquittement autorise : chaque appel =
+//  une nouvelle entree audit (la colonne montre le DERNIER acquittement).
+// ============================================================================
+router.post("/:id/acquitter-urgence", async (req, res) => {
+  try {
+    const params = UpdateConsultationParams.safeParse({ id: Number(req.params.id) });
+    if (!params.success) return res.status(400).json(fail("INVALID_ID", "ID invalide"));
+
+    const [c] = await db
+      .select({
+        id: consultationsTable.id,
+        urgenceVitaleDetectee: consultationsTable.urgenceVitaleDetectee,
+        urgencesVitales: consultationsTable.urgencesVitales,
+      })
+      .from(consultationsTable)
+      .where(and(eq(consultationsTable.clinicId, req.clinicId), eq(consultationsTable.id, params.data.id)));
+    if (!c) return res.status(404).json(fail("NOT_FOUND", "Consultation non trouvée"));
+    if (!c.urgenceVitaleDetectee) {
+      return res.status(400).json(fail("NO_URGENCE", "Aucune urgence vitale à acquitter"));
+    }
+
+    const auth = getAuth(req);
+    const userId = auth?.userId ?? null;
+    if (!userId) return res.status(401).json(fail("UNAUTHENTICATED", "Non authentifié"));
+
+    // Nom lisible : claims Clerk si dispo, sinon nom fourni par le front (affichage).
+    // La PREUVE reste le userId serveur (+ l'entree audit).
+    const claims = (auth?.sessionClaims ?? {}) as Record<string, any>;
+    const nom =
+      (typeof claims.name === "string" && claims.name) ||
+      [claims.firstName, claims.lastName].filter(Boolean).join(" ").trim() ||
+      (typeof req.body?.nom === "string" ? req.body.nom.trim() : "") ||
+      null;
+    const now = new Date();
+
+    await db
+      .update(consultationsTable)
+      .set({ urgenceAcquitteePar: userId, urgenceAcquitteeParNom: nom, urgenceAcquitteeLe: now })
+      .where(and(eq(consultationsTable.clinicId, req.clinicId), eq(consultationsTable.id, params.data.id)));
+
+    // Trace immuable : append-only, chaque acquittement = une entree (re-acquittement OK).
+    await logAuditEvent(req, {
+      action: "ACQUITTEMENT_URGENCE_VITALE",
+      resourceType: "consultation",
+      resourceId: String(params.data.id),
+      metadata: {
+        urgencesVitales: c.urgencesVitales ?? [],
+        niveauMax: niveauMaxUrgences(c.urgencesVitales as any),
+        acquitteParNom: nom,
+      },
+    });
+
+    const consultation = await getConsultationWithDetails(params.data.id, req.clinicId);
+    return res.json(consultation);
+  } catch (err) {
+    req.log.error({ err }, "POST /consultations/:id/acquitter-urgence failed");
+    return res.status(500).json(fail("INTERNAL", "Erreur interne du serveur"));
   }
 });
 

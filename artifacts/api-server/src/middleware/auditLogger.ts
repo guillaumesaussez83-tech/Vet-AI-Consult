@@ -18,7 +18,13 @@ import { auditLogs } from "../../../../lib/db/src/schema/audit-logs";
  * but never cause the request to fail.
  */
 
-export type AuditAction = "CREATE" | "UPDATE" | "DELETE" | "VIEW";
+export type AuditAction =
+  | "CREATE"
+  | "UPDATE"
+  | "DELETE"
+  | "VIEW"
+  | "DETECTION_URGENCE_VITALE"
+  | "ACQUITTEMENT_URGENCE_VITALE";
 
 interface AuditEntry {
   clinicId: string;

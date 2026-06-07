@@ -8,7 +8,7 @@
  * Lancer : pnpm vitest parseDiagnostic
  */
 import { describe, it, expect } from "vitest";
-import { parseDiagnosticResult } from "../lib/ai/diagnosticResult";
+import { parseDiagnosticResult, niveauMaxUrgences } from "../lib/ai/diagnosticResult";
 
 const base = {
   diagnostics: [{ nom: "X", probabilite: "Elevee", description: "desc" }],
@@ -63,5 +63,29 @@ describe("parseDiagnosticResult — normalisation urgences vitales", () => {
 
   it("leve une erreur si aucun JSON n'est present", () => {
     expect(() => parseDiagnosticResult("pas de json ici")).toThrow();
+  });
+});
+
+describe("niveauMaxUrgences", () => {
+  const u = (niveau: string) => ({
+    signal: "s",
+    niveau,
+    declencheurs: [],
+    causeMortelle: "c",
+  });
+
+  it("retourne null si aucune urgence", () => {
+    expect(niveauMaxUrgences([])).toBeNull();
+    expect(niveauMaxUrgences(null)).toBeNull();
+    expect(niveauMaxUrgences(undefined)).toBeNull();
+  });
+
+  it("retourne 'alerte forte' des qu'une urgence est forte", () => {
+    expect(niveauMaxUrgences([u("alerte"), u("alerte forte")])).toBe("alerte forte");
+    expect(niveauMaxUrgences([u("Alerte FORTE")])).toBe("alerte forte");
+  });
+
+  it("retourne 'alerte' si aucune n'est forte", () => {
+    expect(niveauMaxUrgences([u("alerte"), u("alerte")])).toBe("alerte");
   });
 });
