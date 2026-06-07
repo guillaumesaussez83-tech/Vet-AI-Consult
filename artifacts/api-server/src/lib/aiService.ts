@@ -10,6 +10,13 @@ import { buildFacturationPrompt } from "./ai/prompts/facturation";
 import { buildResumeClientPrompt } from "./ai/prompts/communication";
 import * as Sentry from "@sentry/node";
 import { createError } from "../middleware/errorHandler";
+import {
+  parseDiagnosticResult,
+  fallbackDiagnostic,
+  type DiagnosticItem,
+  type UrgenceVitaleItem,
+  type DiagnosticResult,
+} from "./ai/diagnosticResult";
 
 export interface DiagnosticParams {
   espece: string;
@@ -25,18 +32,9 @@ export interface DiagnosticParams {
   allergies?: string | null;
 }
 
-export interface DiagnosticItem {
-  nom: string;
-  probabilite: string;
-  description: string;
-}
-
-export interface DiagnosticResult {
-  diagnostics: DiagnosticItem[];
-  recommandations: string;
-  urgence: string;
-  texteComplet: string;
-}
+// Types + parsing du diagnostic deplaces dans ./ai/diagnosticResult (module pur
+// testable). Re-exportes ici pour compat des imports existants.
+export type { DiagnosticItem, UrgenceVitaleItem, DiagnosticResult };
 
 export interface ResumeClientParams {
   diagnostic?: string | null;
@@ -77,21 +75,6 @@ type AnthropicContentBlock =
   | { type: "text"; text: string }
   | { type: "image"; source: { type: "base64"; media_type: string; data: string } }
   | { type: "document"; source: { type: "base64"; media_type: "application/pdf"; data: string } };
-
-function parseDiagnosticResult(text: string): DiagnosticResult {
-  const jsonMatch = text.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error("No JSON found in response");
-  return JSON.parse(jsonMatch[0]) as DiagnosticResult;
-}
-
-function fallbackDiagnostic(text: string): DiagnosticResult {
-  return {
-    diagnostics: [{ nom: "Diagnostic indetermine", probabilite: "Moderee", description: text }],
-    recommandations: "Consulter un specialiste pour une evaluation approfondie",
-    urgence: "Non urgent",
-    texteComplet: text,
-  };
-}
 
 function buildRagQuery(params: DiagnosticParams): string {
   const parts: string[] = [params.espece];

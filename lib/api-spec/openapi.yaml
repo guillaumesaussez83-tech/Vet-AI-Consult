@@ -1011,6 +1011,14 @@ components:
           type: string
         texteComplet:
           type: string
+        urgenceVitaleDetectee:
+          type: boolean
+          description: Vrai si au moins un signal d'urgence cardio a ne jamais rater est detecte.
+        urgencesVitales:
+          type: array
+          description: Urgences cardio vitales detectees (catalogue v1). Tableau vide si aucune.
+          items:
+            $ref: "#/components/schemas/UrgenceVitaleItem"
       required:
         - diagnostics
         - recommandations
@@ -1030,6 +1038,30 @@ components:
         - nom
         - probabilite
         - description
+
+    UrgenceVitaleItem:
+      type: object
+      properties:
+        signal:
+          type: string
+          description: Identifiant du signal cardio, par exemple detresse-respiratoire-aigue.
+        niveau:
+          type: string
+          description: Niveau de gravite alerte ou alerte forte.
+        declencheurs:
+          type: array
+          description: Elements reellement detectes (verbatim proprietaire ou items d'examen).
+          items:
+            type: string
+        causeMortelle:
+          type: string
+        actionImmediate:
+          type: string
+      required:
+        - signal
+        - niveau
+        - declencheurs
+        - causeMortelle
 
     DashboardStats:
       type: object
