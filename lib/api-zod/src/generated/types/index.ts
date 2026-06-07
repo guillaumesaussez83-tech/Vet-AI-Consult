@@ -28,3 +28,4 @@ export * from "./ordonnanceResponse";
 export * from "./owner";
 export * from "./patient";
 export * from "./patientWithOwner";
+export * from "./urgenceVitaleItem";

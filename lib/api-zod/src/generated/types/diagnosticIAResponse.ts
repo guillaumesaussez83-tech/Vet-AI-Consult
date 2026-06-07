@@ -6,10 +6,15 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { DiagnosticItem } from "./diagnosticItem";
+import type { UrgenceVitaleItem } from "./urgenceVitaleItem";
 
 export interface DiagnosticIAResponse {
   diagnostics: DiagnosticItem[];
   recommandations: string;
   urgence: string;
   texteComplet: string;
+  /** Vrai si au moins un signal d'urgence cardio a ne jamais rater est detecte. */
+  urgenceVitaleDetectee?: boolean;
+  /** Urgences cardio vitales detectees (catalogue v1). Tableau vide si aucune. */
+  urgencesVitales?: UrgenceVitaleItem[];
 }

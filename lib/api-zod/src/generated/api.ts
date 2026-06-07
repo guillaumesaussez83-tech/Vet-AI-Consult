@@ -801,6 +801,36 @@ export const GetDiagnosticIAResponse = zod.object({
   recommandations: zod.string(),
   urgence: zod.string(),
   texteComplet: zod.string(),
+  urgenceVitaleDetectee: zod
+    .boolean()
+    .optional()
+    .describe(
+      "Vrai si au moins un signal d'urgence cardio a ne jamais rater est detecte.",
+    ),
+  urgencesVitales: zod
+    .array(
+      zod.object({
+        signal: zod
+          .string()
+          .describe(
+            "Identifiant du signal cardio, par exemple detresse-respiratoire-aigue.",
+          ),
+        niveau: zod
+          .string()
+          .describe("Niveau de gravite alerte ou alerte forte."),
+        declencheurs: zod
+          .array(zod.string())
+          .describe(
+            "Elements reellement detectes (verbatim proprietaire ou items d'examen).",
+          ),
+        causeMortelle: zod.string(),
+        actionImmediate: zod.string().optional(),
+      }),
+    )
+    .optional()
+    .describe(
+      "Urgences cardio vitales detectees (catalogue v1). Tableau vide si aucune.",
+    ),
 });
 
 /**
