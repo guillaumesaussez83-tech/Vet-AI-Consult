@@ -38,8 +38,8 @@ type ActeRow = {
 };
 
 /**
- * AgrÃÂÃÂ¨ge les actes par consultationId ÃÂ¢ÃÂÃÂ totaux HT/TTC/tva breakdown.
- * Accepte un dÃÂÃÂ©faut (20) pour les actes historiques avec tvaRate null.
+ * Agrège les actes par consultationId → totaux HT/TTC/tva breakdown.
+ * Accepte un défaut (20) pour les actes historiques avec tvaRate null.
  */
 function buildTotalsByConsultation(actes: ReadonlyArray<ActeRow>) {
   const byCons = new Map<number, ActeRow[]>();
@@ -56,8 +56,8 @@ function buildTotalsByConsultation(actes: ReadonlyArray<ActeRow>) {
 }
 
 // ============================================================================
-//  GET / ÃÂ¢ÃÂÃÂ liste des factures avec consultation + patient + owner joints.
-//  P1-1 : TVA multi-taux calculÃÂÃÂ©e par breakdown par acte.
+//  GET / — liste des factures avec consultation + patient + owner joints.
+//  P1-1 : TVA multi-taux calculée par breakdown par acte.
 //  P1-3 : UN SEUL select pour toutes les consultations + patients + owners.
 // ============================================================================
 router.get("/", async (req, res) => {
@@ -154,7 +154,7 @@ router.get("/", async (req, res) => {
 
     const consById = new Map(consultations.map((c) => [c.id, c]));
 
-    // 3) Update en arriÃÂÃÂ¨re-plan des factures dont les totaux ont dÃÂÃÂ©rivÃÂÃÂ© (non bloquant).
+    // 3) Update en arrière-plan des factures dont les totaux ont dérivé (non bloquant).
     const staleUpdates = factures
       .map((f) => {
         const fresh = totalsByCons.get(f.consultationId);
@@ -262,7 +262,7 @@ router.get("/:id", async (req, res) => {
       .select()
       .from(facturesTable)
       .where(and(eq(facturesTable.clinicId, req.clinicId), eq(facturesTable.id, params.data.id)));
-    if (!facture) return res.status(404).json(fail("NOT_FOUND", "Facture non trouvÃÂÃÂ©e"));
+    if (!facture) return res.status(404).json(fail("NOT_FOUND", "Facture non trouvée"));
 
     const [consultation] = await db
       .select({
@@ -340,7 +340,7 @@ router.get("/:id", async (req, res) => {
         ),
       );
 
-    // P1-1 : calcul ligne par ligne avec le tvaRate rÃÂÃÂ©el de chaque acte.
+    // P1-1 : calcul ligne par ligne avec le tvaRate réel de chaque acte.
     const lignesMapped = lignes.map((l) => {
       const rate = l.tvaRate ?? TVA_DEFAULT_RATE;
       const ht = Math.round(l.prixUnitaire * l.quantite * 100) / 100;
@@ -408,7 +408,7 @@ router.get("/:id", async (req, res) => {
 });
 
 
-// POST /api/factures ÃÂ¢ÃÂÃÂ CrÃÂÃÂ©er une facture depuis les actes d'une consultation
+// POST /api/factures — Créer une facture depuis les actes d'une consultation
 router.post("/", validate(CreateFactureSchema), async (req, res) => {
   try {
     const consultationId = Number(req.body?.consultationId);
@@ -420,7 +420,7 @@ router.post("/", validate(CreateFactureSchema), async (req, res) => {
       .from(facturesTable)
       .where(and(eq(facturesTable.clinicId, req.clinicId), eq(facturesTable.consultationId, consultationId)));
     if (existing) {
-      return res.status(409).json({ success: false, error: { code: "ALREADY_EXISTS", message: "Facture dÃÂÃÂ©jÃÂÃÂ  crÃÂÃÂ©ÃÂÃÂ©e pour cette consultation" } });
+      return res.status(409).json({ success: false, error: { code: "ALREADY_EXISTS", message: "Facture déjà créée pour cette consultation" } });
     }
     const montants = await FactureService.recalculerDepuisActes(consultationId, req.clinicId);
     const numero = await FactureService.genererNumero(req.clinicId);
@@ -451,7 +451,7 @@ router.delete("/:id", async (req, res) => {
       .delete(facturesTable)
       .where(and(eq(facturesTable.clinicId, req.clinicId), eq(facturesTable.id, params.data.id)))
       .returning();
-    if (!deleted) return res.status(404).json(fail("NOT_FOUND", "Facture non trouvÃÂÃÂ©e"));
+    if (!deleted) return res.status(404).json(fail("NOT_FOUND", "Facture non trouvée"));
 
     return res.json({ success: true });
   } catch (err) {
@@ -461,7 +461,7 @@ router.delete("/:id", async (req, res) => {
 });
 
 // ============================================================================
-//  PATCH /:id ÃÂ¢ÃÂÃÂ changement de statut, recalcul TVA multi-taux, FEFO transactionnel.
+//  PATCH /:id — changement de statut, recalcul TVA multi-taux, FEFO transactionnel.
 // ============================================================================
 router.patch("/:id", async (req, res) => {
   try {
@@ -471,7 +471,7 @@ router.patch("/:id", async (req, res) => {
     const body = UpdateFactureStatutBody.safeParse(req.body);
     if (!body.success) {
       return res.status(400).json(
-        fail("VALIDATION_ERROR", "DonnÃÂÃÂ©es invalides", body.error.flatten().fieldErrors),
+        fail("VALIDATION_ERROR", "Données invalides", body.error.flatten().fieldErrors),
       );
     }
 
@@ -510,11 +510,11 @@ router.patch("/:id", async (req, res) => {
       .where(
         and(eq(facturesTable.clinicId, req.clinicId), eq(facturesTable.id, params.data.id)),
       );
-    if (!factureBefore) return res.status(404).json(fail("NOT_FOUND", "Facture non trouvÃÂÃÂ©e"));
+    if (!factureBefore) return res.status(404).json(fail("NOT_FOUND", "Facture non trouvée"));
 
     if (body.data.statut === "payee" && Number(factureBefore.montantTTC ?? 0) === 0) {
       return res.status(400).json(
-        fail("ZERO_TOTAL", "Impossible de marquer comme payÃÂÃÂ©e une facture ÃÂÃÂ  0 ÃÂ¢ÃÂÃÂ¬. Ajoutez des actes d'abord."),
+        fail("ZERO_TOTAL", "Impossible de marquer comme payée une facture à 0 €. Ajoutez des actes d'abord."),
       );
     }
 
@@ -545,9 +545,9 @@ router.patch("/:id", async (req, res) => {
       .set(updateData)
       .where(and(eq(facturesTable.clinicId, req.clinicId), eq(facturesTable.id, params.data.id)))
       .returning();
-    if (!facture) return res.status(404).json(fail("NOT_FOUND", "Facture non trouvÃÂÃÂ©e"));
+    if (!facture) return res.status(404).json(fail("NOT_FOUND", "Facture non trouvée"));
 
-    // FEFO auto-decrement ÃÂÃÂ  l'encaissement.
+    // FEFO auto-decrement à l'encaissement.
     if (body.data.statut === "payee" && factureBefore.statut !== "payee") {
       try {
         const lignes = await db

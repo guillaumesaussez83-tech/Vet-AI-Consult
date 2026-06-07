@@ -30,12 +30,12 @@ const storage = new ObjectStorageService();
 router.post("/diagnostic", async (req, res) => {
   try {
     const body = GetDiagnosticIABody.safeParse(req.body);
-    if (!body.success) return res.status(400).json({ error: "DonnÃÂ©es invalides" });
+    if (!body.success) return res.status(400).json({ error: "Données invalides" });
     const result = await diagnosticDifferentiel(body.data);
     return res.json(result);
   } catch (err) {
     req.log.error(err);
-    return res.status(500).json({ error: "Erreur lors de la gÃÂ©nÃÂ©ration du diagnostic IA" });
+    return res.status(500).json({ error: "Erreur lors de la génération du diagnostic IA" });
   }
 });
 
@@ -43,7 +43,7 @@ router.post("/diagnostic-enrichi", async (req, res) => {
   try {
     const { espece, race, age, poids, sexe, sterilise, anamnese, examenClinique, examensComplementaires, antecedents, allergies, objectPaths } = req.body;
     if (!anamnese || !examenClinique) {
-      return res.status(400).json({ error: "AnamnÃÂ¨se et examen clinique requis" });
+      return res.status(400).json({ error: "Anamnèse et examen clinique requis" });
     }
     const result = await diagnosticEnrichi(
       { espece, race, age, poids, sexe, sterilise, anamnese, examenClinique, examensComplementaires, antecedents, allergies, objectPaths },
@@ -66,7 +66,7 @@ router.post("/reformuler-anamnese", async (req, res) => {
     return res.json(result);
   } catch (err) {
     req.log.error(err);
-    return res.status(500).json({ error: "Erreur lors de la reformulation de l'anamnÃÂ¨se" });
+    return res.status(500).json({ error: "Erreur lors de la reformulation de l'anamnèse" });
   }
 });
 
@@ -94,7 +94,7 @@ router.post("/resume-client", async (req, res) => {
     return res.json(result);
   } catch (err) {
     req.log.error(err);
-    return res.status(500).json({ error: "Erreur lors de la gÃÂ©nÃÂ©ration du rÃÂ©sumÃÂ© client" });
+    return res.status(500).json({ error: "Erreur lors de la génération du résumé client" });
   }
 });
 
@@ -121,7 +121,7 @@ router.post("/generer-facture-voix", pdfLimiter, async (req, res) => {
     return res.json(result);
   } catch (err) {
     req.log.error(err);
-    return res.status(500).json({ error: "Erreur lors de la gÃÂ©nÃÂ©ration de la facture vocale" });
+    return res.status(500).json({ error: "Erreur lors de la génération de la facture vocale" });
   }
 });
 
@@ -130,54 +130,54 @@ router.post("/certificat", pdfLimiter, async (req, res) => {
     const { type, patient, owner, vaccinations, consultations, actes, veterinaire, clinique, cliniqueInfo } = req.body;
     if (!type || !patient) return res.status(400).json({ error: "type et patient requis" });
     const templates: Record<string, string> = {
-      bonne_sante: "Certificat de bonne santÃÂ© pour voyage UE (ÃÂ©tat gÃÂ©nÃÂ©ral, vaccins, puce, date examen)",
-      cession: "Certificat de cession pour vente (ÃÂ©tat de santÃÂ©, vaccins, vermifugations, absence de pathologie connue)",
-      aptitude: "Certificat d'aptitude pour concours ou ÃÂ©levage (examen complet systÃÂ¨mes, locomoteur, cardiaque, respiratoire)",
-      soins: "Attestation de soins pour assurance (liste actes, diagnostic, pronostic, durÃÂ©e traitement)",
-      ordonnance: "Ordonnance sÃÂ©curisÃÂ©e (numÃÂ©ro vÃÂ©tÃÂ©rinaire, date, posologie dÃÂ©taillÃÂ©e, durÃÂ©e traitement, mentions lÃÂ©gales)",
+      bonne_sante: "Certificat de bonne santé pour voyage UE (état général, vaccins, puce, date examen)",
+      cession: "Certificat de cession pour vente (état de santé, vaccins, vermifugations, absence de pathologie connue)",
+      aptitude: "Certificat d'aptitude pour concours ou élevage (examen complet systèmes, locomoteur, cardiaque, respiratoire)",
+      soins: "Attestation de soins pour assurance (liste actes, diagnostic, pronostic, durée traitement)",
+      ordonnance: "Ordonnance sécurisée (numéro vétérinaire, date, posologie détaillée, durée traitement, mentions légales)",
     };
     const templateDesc = templates[type] ?? type;
     const ci = cliniqueInfo ?? {};
     const adresseComplete = [ci.adresse, ci.codePostal && ci.ville ? `${ci.codePostal} ${ci.ville}` : (ci.ville || "")].filter(Boolean).join(", ");
-    const prompt = `Tu es vÃÂ©tÃÂ©rinaire praticien en France. GÃÂ©nÃÂ¨re un ${templateDesc} officiel et professionnel.
+    const prompt = `Tu es vétérinaire praticien en France. Génère un ${templateDesc} officiel et professionnel.
 
-DONNÃÂES PATIENT :
+DONNÉES PATIENT :
 ${JSON.stringify(patient, null, 2)}
 
-PROPRIÃÂTAIRE :
+PROPRIÉTAIRE :
 ${JSON.stringify(owner, null, 2)}
 
 ${vaccinations?.length ? `HISTORIQUE VACCINAL :\n${JSON.stringify(vaccinations, null, 2)}` : ""}
-${consultations?.length ? `CONSULTATIONS RÃÂCENTES :\n${JSON.stringify(consultations.slice(0, 3), null, 2)}` : ""}
-${actes?.length ? `ACTES RÃÂALISÃÂS :\n${JSON.stringify(actes, null, 2)}` : ""}
+${consultations?.length ? `CONSULTATIONS RÉCENTES :\n${JSON.stringify(consultations.slice(0, 3), null, 2)}` : ""}
+${actes?.length ? `ACTES RÉALISÉS :\n${JSON.stringify(actes, null, 2)}` : ""}
 
-VÃÂSÃÂRINAIRE SIGNATAIRE : ${veterinaire || "Dr. VÃÂ©tÃÂ©rinaire"}
-CLINIQUE : ${ci.nom || clinique || "Clinique vÃÂ©tÃÂ©rinaire"}
+VÉSÉRINAIRE SIGNATAIRE : ${veterinaire || "Dr. Vétérinaire"}
+CLINIQUE : ${ci.nom || clinique || "Clinique vétérinaire"}
 ${adresseComplete ? `ADRESSE : ${adresseComplete}` : ""}
-${ci.telephone ? `TÃÂLÃÂPHONE : ${ci.telephone}` : ""}
+${ci.telephone ? `TÉLÉPHONE : ${ci.telephone}` : ""}
 ${ci.email ? `EMAIL : ${ci.email}` : ""}
-${ci.numeroOrdre ? `NÃÂ° ORDRE : ${ci.numeroOrdre}` : ""}
+${ci.numeroOrdre ? `N° ORDRE : ${ci.numeroOrdre}` : ""}
 ${ci.siret ? `SIRET : ${ci.siret}` : ""}
 DATE : ${new Date().toLocaleDateString("fr-FR")}
 
 INSTRUCTIONS :
-- GÃÂ©nÃÂ¨re le certificat complet, professionnel, conforme aux exigences lÃÂ©gales franÃÂ§aises.
-- Utilise les coordonnÃÂ©es exactes fournies ci-dessus Ã¢ÂÂ n'utilise JAMAIS de placeholders comme [Adresse du cabinet], [XXXX], [email@example.com], etc.
+- Génère le certificat complet, professionnel, conforme aux exigences légales françaises.
+- Utilise les coordonnées exactes fournies ci-dessus — n'utilise JAMAIS de placeholders comme [Adresse du cabinet], [XXXX], [email@example.com], etc.
 - Inclus toutes les mentions obligatoires.
-- Utilise un format structurÃÂ© avec en-tÃÂªte (coordonnÃÂ©es clinique + vÃÂ©tÃÂ©rinaire), corps du document et signature.
+- Utilise un format structuré avec en-tête (coordonnées clinique + vétérinaire), corps du document et signature.
 
-RÃÂ©ponds UNIQUEMENT avec le texte du certificat, prÃÂªt ÃÂ  imprimer.`;
+Réponds UNIQUEMENT avec le texte du certificat, prêt à imprimer.`;
     const message = await (await import("@workspace/integrations-anthropic-ai")).anthropic.messages.create({
       model: "claude-sonnet-4-6",
       max_tokens: 2048,
       messages: [{ role: "user", content: prompt }],
     });
     const content = message.content[0];
-    if (content.type !== "text") throw new Error("RÃÂ©ponse inattendue");
+    if (content.type !== "text") throw new Error("Réponse inattendue");
     return res.json({ certificat: content.text.trim() });
   } catch (err) {
     req.log.error(err);
-    return res.status(500).json({ error: "Erreur lors de la gÃÂ©nÃÂ©ration du certificat" });
+    return res.status(500).json({ error: "Erreur lors de la génération du certificat" });
   }
 });
 
@@ -185,32 +185,32 @@ router.post("/carnet-vaccinations", async (req, res) => {
   try {
     const { patient, owner, vaccinations } = req.body;
     if (!patient) return res.status(400).json({ error: "patient requis" });
-    const prompt = `Tu es vÃÂ©tÃÂ©rinaire. GÃÂ©nÃÂ¨re un rÃÂ©sumÃÂ© du carnet de santÃÂ© vaccinal pour ce patient animal.
+    const prompt = `Tu es vétérinaire. Génère un résumé du carnet de santé vaccinal pour ce patient animal.
 
 ANIMAL : ${JSON.stringify(patient)}
-PROPRIÃÂTAIRE : ${JSON.stringify(owner)}
+PROPRIÉTAIRE : ${JSON.stringify(owner)}
 VACCINATIONS : ${JSON.stringify(vaccinations ?? [])}
 DATE D'AUJOURD'HUI : ${new Date().toLocaleDateString("fr-FR")}
 
-GÃÂ©nÃÂ¨re un bilan vaccinal complet et professionnel qui explique :
-1. Les vaccins rÃÂ©alisÃÂ©s et leur date
-2. Les rappels ÃÂ  venir (prochains 6 mois)
+Génère un bilan vaccinal complet et professionnel qui explique :
+1. Les vaccins réalisés et leur date
+2. Les rappels à venir (prochains 6 mois)
 3. Les vaccins en retard s'il y en a
-4. Les recommandations vaccinales pour l'espÃÂ¨ce
-5. Un rÃÂ©sumÃÂ© de protection actuelle
+4. Les recommandations vaccinales pour l'espèce
+5. Un résumé de protection actuelle
 
-RÃÂ©ponds en franÃÂ§ais, de faÃÂ§on claire et lisible pour le propriÃÂ©taire.`;
+Réponds en français, de façon claire et lisible pour le propriétaire.`;
     const message = await (await import("@workspace/integrations-anthropic-ai")).anthropic.messages.create({
       model: "claude-sonnet-4-6",
       max_tokens: 2048,
       messages: [{ role: "user", content: prompt }],
     });
     const content = message.content[0];
-    if (content.type !== "text") throw new Error("RÃÂ©ponse inattendue");
+    if (content.type !== "text") throw new Error("Réponse inattendue");
     return res.json({ carnet: content.text.trim() });
   } catch (err) {
     req.log.error(err);
-    return res.status(500).json({ error: "Erreur lors de la gÃÂ©nÃÂ©ration du carnet" });
+    return res.status(500).json({ error: "Erreur lors de la génération du carnet" });
   }
 });
 
@@ -218,27 +218,27 @@ router.post("/dictee-ordonnance", async (req, res) => {
   try {
     const { transcription } = req.body;
     if (!transcription || typeof transcription !== "string" || !transcription.trim()) {
-      return res.status(400).json({ error: "Le texte de la dictÃÂ©e est requis" });
+      return res.status(400).json({ error: "Le texte de la dictée est requis" });
     }
     const { anthropic } = await import("@workspace/integrations-anthropic-ai");
     const message = await anthropic.messages.create({
       model: "claude-sonnet-4-6",
       max_tokens: 2048,
-      system: `Tu es un vÃÂ©tÃÂ©rinaire praticien expert en France. Tu gÃÂ©nÃÂ¨res des ordonnances vÃÂ©tÃÂ©rinaires prÃÂ©cises et mÃÂ©dicalement justifiÃÂ©es ÃÂ  partir de dictÃÂ©es vocales.
+      system: `Tu es un vétérinaire praticien expert en France. Tu génères des ordonnances vétérinaires précises et médicalement justifiées à partir de dictées vocales.
 
-RÃÂGLES STRICTES :
-1. Ne prescris JAMAIS d'antibiotiques (amoxicilline, amoxiclavulanate, cÃÂ©fovecine, mÃÂ©tronidazole, etc.) sans indication infectieuse confirmÃÂ©e ou trÃÂ¨s probable.
-2. Calcule toujours les doses en mg/kg si le poids est mentionnÃÂ©.
-3. Prescris UNIQUEMENT ce qui est mÃÂ©dicalement justifiÃÂ©.
-4. AINS : prÃÂ©cise la durÃÂ©e maximale (5-7j chien, 3-5j chat).
-5. CorticoÃÂ¯des : dÃÂ©croissance progressive.
-6. StupÃÂ©fiants : mention "STUPÃÂFIANT Ã¢ÂÂ Ordonnance sÃÂ©curisÃÂ©e obligatoire".
-7. quantite_a_delivrer doit ÃÂªtre un entier positif.
-8. ANTI-DOUBLON STRICT : Si un mÃÂªme mÃÂ©dicament est mentionnÃÂ© plusieurs fois dans la dictÃÂ©e, ne l'inclure QU'UNE SEULE FOIS.
+RÈGLES STRICTES :
+1. Ne prescris JAMAIS d'antibiotiques (amoxicilline, amoxiclavulanate, céfovecine, métronidazole, etc.) sans indication infectieuse confirmée ou très probable.
+2. Calcule toujours les doses en mg/kg si le poids est mentionné.
+3. Prescris UNIQUEMENT ce qui est médicalement justifié.
+4. AINS : précise la durée maximale (5-7j chien, 3-5j chat).
+5. Corticoïdes : décroissance progressive.
+6. Stupéfiants : mention "STUPÉFIANT — Ordonnance sécurisée obligatoire".
+7. quantite_a_delivrer doit être un entier positif.
+8. ANTI-DOUBLON STRICT : Si un même médicament est mentionné plusieurs fois dans la dictée, ne l'inclure QU'UNE SEULE FOIS.
 Inclus le champ estDelivre (boolean).`,
       messages: [{
         role: "user",
-        content: `Extrait de cette dictÃÂ©e les prescriptions mÃÂ©dicamenteuses sous forme JSON structurÃÂ© :
+        content: `Extrait de cette dictée les prescriptions médicamenteuses sous forme JSON structuré :
 [{
   "nom_medicament": string,
   "dose": string,
@@ -251,9 +251,9 @@ Inclus le champ estDelivre (boolean).`,
   "estDelivre": boolean
 }]
 
-RÃÂ©ponds UNIQUEMENT avec le JSON valide.
+Réponds UNIQUEMENT avec le JSON valide.
 
-Texte de la dictÃÂ©e : "${transcription}"`
+Texte de la dictée : "${transcription}"`
       }],
     });
 
@@ -271,7 +271,7 @@ Texte de la dictÃÂ©e : "${transcription}"`
     prescriptions = Array.from(dedupMap.values());
     const resultats = await Promise.all(prescriptions.map(async (p) => { const mots = p.nom_medicament.split(/\s+/).filter((m: string) => m.length > 2); let match = null; for (const mot of mots) { const [found] = await db.select({ id: stockMedicamentsTable.id, nom: stockMedicamentsTable.nom, prixVenteTTC: stockMedicamentsTable.prixVenteTTC, quantiteStock: stockMedicamentsTable.quantiteStock, unite: stockMedicamentsTable.unite }).from(stockMedicamentsTable).where(and(eq(stockMedicamentsTable.clinicId, req.clinicId), ilike(stockMedicamentsTable.nom, `%${mot}%`))).limit(1); if (found) { match = found; break; } } return { ...p, stockMatch: match }; }));
     return res.json({ prescriptions: resultats });
-  } catch (err) { req.log.error(err); return res.status(500).json({ error: "Erreur lors de la dictÃÂ©e ordonnance" }); }
+  } catch (err) { req.log.error(err); return res.status(500).json({ error: "Erreur lors de la dictée ordonnance" }); }
 });
 
 router.post("/confirmer-dictee-ordonnance", async (req, res) => {
@@ -287,11 +287,11 @@ router.post("/confirmer-dictee-ordonnance", async (req, res) => {
     const lastSeq = lastOrd?.num ? parseInt(lastOrd.num.split("-")[2] ?? "0") : 0;
     const numeroOrdonnance = `ORD-${year}-${String(lastSeq + 1).padStart(5, "0")}`;
     const cleanField = (v: any) => { if (v == null) return ""; const s = String(v).trim(); if (!s || s === "Ã¢ÂÂ" || s === "-" || /^null$/i.test(s)) return ""; return s; };
-    const contenu = prescriptions.map((p: any) => { const delivre = p.estDelivre === false ? " [ÃÂ acheter en pharmacie]" : " [DÃÂ©livrÃÂ© en clinique]"; return [p.nom_medicament + delivre, cleanField(p.dose) && `Dose : ${cleanField(p.dose)}`, cleanField(p.voie_administration) && `Voie : ${cleanField(p.voie_administration)}`, cleanField(p.frequence) && `FrÃÂ©quence : ${cleanField(p.frequence)}`, cleanField(p.duree) && `DurÃÂ©e : ${cleanField(p.duree)}`].filter(Boolean).join(" Ã¢ÂÂ "); }).join("\n");
+    const contenu = prescriptions.map((p: any) => { const delivre = p.estDelivre === false ? " [À acheter en pharmacie]" : " [Délivré en clinique]"; return [p.nom_medicament + delivre, cleanField(p.dose) && `Dose : ${cleanField(p.dose)}`, cleanField(p.voie_administration) && `Voie : ${cleanField(p.voie_administration)}`, cleanField(p.frequence) && `Fréquence : ${cleanField(p.frequence)}`, cleanField(p.duree) && `Durée : ${cleanField(p.duree)}`].filter(Boolean).join(" — "); }).join("\n");
     const { ordonnance, medicamentsDelivres } = await db.transaction(async (tx) => {
       const [ordonnance] = await tx.insert(ordonnancesTable).values({ clinicId: req.clinicId, consultationId: consId, patientId: patientId ? Number(patientId) : null, veterinaire: veterinaire ?? null, contenu, numeroOrdonnance, genereIA: true }).returning();
       const [existingFacture] = await tx.select({ id: facturesTable.id, lignes: facturesTable.lignes, totalHT: facturesTable.totalHT, totalTVA: facturesTable.totalTVA, totalTTC: facturesTable.totalTTC }).from(facturesTable).where(and(eq(facturesTable.clinicId, req.clinicId), eq(facturesTable.consultationId, consId)));
-      for (const p of prescriptions) { if (!p.stockMatch?.id) continue; const quantite = Math.max(1, Math.round(p.quantite_a_delivrer ?? 1)); await tx.insert(mouvementsStockTable).values({ clinicId: req.clinicId, medicamentId: p.stockMatch.id, typeMouvement: "sortie_consultation", quantite: -quantite, consultationId: consId, factureId: existingFacture?.id ?? null, motif: `Ordonnance ${numeroOrdonnance} Ã¢ÂÂ ${p.nom_medicament}`, utilisateur: veterinaire ?? "SystÃÂ¨me" }); await tx.update(stockMedicamentsTable).set({ quantiteStock: drizzleSql`quantite_stock - ${quantite}` }).where(and(eq(stockMedicamentsTable.clinicId, req.clinicId), eq(stockMedicamentsTable.id, p.stockMatch.id))); }
+      for (const p of prescriptions) { if (!p.stockMatch?.id) continue; const quantite = Math.max(1, Math.round(p.quantite_a_delivrer ?? 1)); await tx.insert(mouvementsStockTable).values({ clinicId: req.clinicId, medicamentId: p.stockMatch.id, typeMouvement: "sortie_consultation", quantite: -quantite, consultationId: consId, factureId: existingFacture?.id ?? null, motif: `Ordonnance ${numeroOrdonnance} — ${p.nom_medicament}`, utilisateur: veterinaire ?? "Système" }); await tx.update(stockMedicamentsTable).set({ quantiteStock: drizzleSql`quantite_stock - ${quantite}` }).where(and(eq(stockMedicamentsTable.clinicId, req.clinicId), eq(stockMedicamentsTable.id, p.stockMatch.id))); }
       const medicamentsDelivres = prescriptions.filter((p: any) => p.estDelivre !== false && p.stockMatch?.id && p.stockMatch?.prixVenteTTC);
       if (existingFacture?.id && medicamentsDelivres.length > 0) { const lignesExistantes = Array.isArray(existingFacture.lignes) ? existingFacture.lignes : []; const descExistantes = new Set(lignesExistantes.map((l: any) => (l.description ?? "").toLowerCase().trim())); const nouvLignes = medicamentsDelivres.filter((p: any) => !descExistantes.has((p.nom_medicament ?? "").toLowerCase().trim())).map((p: any) => { const quantite = Math.max(1, Math.round(p.quantite_a_delivrer ?? 1)); const prixTTC = Number(p.stockMatch.prixVenteTTC) || 0; const prixHT = prixTTC / 1.2; return { acteId: null, description: p.nom_medicament, quantite, prixUnitaire: prixHT, tvaRate: 20, montantHT: prixHT * quantite }; }); if (nouvLignes.length > 0) { const toutesLignes = [...lignesExistantes, ...nouvLignes]; const totalHT = toutesLignes.reduce((s, l) => s + (l.montantHT ?? 0), 0); await tx.update(facturesTable).set({ lignes: toutesLignes, totalHT: String(totalHT.toFixed(2)), totalTVA: String((totalHT * 0.2).toFixed(2)), totalTTC: String((totalHT * 1.2).toFixed(2)) }).where(eq(facturesTable.id, existingFacture.id)); } }
       return { ordonnance, medicamentsDelivres };

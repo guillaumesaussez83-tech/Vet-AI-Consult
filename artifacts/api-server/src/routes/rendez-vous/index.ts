@@ -97,7 +97,7 @@ router.post("/", async (req, res) => {
       patientId: patientId ? parseInt(patientId) : null,
       ownerId: ownerId ? parseInt(ownerId) : null,
       veterinaire, motif,
-      statut: statut ?? "planifiÃ©",
+      statut: statut ?? "planifié",
       statutSalle: "en_attente_arrivee",
       notes,
     }).returning();
@@ -123,7 +123,7 @@ router.patch("/:id/statut-salle", async (req, res) => {
       .where(and(eq(rendezVousTable.id, id), eq(rendezVousTable.clinicId, req.clinicId)))
       .returning();
 
-    if (!rdvs[0]) return res.status(404).json({ error: "RDV non trouvÃ©" });
+    if (!rdvs[0]) return res.status(404).json({ error: "RDV non trouvé" });
 
     const full = await db
       .select(selectRdv)
@@ -168,7 +168,7 @@ router.patch("/:id", async (req, res) => {
       eq(rendezVousTable.id, id),
       eq(rendezVousTable.clinicId, req.clinicId),
     )).returning();
-    if (!rdv) return res.status(404).json({ error: "RDV non trouvÃ©" });
+    if (!rdv) return res.status(404).json({ error: "RDV non trouvé" });
     return res.json(rdv);
   } catch (err) {
     req.log.error(err);
