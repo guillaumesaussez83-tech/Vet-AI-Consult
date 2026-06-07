@@ -21,6 +21,7 @@ import {
 import { eq, and, inArray, desc } from "drizzle-orm";
 import { decrementerConsultationFEFO } from "../stock/ia-engine";
 import { TVA_DEFAULT_RATE } from "../../lib/constants";
+import { doitDecrementerStock } from "../../lib/categorisation";
 import { computeInvoiceTotals } from "../../lib/numbering";
 import { fail } from "../../lib/response";
 
@@ -566,15 +567,10 @@ router.patch("/:id", async (req, res) => {
             ),
           );
 
+        // Match insensible aux accents/casse (categorie Medicament saisie
+        // avec ou sans accent) + codes produits MED.../VACCI.... Cf. lib/categorisation.
         const medicamentLignes = lignes
-          .filter(
-            (l) =>
-              l.nom &&
-              (l.categorie?.toLowerCase().includes("mÃÂÃÂ©dic") ||
-                l.categorie?.toLowerCase().includes("medic") ||
-                l.code?.startsWith("MED") ||
-                l.code?.startsWith("VACCI")),
-          )
+          .filter((l) => l.nom && doitDecrementerStock(l.categorie, l.code))
           .map((l) => ({ nom: l.nom!, quantite: l.quantite ?? 1 }));
 
         if (medicamentLignes.length > 0) {
