@@ -253,6 +253,16 @@ CREATE INDEX IF NOT EXISTS idx_sms_log_clinic ON sms_log(clinic_id);
 CREATE INDEX IF NOT EXISTS idx_recurring_clinic ON recurring_appointments(clinic_id, active);
 `,
   },
+  {
+    name: "urgences-vitales-persistance",
+    sql: `
+      ALTER TABLE consultations ADD COLUMN IF NOT EXISTS urgences_vitales JSONB;
+      ALTER TABLE consultations ADD COLUMN IF NOT EXISTS urgence_vitale_detectee BOOLEAN DEFAULT FALSE;
+      ALTER TABLE consultations ADD COLUMN IF NOT EXISTS urgence_acquittee_par TEXT;
+      ALTER TABLE consultations ADD COLUMN IF NOT EXISTS urgence_acquittee_par_nom TEXT;
+      ALTER TABLE consultations ADD COLUMN IF NOT EXISTS urgence_acquittee_le TIMESTAMPTZ;
+    `,
+  },
 ];
 
 export async function runMigrations(db: AnyDb, logger: Logger): Promise<void> {
