@@ -1,4 +1,4 @@
-import { pgTable, text, serial, timestamp, integer, real, index } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp, integer, real, index, jsonb, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { patientsTable } from "./patients";
@@ -28,6 +28,13 @@ export const consultationsTable = pgTable("consultations", {
     examenIA: text("examen_ia"),
     examensComplementairesValides: text("examens_complementaires_valides"),
     syntheseIA: text("synthese_ia"),
+    // Urgences cardio « a ne jamais rater » : etat/affichage. La PREUVE immuable
+    // (qui/quand/quoi, detection + acquittements) vit dans audit_logs (append-only).
+    urgencesVitales: jsonb("urgences_vitales"),
+    urgenceVitaleDetectee: boolean("urgence_vitale_detectee").default(false),
+    urgenceAcquitteePar: text("urgence_acquittee_par"),         // Clerk userId (autoritaire)
+    urgenceAcquitteeParNom: text("urgence_acquittee_par_nom"),  // nom lisible (affichage)
+    urgenceAcquitteeLe: timestamp("urgence_acquittee_le", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 }, (table) => ({
