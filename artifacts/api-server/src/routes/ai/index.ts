@@ -35,6 +35,13 @@ router.post("/diagnostic", async (req, res) => {
     return res.json(result);
   } catch (err) {
     req.log.error(err);
+    // Distinguer le delai depasse (timeout LLM) d'une vraie erreur serveur, pour
+    // que le front affiche un message clair "delai depasse" plutot que generique.
+    if ((err as { code?: string } | null | undefined)?.code === "AI_TIMEOUT") {
+      return res
+        .status(504)
+        .json({ error: "Le diagnostic IA a depasse le delai imparti. Veuillez reessayer.", code: "AI_TIMEOUT" });
+    }
     return res.status(500).json({ error: "Erreur lors de la génération du diagnostic IA" });
   }
 });
@@ -52,6 +59,11 @@ router.post("/diagnostic-enrichi", async (req, res) => {
     return res.json(result);
   } catch (err) {
     req.log.error(err);
+    if ((err as { code?: string } | null | undefined)?.code === "AI_TIMEOUT") {
+      return res
+        .status(504)
+        .json({ error: "Le diagnostic IA a depasse le delai imparti. Veuillez reessayer.", code: "AI_TIMEOUT" });
+    }
     return res.status(500).json({ error: "Erreur lors du diagnostic enrichi" });
   }
 });

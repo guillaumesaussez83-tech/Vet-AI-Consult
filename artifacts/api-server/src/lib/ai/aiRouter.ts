@@ -8,6 +8,12 @@ import { logger } from "../logger";
 
 const AI_TIMEOUT_MS = parseInt(process.env["AI_TIMEOUT_MS"] ?? "30000", 10); // configurable via env
 
+// Garde-fou anti-emballement. Volontairement large pour ne JAMAIS tronquer un
+// prompt clinique (anamnese/examen) ni la consigne de sortie : une troncature
+// silencieuse produirait un diagnostic mal informe. ~24k chars (~6k tokens),
+// derisoire face aux 200k de contexte de Sonnet.
+const MAX_PROMPT_CHARS = 24_000;
+
 function withAITimeout<T>(promise: Promise<T>): Promise<T> {
   return Promise.race([
     promise,
@@ -35,7 +41,7 @@ const CLAUDE_TASKS = new Set<AITask>(["diagnostic_differentiel", "drug_interacti
 export interface RunAITaskOptions {
   clinicId: string;
   consultationId?: number;
-  maxTokens?: "long" | "short";
+  maxTokens?: "long" | "medium" | "short";
   jsonMode?: boolean;
 }
 
@@ -51,7 +57,7 @@ export async function runAITask(
   options: RunAITaskOptions,
 ): Promise<string> {
   const start = Date.now();
-  const safePrompt = typeof prompt === "string" ? prompt.slice(0, 10_000) : String(prompt);
+  const safePrompt = typeof prompt === "string" ? prompt.slice(0, MAX_PROMPT_CHARS) : String(prompt);
   const useClaude = CLAUDE_TASKS.has(task);
   const maxTokens = options.maxTokens ?? "short";
   const model = useClaude ? AI_MODEL : GPT_MODEL;

@@ -118,7 +118,7 @@ export async function diagnosticDifferentiel(
   const text = await runAITask("diagnostic_differentiel", prompt, {
     clinicId,
     consultationId,
-    maxTokens: "long",
+    maxTokens: "medium",
   });
   try { return parseDiagnosticResult(text); } catch { return fallbackDiagnostic(text); }
 }
@@ -158,7 +158,7 @@ export async function diagnosticEnrichi(
   }
 
   const start = Date.now();
-  const result = await callClaudeMultimodal(contentBlocks, "long");
+  const result = await callClaudeMultimodal(contentBlocks, "medium");
   void logAIUsage({
     clinicId, consultationId, taskType: "diagnostic_enrichi", model: AI_MODEL,
     inputTokens: result.usage.inputTokens, outputTokens: result.usage.outputTokens,

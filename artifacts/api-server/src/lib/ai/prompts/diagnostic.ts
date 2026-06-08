@@ -26,7 +26,27 @@ Pour CHAQUE medicament mentionne dans tes recommandations, tu DOIS calculer et i
 - La duree de traitement recommandee
 Ne laisse JAMAIS une posologie sans calcul concret si le poids est connu.` : "";
 
-  return `Tu es un veterinaire expert en medecine des animaux de compagnie. Analyse le cas clinique suivant et propose un diagnostic differentiel structure.
+  // IMPORTANT : la consigne de sortie (format JSON) est placee EN TETE, avant le
+  // bloc cardio (volumineux) et le contexte RAG, pour qu'elle ne soit jamais la
+  // victime d'une troncature du prompt. Donnees cliniques ensuite ; RAG en dernier
+  // (le moins critique si jamais une troncature survenait).
+  return `Tu es un veterinaire expert en medecine des animaux de compagnie. Analyse le cas clinique ci-dessous et propose un diagnostic differentiel structure.
+
+Reponds UNIQUEMENT avec un objet JSON valide (sans bloc de code markdown) ayant cette structure exacte (si aucun signal cardio n'est present : "urgencesVitales": [] et "urgenceVitaleDetectee": false) :
+{
+  "diagnostics": [
+    {"nom": "Nom du diagnostic 1", "probabilite": "Elevee/Moderee/Faible", "description": "Explication clinique concise"},
+    {"nom": "Nom du diagnostic 2", "probabilite": "Elevee/Moderee/Faible", "description": "Explication clinique concise"},
+    {"nom": "Nom du diagnostic 3", "probabilite": "Elevee/Moderee/Faible", "description": "Explication clinique concise"}
+  ],
+  "recommandations": "Recommandations therapeutiques avec posologies CALCULEES selon le poids de l'animal",
+  "urgence": "Urgence vitale/Urgence relative/Non urgent",
+  "urgenceVitaleDetectee": false,
+  "urgencesVitales": [
+    {"signal": "id du signal cardio (ex: detresse-respiratoire-aigue)", "niveau": "alerte forte", "declencheurs": ["element reellement present dans l'anamnese ou l'examen"], "causeMortelle": "cause mortelle a ne pas rater meme si peu probable", "actionImmediate": "geste ou examen immediat (radio thorax, echo, ECG/Holter...)"}
+  ],
+  "texteComplet": "Analyse clinique complete avec toutes les posologies calculees selon le poids reel de l'animal"
+}
 
 INFORMATIONS SUR LE PATIENT :
 - Espece : ${espece}${race ? ` (Race : ${race})` : ""}${age ? `\n- Age : ${age}` : ""}
@@ -43,23 +63,8 @@ EXAMEN CLINIQUE :
 ${examenClinique}
 ${examensComplementaires ? `\nEXAMENS COMPLEMENTAIRES :\n${examensComplementaires}` : ""}
 ${posologieBlock}
-${ragContext}
 
 ${renderCardioUrgencesBlock()}
 
-Reponds UNIQUEMENT avec un objet JSON valide (sans bloc de code markdown) ayant cette structure exacte (si aucun signal cardio n'est present : "urgencesVitales": [] et "urgenceVitaleDetectee": false) :
-{
-  "diagnostics": [
-    {"nom": "Nom du diagnostic 1", "probabilite": "Elevee/Moderee/Faible", "description": "Explication clinique concise"},
-    {"nom": "Nom du diagnostic 2", "probabilite": "Elevee/Moderee/Faible", "description": "Explication clinique concise"},
-    {"nom": "Nom du diagnostic 3", "probabilite": "Elevee/Moderee/Faible", "description": "Explication clinique concise"}
-  ],
-  "recommandations": "Recommandations therapeutiques avec posologies CALCULEES selon le poids de l'animal",
-  "urgence": "Urgence vitale/Urgence relative/Non urgent",
-  "urgenceVitaleDetectee": false,
-  "urgencesVitales": [
-    {"signal": "id du signal cardio (ex: detresse-respiratoire-aigue)", "niveau": "alerte forte", "declencheurs": ["element reellement present dans l'anamnese ou l'examen"], "causeMortelle": "cause mortelle a ne pas rater meme si peu probable", "actionImmediate": "geste ou examen immediat (radio thorax, echo, ECG/Holter...)"}
-  ],
-  "texteComplet": "Analyse clinique complete avec toutes les posologies calculees selon le poids reel de l'animal"
-}`;
+${ragContext}`;
 }
