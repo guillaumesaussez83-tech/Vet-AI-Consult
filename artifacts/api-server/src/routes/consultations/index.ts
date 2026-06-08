@@ -611,6 +611,12 @@ router.post("/:id/diagnostic-ia", aiLimiter, async (req, res) => {
     return res.json(result);
   } catch (err) {
     req.log.error({ err }, "POST /consultations/:id/diagnostic-ia failed");
+    // Meme distinction que /api/ai/diagnostic : delai depasse (504) vs erreur serveur.
+    if ((err as { code?: string } | null | undefined)?.code === "AI_TIMEOUT") {
+      return res
+        .status(504)
+        .json(fail("AI_TIMEOUT", "Le diagnostic IA a depasse le delai imparti. Veuillez reessayer."));
+    }
     return res.status(500).json(fail("INTERNAL", "Erreur lors de la génération du diagnostic IA"));
   }
 });
