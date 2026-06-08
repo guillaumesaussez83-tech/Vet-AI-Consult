@@ -93,6 +93,7 @@ export default function NouvelleConsultationPage() {
     urgence: string;
     recommandations: string;
   } | null>(null);
+  const [diagnosticError, setDiagnosticError] = useState<string | null>(null);
   const [step5, setStep5] = useState({ ordonnance: "", notes: "" });
   const [uploadedFiles, setUploadedFiles] = useState<
     { name: string; objectPath: string; type: string; previewUrl?: string }[]
@@ -114,6 +115,7 @@ export default function NouvelleConsultationPage() {
       return;
     }
     setIsDiagnosticLoading(true);
+    setDiagnosticError(null);
     try {
       const endpoint =
         uploadedFiles.length > 0 ? "/api/ai/diagnostic-enrichi" : "/api/ai/diagnostic";
@@ -136,7 +138,15 @@ export default function NouvelleConsultationPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
-      if (!response.ok) throw new Error();
+      if (!response.ok) {
+        const msg =
+          response.status === 504
+            ? "Le diagnostic IA a dépassé le délai imparti. Veuillez réessayer."
+            : "Le diagnostic IA a échoué (erreur serveur). Veuillez réessayer.";
+        setDiagnosticError(msg);
+        toast({ title: msg, variant: "destructive" });
+        return;
+      }
       const json = await response.json();
       const res = json.data ?? json;
       setStep4Result({
@@ -146,7 +156,9 @@ export default function NouvelleConsultationPage() {
       });
       setStep4(f => ({ ...f, diagnosticIA: res.texteComplet }));
     } catch {
-      toast({ title: "Erreur lors de la génération du diagnostic IA", variant: "destructive" });
+      const msg = "Le diagnostic IA a échoué (problème réseau). Vérifiez votre connexion et réessayez.";
+      setDiagnosticError(msg);
+      toast({ title: msg, variant: "destructive" });
     } finally {
       setIsDiagnosticLoading(false);
     }
@@ -372,6 +384,21 @@ export default function NouvelleConsultationPage() {
                 </>
               )}
             </Button>
+
+            {diagnosticError && !isDiagnosticLoading && (
+              <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3">
+                <p className="text-sm font-medium text-red-800">{diagnosticError}</p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="mt-2 border-red-300 text-red-700 hover:bg-red-100"
+                  onClick={handleDiagnosticIA}
+                >
+                  Réessayer
+                </Button>
+              </div>
+            )}
 
             {step4Result && (
               <div className="space-y-3">
