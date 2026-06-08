@@ -8,7 +8,7 @@ export interface AIResponse {
 
 export async function callClaude(
   prompt: string,
-  maxTokens: "long" | "short" = "long",
+  maxTokens: "long" | "medium" | "short" = "long",
 ): Promise<AIResponse> {
   const message = await anthropic.messages.create({
     model: AI_MODEL,
@@ -28,7 +28,7 @@ export async function callClaude(
 
 export async function callClaudeMultimodal(
   contentBlocks: unknown[],
-  maxTokens: "long" | "short" = "long",
+  maxTokens: "long" | "medium" | "short" = "long",
 ): Promise<AIResponse> {
   const message = await anthropic.messages.create({
     model: AI_MODEL,

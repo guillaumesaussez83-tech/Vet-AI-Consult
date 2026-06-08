@@ -13,7 +13,7 @@ export interface AIResponse {
 
 export async function callGPT(
   prompt: string,
-  maxTokens: "long" | "short" = "short",
+  maxTokens: "long" | "medium" | "short" = "short",
   jsonMode = false,
 ): Promise<AIResponse> {
   const completion = await openai.chat.completions.create({
