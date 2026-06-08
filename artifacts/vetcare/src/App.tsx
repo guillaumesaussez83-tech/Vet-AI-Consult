@@ -7,6 +7,7 @@ import { Switch, Route, Redirect } from "wouter";
 import { useAuth } from "@clerk/clerk-react";
 import AppLayout from "./components/AppLayout";
 import { ApiClientSetup } from "./components/ApiClientSetup";
+import { Toaster } from "./components/ui/toaster";
 
 // Pages existantes -- imports corriges
 import Dashboard from "./pages/dashboard";
@@ -66,6 +67,9 @@ export default function App() {
   return (
     <>
       <ApiClientSetup />
+      {/* Toaster shadcn (useToast) -- etait absent : tous les toast() de l'app
+          etaient muets. Monte ici pour qu'ils s'affichent partout. */}
+      <Toaster />
       <Switch>
         <Route path="/sign-in" component={SignInPage} />
         <Route path="/sign-up" component={SignUpPage} />
