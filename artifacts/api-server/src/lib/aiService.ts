@@ -1,11 +1,11 @@
 import { AI_MODEL, TVA_RATE_MULTIPLIER } from "./constants";
 import { searchVetKnowledge, formatRagContext } from "./vetKnowledgeService";
 import type { ObjectStorageService } from "./objectStorage";
-import { runAITask, callClaudeMultimodal } from "./ai/aiRouter";
+import { runAITask, runAITaskStream, callClaudeMultimodal } from "./ai/aiRouter";
 import { logAIUsage } from "./ai/aiMetrics";
 import { buildAnamnesePrompt } from "./ai/prompts/anamnese";
 import { buildExamenPrompt } from "./ai/prompts/examen";
-import { buildDiagnosticPrompt } from "./ai/prompts/diagnostic";
+import { buildDiagnosticPrompt, buildDiagnosticStreamPrompt } from "./ai/prompts/diagnostic";
 import { buildFacturationPrompt } from "./ai/prompts/facturation";
 import { buildResumeClientPrompt } from "./ai/prompts/communication";
 import * as Sentry from "@sentry/node";
@@ -121,6 +121,71 @@ export async function diagnosticDifferentiel(
     maxTokens: "medium",
   });
   try { return parseDiagnosticResult(text); } catch { return fallbackDiagnostic(text); }
+}
+
+// v2 - Diagnostic differentiel STREAME (SSE) -> Claude Sonnet.
+// Emet la prose (analyse clinique) au fil de l'eau via `emitProse`, puis renvoie le
+// DiagnosticResult complet (cartes structurees + urgencesVitales) une fois le JSON
+// final parse par le parser DURCI (urgenceVitaleDetectee derive du tableau).
+//
+// GARANTIE URGENCES (non negociable) : la detection repose sur le JSON COMPLET de fin
+// de flux (apres "---JSON---"), parse cote serveur exactement comme en synchrone --
+// jamais sur un fragment streame. La banniere se declenche donc de facon fiable sur le
+// resultat final, identique au mode bloquant.
+const DIAG_STREAM_SEP = "---JSON---";
+export async function diagnosticDifferentielStream(
+  params: DiagnosticParams,
+  emitProse: (chunk: string) => void,
+  clinicId = "default",
+  consultationId?: number,
+): Promise<DiagnosticResult> {
+  const ragResults = await searchVetKnowledge(buildRagQuery(params));
+  const ragContext = formatRagContext(ragResults);
+  const prompt = buildDiagnosticStreamPrompt(params, ragContext);
+
+  let acc = "";
+  let emittedLen = 0;
+  let sepReached = false;
+
+  await runAITaskStream(
+    "diagnostic_differentiel",
+    prompt,
+    { clinicId, consultationId, maxTokens: "medium" },
+    (delta) => {
+      acc += delta;
+      if (sepReached) return; // apres le separateur, plus rien n'est streame (c'est le JSON)
+      const idx = acc.indexOf(DIAG_STREAM_SEP);
+      if (idx === -1) {
+        // Retient une marge = longueur du separateur, pour ne jamais emettre un
+        // "---JSON---" coupe en deux entre deux deltas.
+        const safeEnd = Math.max(emittedLen, acc.length - DIAG_STREAM_SEP.length);
+        if (safeEnd > emittedLen) {
+          emitProse(acc.slice(emittedLen, safeEnd));
+          emittedLen = safeEnd;
+        }
+      } else {
+        if (idx > emittedLen) emitProse(acc.slice(emittedLen, idx));
+        emittedLen = idx;
+        sepReached = true;
+      }
+    },
+  );
+
+  // Si le modele n'a pas produit le separateur, on emet le reliquat de prose retenu.
+  if (!sepReached && emittedLen < acc.length) emitProse(acc.slice(emittedLen));
+
+  const sepIdx = acc.indexOf(DIAG_STREAM_SEP);
+  const prose = (sepIdx === -1 ? acc : acc.slice(0, sepIdx)).trim();
+  // Si le separateur manque, on parse tout `acc` : le parser durci extrait le 1er objet
+  // JSON present -> on ne perd pas les urgencesVitales sur une sortie mal formatee.
+  const jsonPart = sepIdx === -1 ? acc : acc.slice(sepIdx + DIAG_STREAM_SEP.length);
+
+  try {
+    const parsed = parseDiagnosticResult(jsonPart);
+    return { ...parsed, texteComplet: prose };
+  } catch {
+    return { ...fallbackDiagnostic(prose), texteComplet: prose };
+  }
 }
 
 // v2 - Diagnostic enrichi avec pieces jointes -> Claude Sonnet (multimodal direct)
