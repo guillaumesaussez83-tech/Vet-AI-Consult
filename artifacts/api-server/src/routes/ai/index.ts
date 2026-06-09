@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { Router } from "express";
+import { Router, raw } from "express";
 import {
   db,
   actesTable,
@@ -23,6 +23,7 @@ import {
   resumeClient,
   genererFactureVoix,
 } from "../../lib/aiService";
+import { transcribeAudio } from "../../lib/ai/assemblyaiClient";
 
 const router = Router();
 router.use(aiLimiter);
@@ -137,6 +138,31 @@ router.post("/diagnostic-stream", async (req, res) => {
   } finally {
     clearInterval(heartbeat);
     if (!closed) res.end();
+  }
+});
+
+// POST /transcribe -- dictee vocale (STT) via AssemblyAI, Medical Mode FR.
+// Le navigateur envoie l'audio brut (blob MediaRecorder) en body BINAIRE ; la cle
+// ASSEMBLYAI_API_KEY reste 100% serveur (jamais cote front). express.raw lit le binaire :
+// les parsers JSON/urlencoded globaux sont type-restreints -> ils laissent passer l'audio.
+//
+// PREMIER JET SYNCHRONE (upload + polling cote serveur). Pour un clip long, le traitement
+// peut depasser ~20s et la passerelle Railway couperait -> garde-fou cote front (cap ~3 min,
+// etape suivante). Si on observe des 504, migrer vers un pattern polling/SSE (cf. diagnostic).
+router.post("/transcribe", raw({ type: () => true, limit: "20mb" }), async (req, res) => {
+  try {
+    const audio = req.body;
+    if (!Buffer.isBuffer(audio) || audio.length === 0) {
+      return res.status(400).json({ error: "Audio manquant ou vide" });
+    }
+    const transcript = await transcribeAudio(audio);
+    return res.json({ transcript });
+  } catch (err) {
+    req.log.error({ err }, "POST /ai/transcribe failed");
+    if ((err as { code?: string } | null | undefined)?.code === "STT_NOT_CONFIGURED") {
+      return res.status(503).json({ error: "Service de transcription non configure" });
+    }
+    return res.status(500).json({ error: "Erreur lors de la transcription audio" });
   }
 });
 
