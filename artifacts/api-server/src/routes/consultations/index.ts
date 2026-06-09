@@ -27,8 +27,6 @@ import { anthropic } from "@workspace/integrations-anthropic-ai";
 import { AI_MODEL, AI_MAX_TOKENS, TVA_DEFAULT_RATE } from "../../lib/constants";
 import { nextInvoiceNumber, computeInvoiceTotals } from "../../lib/numbering";
 import { fail, ok } from "../../lib/response";
-import { validate } from "../../middlewares/validate";
-import { CreateConsultationSchema } from "../../schemas";
 import { getAuth } from "@clerk/express";
 import { logAuditEvent } from "../../middleware/auditLogger";
 import { diagnosticDifferentiel } from "../../lib/aiService";
@@ -237,7 +235,12 @@ router.get("/", async (req, res) => {
   }
 });
 
-router.post("/", validate(CreateConsultationSchema), async (req, res) => {
+// Validation via le canonique CreateConsultationBody (api-zod, aligne DB + front)
+// DIRECTEMENT dans le handler (ci-dessous). Pas de middleware validate() ici : l'ancien
+// schema manuel CreateConsultationSchema divergeait (patientId z.string().uuid() au lieu
+// d'integer, motif requis au lieu de nullable) et rejetait a tort le payload legitime
+// (bug dormant depuis P7). Le handler valide + verifie l'existence du patient (FK).
+router.post("/", async (req, res) => {
   try {
     const body = CreateConsultationBody.safeParse(req.body);
     if (!body.success) {
