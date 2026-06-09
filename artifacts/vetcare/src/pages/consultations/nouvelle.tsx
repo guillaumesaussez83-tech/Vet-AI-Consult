@@ -31,6 +31,7 @@ import { formatDateFR } from "@/lib/utils";
 import { PatientBarre } from "@/components/PatientBarre";
 import { VoiceRecorder } from "@/components/VoiceRecorder";
 import DicteeOrdonnanceDialog, { PrescriptionConfirmee } from "@/components/DicteeOrdonnanceDialog";
+import { UrgencesVitalesBanner, type UrgenceVitaleItem } from "@/components/UrgencesVitalesBanner";
 
 /** Fetch authentifié : injecte le Bearer token Clerk sur toutes les requêtes /api/* */
 async function authFetch(input: RequestInfo, init?: RequestInit): Promise<Response> {
@@ -94,6 +95,8 @@ export default function NouvelleConsultationPage() {
     recommandations: string;
   } | null>(null);
   const [diagnosticError, setDiagnosticError] = useState<string | null>(null);
+  const [urgencesAlerte, setUrgencesAlerte] = useState<UrgenceVitaleItem[] | null>(null);
+  const [streamingProse, setStreamingProse] = useState("");
   const [step5, setStep5] = useState({ ordonnance: "", notes: "" });
   const [uploadedFiles, setUploadedFiles] = useState<
     { name: string; objectPath: string; type: string; previewUrl?: string }[]
@@ -109,6 +112,26 @@ export default function NouvelleConsultationPage() {
 
   const selectedPatient = patients?.find(p => String(p.id) === step1.patientId);
 
+  const applyResult = (res: any) => {
+    setStep4Result({
+      diagnostics: res.diagnostics as DiagnosticItem[],
+      urgence: res.urgence,
+      recommandations: res.recommandations,
+    });
+    setStep4(f => ({ ...f, diagnosticIA: res.texteComplet ?? "" }));
+    setStreamingProse(res.texteComplet ?? "");
+    // Banniere d'urgence vitale : declenchee sur le resultat structure COMPLET
+    // (urgencesVitales parsees cote serveur par le parser durci). Meme logique que
+    // detail.tsx, via le composant partage UrgencesVitalesBanner.
+    if (
+      res.urgenceVitaleDetectee &&
+      Array.isArray(res.urgencesVitales) &&
+      res.urgencesVitales.length > 0
+    ) {
+      setUrgencesAlerte(res.urgencesVitales);
+    }
+  };
+
   const handleDiagnosticIA = async () => {
     if (!selectedPatient) {
       toast({ title: "Aucun patient sélectionné", variant: "destructive" });
@@ -116,29 +139,56 @@ export default function NouvelleConsultationPage() {
     }
     setIsDiagnosticLoading(true);
     setDiagnosticError(null);
+    setUrgencesAlerte(null);
+    setStep4Result(null);
+    setStreamingProse("");
+
+    const body = {
+      espece: selectedPatient.espece,
+      race: selectedPatient.race ?? null,
+      age: null,
+      poids: step3.poids ? parseFloat(step3.poids) : (selectedPatient.poids ?? null),
+      sexe: selectedPatient.sexe,
+      sterilise: selectedPatient.sterilise ?? false,
+      anamnese: step2.anamnese,
+      examenClinique: step3.examenClinique,
+      examensComplementaires: step3.examensComplementaires || null,
+      antecedents: selectedPatient.antecedents ?? null,
+      allergies: selectedPatient.allergies ?? null,
+      objectPaths: uploadedFiles.map(f => f.objectPath),
+    };
+
     try {
-      const endpoint =
-        uploadedFiles.length > 0 ? "/api/ai/diagnostic-enrichi" : "/api/ai/diagnostic";
-      const body = {
-        espece: selectedPatient.espece,
-        race: selectedPatient.race ?? null,
-        age: null,
-        poids: step3.poids ? parseFloat(step3.poids) : (selectedPatient.poids ?? null),
-        sexe: selectedPatient.sexe,
-        sterilise: selectedPatient.sterilise ?? false,
-        anamnese: step2.anamnese,
-        examenClinique: step3.examenClinique,
-        examensComplementaires: step3.examensComplementaires || null,
-        antecedents: selectedPatient.antecedents ?? null,
-        allergies: selectedPatient.allergies ?? null,
-        objectPaths: uploadedFiles.map(f => f.objectPath),
-      };
-      const response = await authFetch(endpoint, {
+      // Pieces jointes -> diagnostic enrichi multimodal (bloquant, non streame).
+      if (uploadedFiles.length > 0) {
+        const response = await authFetch("/api/ai/diagnostic-enrichi", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        if (!response.ok) {
+          const msg =
+            response.status === 504
+              ? "Le diagnostic IA a dépassé le délai imparti. Veuillez réessayer."
+              : "Le diagnostic IA a échoué (erreur serveur). Veuillez réessayer.";
+          setDiagnosticError(msg);
+          toast({ title: msg, variant: "destructive" });
+          return;
+        }
+        const json = await response.json();
+        applyResult(json.data ?? json);
+        return;
+      }
+
+      // Cas standard -> streaming SSE : la prose s'affiche au fil de l'eau ; le resultat
+      // structure complet (cartes + urgencesVitales) arrive dans l'event `result`.
+      const response = await authFetch("/api/ai/diagnostic-stream", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
-      if (!response.ok) {
+      if (!response.ok || !response.body) {
+        // Erreur AVANT le flux (validation 400, ou 504 defensif TTFB) : corps JSON.
         const msg =
           response.status === 504
             ? "Le diagnostic IA a dépassé le délai imparti. Veuillez réessayer."
@@ -147,14 +197,48 @@ export default function NouvelleConsultationPage() {
         toast({ title: msg, variant: "destructive" });
         return;
       }
-      const json = await response.json();
-      const res = json.data ?? json;
-      setStep4Result({
-        diagnostics: res.diagnostics as DiagnosticItem[],
-        urgence: res.urgence,
-        recommandations: res.recommandations,
-      });
-      setStep4(f => ({ ...f, diagnosticIA: res.texteComplet }));
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let proseAcc = "";
+      let gotResult = false;
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const blocks = buffer.split("\n\n");
+        buffer = blocks.pop() ?? ""; // dernier bloc possiblement incomplet
+        for (const block of blocks) {
+          // Heartbeat (": keep-alive") ou bloc sans event/data -> ignore.
+          const evtMatch = block.match(/^event: (.*)$/m);
+          const dataMatch = block.match(/^data: (.*)$/m);
+          if (!evtMatch || !dataMatch) continue;
+          let data: any;
+          try { data = JSON.parse(dataMatch[1]); } catch { continue; }
+          if (evtMatch[1] === "delta") {
+            proseAcc += data.text ?? "";
+            setStreamingProse(proseAcc);
+          } else if (evtMatch[1] === "result") {
+            gotResult = true;
+            applyResult(data);
+          } else if (evtMatch[1] === "error") {
+            const msg =
+              data.code === "AI_TTFB_TIMEOUT"
+                ? "Le diagnostic IA a dépassé le délai imparti. Veuillez réessayer."
+                : (data.error || "Le diagnostic IA a échoué. Veuillez réessayer.");
+            setDiagnosticError(msg);
+            toast({ title: msg, variant: "destructive" });
+            return;
+          }
+        }
+      }
+      if (!gotResult) {
+        const msg = "Le diagnostic IA a été interrompu avant la fin. Veuillez réessayer.";
+        setDiagnosticError(msg);
+        toast({ title: msg, variant: "destructive" });
+      }
     } catch {
       const msg = "Le diagnostic IA a échoué (problème réseau). Vérifiez votre connexion et réessayez.";
       setDiagnosticError(msg);
@@ -399,6 +483,17 @@ export default function NouvelleConsultationPage() {
                 </Button>
               </div>
             )}
+
+            {streamingProse && (
+              <div className="rounded-lg border border-violet-100 bg-violet-50/50 p-3 text-sm text-violet-900 whitespace-pre-wrap">
+                {streamingProse}
+              </div>
+            )}
+
+            <UrgencesVitalesBanner
+              urgences={urgencesAlerte}
+              onAcknowledge={() => setUrgencesAlerte(null)}
+            />
 
             {step4Result && (
               <div className="space-y-3">

@@ -18,6 +18,7 @@ import {
   reformulerAnamnese,
   structurerExamenClinique,
   diagnosticDifferentiel,
+  diagnosticDifferentielStream,
   diagnosticEnrichi,
   resumeClient,
   genererFactureVoix,
@@ -65,6 +66,77 @@ router.post("/diagnostic-enrichi", async (req, res) => {
         .json({ error: "Le diagnostic IA a depasse le delai imparti. Veuillez reessayer.", code: "AI_TIMEOUT" });
     }
     return res.status(500).json({ error: "Erreur lors du diagnostic enrichi" });
+  }
+});
+
+// POST /diagnostic-stream — version SSE (Server-Sent Events) du diagnostic differentiel.
+// Resout la coupure passerelle Railway ~20s : des octets circulent en continu
+// (heartbeat puis deltas de prose), donc la connexion ne tombe jamais en timeout.
+// Events emis : `delta` (prose au fil de l'eau), `result` (DiagnosticResult complet
+// avec cartes + urgencesVitales, parse cote serveur sur le JSON final), `done`, `error`.
+// La banniere d'urgence se declenche cote front sur l'event `result` (JSON complet) :
+// fiabilite identique au mode synchrone, jamais sur un fragment streame.
+router.post("/diagnostic-stream", async (req, res) => {
+  const body = GetDiagnosticIABody.safeParse(req.body);
+  if (!body.success) return res.status(400).json({ error: "Données invalides" });
+
+  // Headers SSE. X-Accel-Buffering:no -> desactive le buffering des proxies (nginx /
+  // passerelle Railway) pour que chaque event parte immediatement ; no-transform ->
+  // empeche toute recompression intermediaire qui bufferiserait le flux.
+  res.setHeader("Content-Type", "text/event-stream; charset=utf-8");
+  res.setHeader("Cache-Control", "no-cache, no-transform");
+  res.setHeader("Connection", "keep-alive");
+  res.setHeader("X-Accel-Buffering", "no");
+  if (typeof res.flushHeaders === "function") res.flushHeaders();
+
+  let closed = false;
+  req.on("close", () => { closed = true; });
+
+  const send = (event: string, data: unknown) => {
+    if (closed) return;
+    res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+  };
+
+  // Heartbeat AVANT le 1er token : couvre la recherche RAG + le temps de demarrage du
+  // modele (TTFB). Un commentaire SSE (ligne ": ...") est ignore par le client mais
+  // maintient la connexion ouverte cote passerelle. Maintenu pendant tout le flux pour
+  // couvrir aussi une eventuelle pause longue du modele en cours de generation. Stoppe
+  // dans le finally.
+  const heartbeat = setInterval(() => {
+    if (!closed) res.write(`: keep-alive\n\n`);
+  }, 10_000);
+
+  try {
+    const result = await diagnosticDifferentielStream(
+      body.data,
+      (chunk) => send("delta", { text: chunk }),
+      req.clinicId,
+    );
+    send("result", result);
+    send("done", {});
+  } catch (err) {
+    req.log.error(err);
+    const code = (err as { code?: string } | null | undefined)?.code;
+    // En SSE le heartbeat a deja envoye les headers -> impossible de poser un status
+    // 504 ; on transmet l'erreur via un event `error` portant le code. Le front le
+    // mappe en message clair (AI_TTFB_TIMEOUT = "delai depasse"). Garde defensif si
+    // jamais aucun octet n'a encore ete envoye (erreur tres precoce).
+    if (!res.headersSent && code === "AI_TTFB_TIMEOUT") {
+      clearInterval(heartbeat);
+      return res
+        .status(504)
+        .json({ error: "Le diagnostic IA n'a pas demarre dans le delai imparti. Veuillez reessayer.", code });
+    }
+    send("error", {
+      code: code ?? "AI_ERROR",
+      error:
+        code === "AI_TTFB_TIMEOUT"
+          ? "Le diagnostic IA n'a pas demarre dans le delai imparti. Veuillez reessayer."
+          : "Erreur lors de la génération du diagnostic IA",
+    });
+  } finally {
+    clearInterval(heartbeat);
+    if (!closed) res.end();
   }
 });
 
