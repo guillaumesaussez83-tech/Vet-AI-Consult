@@ -30,6 +30,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { formatDateFR } from "@/lib/utils";
 import { PatientBarre } from "@/components/PatientBarre";
 import { VoiceRecorder } from "@/components/VoiceRecorder";
+import { DicteeVocaleAssemblyAI } from "@/components/DicteeVocaleAssemblyAI";
 import DicteeOrdonnanceDialog, { PrescriptionConfirmee } from "@/components/DicteeOrdonnanceDialog";
 import { UrgencesVitalesBanner, type UrgenceVitaleItem } from "@/components/UrgencesVitalesBanner";
 
@@ -722,18 +723,14 @@ function Step2Anamnese({
   anamnese: string;
   setAnamnese: (v: string) => void;
 }) {
-  const { toast } = useToast();
-
-  const handleReformuler = async (transcript: string) => {
-    const res = await authFetch("/api/ai/reformuler-anamnese", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ transcript }),
-    });
-    if (!res.ok) throw new Error("Erreur lors de la reformulation");
-    const json = await res.json();
-    setAnamnese((json.data ?? json).anamnese);
-    toast({ title: "Anamnèse reformulée par Claude" });
+  // Dictee AssemblyAI -> append du transcript a l'anamnese (non destructif : on garde
+  // ce qui est deja saisi/dicte). `anamnese` courant : Step2Anamnese se re-rend a chaque
+  // changement, donc la valeur est a jour quand le transcript arrive.
+  const handleTranscript = (text: string) => {
+    const t = text.trim();
+    if (!t) return;
+    const base = anamnese.trim();
+    setAnamnese(base ? `${base} ${t}` : t);
   };
 
   return (
@@ -745,7 +742,7 @@ function Step2Anamnese({
         </p>
       </CardHeader>
       <CardContent className="space-y-4">
-        <VoiceRecorder onAction={handleReformuler} actionLabel="Reformuler avec l'IA" />
+        <DicteeVocaleAssemblyAI onTranscript={handleTranscript} />
         <div>
           <Label>Anamnèse (ou saisie manuelle)</Label>
           <Textarea
